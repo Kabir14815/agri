@@ -2,9 +2,10 @@
 # https://docs.netlify.com/configure-builds/file-based-configuration/
 
 [build]
+  # `publish` is relative to `base`, not the repo root — see Netlify docs.
   base = "frontend"
   command = "npm install && npm run build"
-  publish = "frontend/dist"
+  publish = "dist"
 
 # React Router (SPA): serve index.html for all paths so /admin, /blog/1, etc. work
 [[redirects]]
