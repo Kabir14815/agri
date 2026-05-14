@@ -1,0 +1,13 @@
+# Netlify: build the Vite app from /frontend and publish /frontend/dist
+# https://docs.netlify.com/configure-builds/file-based-configuration/
+
+[build]
+  base = "frontend"
+  command = "npm install && npm run build"
+  publish = "frontend/dist"
+
+# React Router (SPA): serve index.html for all paths so /admin, /blog/1, etc. work
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
