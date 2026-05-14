@@ -1,0 +1,34 @@
+import { Link } from 'react-router-dom'
+
+export default function EarthwormSection() {
+  return (
+    <section className="section section-soft">
+      <div className="container">
+        <div className="about-content">
+          <img
+            src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=900&q=80"
+            alt="Earthworm"
+          />
+          <div>
+            <span className="section-title-eyebrow">KGF Farming</span>
+            <h2 className="section-title">Earthworm</h2>
+            <p>
+              Earthworms are voracious eaters, consuming organic matter like dead
+              leaves, decaying plants, and other detritus. They digest this organic
+              material and excrete it as nutrient-rich castings, also known as worm
+              poop. These castings are packed with essential nutrients, making them
+              an excellent natural fertilizer.
+            </p>
+            <p>
+              Earthworms are also ecosystem engineers. Their burrowing activities
+              mix and incorporate organic matter into the soil, leading to improved
+              soil structure and microbial activity. This benefits the entire food
+              web in the soil.
+            </p>
+            <Link to="/about" className="btn btn-primary">Discover More</Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
