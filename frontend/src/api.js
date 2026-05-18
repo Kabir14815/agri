@@ -5,9 +5,18 @@ function authHeader() {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+function userAuthHeader() {
+  const token =
+    localStorage.getItem('kgf_token') || localStorage.getItem('kgf_franchisee_token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 async function request(path, options = {}) {
+  let headers = { 'Content-Type': 'application/json' }
+  if (options.auth === true) headers = { ...headers, ...authHeader() }
+  else if (options.auth === 'user') headers = { ...headers, ...userAuthHeader() }
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.auth ? authHeader() : {}) },
+    headers,
     ...options,
   })
   if (!res.ok) {
@@ -36,12 +45,19 @@ export const api = {
     request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   login: (data) =>
     request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  userDashboard: () => request('/user/dashboard', { auth: 'user' }),
 }
 
 // ---------- Admin API ----------
 
 export const adminApi = {
   me: () => request('/admin/me', { auth: true }),
+  updateUserAmount: (id, amount) =>
+    request(`/admin/users/${id}/amount`, {
+      method: 'PATCH',
+      auth: true,
+      body: JSON.stringify({ amount }),
+    }),
   stats: () => request('/admin/stats', { auth: true }),
   contacts: () => request('/admin/contacts', { auth: true }),
   deleteContact: (id) =>

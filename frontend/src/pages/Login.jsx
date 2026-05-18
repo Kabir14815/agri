@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAdminAuth } from '../admin/AdminAuth.jsx'
+import { useUserAuth } from '../user/UserAuth.jsx'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { applySession } = useAdminAuth()
+  const { applySession: applyAdminSession } = useAdminAuth()
+  const { applySession: applyUserSession } = useUserAuth()
   const [form, setForm] = useState({ email: '', password: '' })
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -18,11 +20,9 @@ export default function Login() {
     setStatus(null)
     try {
       const res = await api.login(form)
-      localStorage.setItem('kgf_token', res.token)
-      localStorage.setItem('kgf_user', JSON.stringify(res.user))
 
       if (res.user.role === 'admin') {
-        applySession(res.token, res.user)
+        applyAdminSession(res.token, res.user)
         setStatus({
           type: 'success',
           text: `Welcome, ${res.user.full_name}. Taking you to the admin panel…`,
@@ -31,8 +31,12 @@ export default function Login() {
         return
       }
 
-      setStatus({ type: 'success', text: `Welcome back, ${res.user.full_name}!` })
-      setTimeout(() => navigate('/'), 800)
+      applyUserSession(res.token, res.user, 'customer')
+      setStatus({
+        type: 'success',
+        text: `Welcome back, ${res.user.full_name}! Opening your dashboard…`,
+      })
+      setTimeout(() => navigate('/dashboard', { replace: true }), 700)
     } catch (err) {
       setStatus({ type: 'error', text: err.message })
     } finally {
@@ -41,8 +45,8 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-wrap">
-      <div className="auth-card">
+    <div className="auth-wrap auth-premium">
+      <div className="auth-card auth-card-premium" style={{ maxWidth: 480 }}>
         <h2>Login</h2>
         <p className="sub">
           Sign in to your KGF Farming account. Admins are taken straight to the
@@ -107,7 +111,7 @@ export default function Login() {
               minLength={6}
             />
           </div>
-          <button className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+          <button className="btn btn-accent" style={{ width: '100%' }} disabled={loading}>
             {loading ? 'Logging in…' : 'Login'}
           </button>
         </form>

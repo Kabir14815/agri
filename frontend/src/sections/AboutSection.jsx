@@ -7,33 +7,38 @@ export default function AboutSection() {
         <div className="about-grid">
           <div className="about-image">
             <img
-              src="https://images.unsplash.com/photo-1592982537447-7440770faae9?w=900&q=80"
-              alt="Farming"
+              src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=900&q=80"
+              alt="Vermicompost farming"
             />
-            <div className="image-tag">25+ Years</div>
+            <div className="image-tag">Eco Farming</div>
           </div>
           <div>
-            <span className="section-title-eyebrow">Welcome to KGF Farming</span>
+            <span className="section-title-eyebrow">Introduction</span>
             <h2 className="section-title">
-              We're Leading Agriculture future need market
+              Kamauput Growth Farming Pvt Ltd.
             </h2>
             <p>
-              Vermicomposting is the process by which worms are used to convert
-              organic materials (usually wastes) into a humus-like material known as
-              vermin-compost.
+              We specialise in high-quality vermicompost, organic fertilizers and natural crop
+              protection — promoting eco-friendly farming that boosts soil fertility and crop
+              yields across Haryana and beyond.
+            </p>
+            <p>
+              Vermicompost is like black gold for your plants: a nutrient-rich organic fertilizer
+              and soil conditioner made from decomposed organic matter with the help of earthworms
+              and beneficial microorganisms.
             </p>
             <div className="about-tags">
               <div className="about-tag">
                 <span>01</span>
-                Home Geneity Capacity
+                Indoor Vermicompost
               </div>
               <div className="about-tag">
                 <span>02</span>
-                High Porosity Capacity
+                Outdoor Vermicompost
               </div>
               <div className="about-tag">
                 <span>03</span>
-                High Water Holding Capacity
+                Windrow & Trench Methods
               </div>
             </div>
             <Link to="/about" className="btn btn-primary">Discover More</Link>

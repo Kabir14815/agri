@@ -1,129 +1,122 @@
 """In-memory data store for the KGF Farming clone."""
 
+# Peasant Natural Farming catalogue — product line for Kamauput Growth Farming
 PRODUCTS = [
     {
         "id": 1,
-        "name": "BRONO - L",
-        "category": "INSECTICIDE",
-        "price": 199,
-        "original_price": 1800,
-        "discount": 89,
-        "image": "https://images.unsplash.com/photo-1611843467160-25afb8df1074?w=600&q=80",
-        "description": "High-grade liquid insecticide for crop protection.",
+        "name": "Bhumi Care",
+        "category": "SOIL CARE",
+        "price": 550,
+        "original_price": 550,
+        "discount": 0,
+        "image": "/products/bhumi-care.png",
+        "description": (
+            "Nutrition for plant & soil — powerful organic soil booster (1000 ml). "
+            "Organic manure that improves soil fertility, enhances root development, "
+            "increases nutrient absorption, and improves crop yield & quality. "
+            "Dosage: 2–3 ml per litre of water. Suitable for all crops."
+        ),
     },
     {
         "id": 2,
-        "name": "BHUMI SHAKTI",
-        "category": "GROWTH BOOSTER",
-        "price": 640,
-        "original_price": 1380,
-        "discount": 54,
-        "image": "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=600&q=80",
-        "description": "Soil revitalising growth booster enriched with organic minerals.",
+        "name": "Spread-10X",
+        "category": "SPRAY ADJUVANT",
+        "price": 420,
+        "original_price": 420,
+        "discount": 0,
+        "image": "/products/spread-10x.png",
+        "description": (
+            "Non-ionic silicon based wetting agent — makes your spray more effective. "
+            "Helps pesticides spread evenly, improves coverage and sticking power. "
+            "Compatible with insecticides, fungicides and nutrients. "
+            "Dosage: 3–5 ml per litre of water."
+        ),
     },
     {
         "id": 3,
-        "name": "BRONO T",
-        "category": "INSECTICIDE",
-        "price": 1648,
-        "original_price": 2060,
-        "discount": 20,
-        "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-        "description": "Targeted insecticide for tough crop pests.",
+        "name": "PNF Root Grow",
+        "category": "GROWTH BOOSTER",
+        "price": 680,
+        "original_price": 680,
+        "discount": 0,
+        "image": "/products/root-grow.png",
+        "description": (
+            "Advanced root development nutrients (1 kg). Rapid root growth, strong & deep roots, "
+            "improved plant growth, better nutrient absorption, and increased yield."
+        ),
     },
     {
         "id": 4,
-        "name": "BRONO - L",
-        "category": "INSECTICIDE",
-        "price": 1500,
-        "original_price": 1875,
-        "discount": 20,
-        "image": "https://images.unsplash.com/photo-1592982537447-7440770faae9?w=600&q=80",
-        "description": "Premium variant of BRONO-L for large fields.",
+        "name": "Peasant Power",
+        "category": "GROWTH BOOSTER",
+        "price": 320,
+        "original_price": 320,
+        "discount": 0,
+        "image": "/products/peasant-power.png",
+        "description": (
+            "Crop performance enhancer powder (250 g). Boosts crop vigor, enhances nutrient uptake, "
+            "improves stress tolerance — visible effect in 3–5 days."
+        ),
     },
     {
         "id": 5,
-        "name": "VIRYGO",
-        "category": "GROWTH BOOSTER",
-        "price": 1104,
-        "original_price": 1380,
-        "discount": 20,
-        "image": "https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=600&q=80",
-        "description": "All-natural plant growth accelerator.",
+        "name": "Bhumi Raja",
+        "category": "FUNGICIDE",
+        "price": 480,
+        "original_price": 480,
+        "discount": 0,
+        "image": "/products/bhumi-raja.png",
+        "description": (
+            "Powerful bio-fungicide (500 ml) — protect your crops from fungal diseases. "
+            "Controls root & leaf diseases, strengthens roots, improves soil health, "
+            "boosts growth and yield. 100% organic & safe."
+        ),
     },
     {
         "id": 6,
-        "name": "SUPER SHILI",
+        "name": "Crop Care",
         "category": "INSECTICIDE",
-        "price": 228,
-        "original_price": 285,
-        "discount": 20,
-        "image": "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=600&q=80",
-        "description": "Economical insecticide for small farms and gardens.",
+        "price": 450,
+        "original_price": 450,
+        "discount": 0,
+        "image": "/products/crop-care.png",
+        "description": (
+            "Organic bio-insecticide — protect crops from harmful insects. "
+            "Controls caterpillars (sundi), leaf-eating insects, army worm and leaf-damaging pests. "
+            "Safe for crops and environment. Dosage: 2–3 ml per litre of water. "
+            "Suitable for cotton, vegetables, pulses, fruits and cereals."
+        ),
     },
     {
         "id": 7,
-        "name": "SUPER SPRIDER",
+        "name": "Crop Care-T",
         "category": "INSECTICIDE",
-        "price": 228,
-        "original_price": 285,
-        "discount": 20,
-        "image": "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
-        "description": "Effective against spider mites and tiny insects.",
+        "price": 450,
+        "original_price": 450,
+        "discount": 0,
+        "image": "/products/crop-care-t.png",
+        "description": (
+            "Organic bio-insecticide — 100% organic and natural. Effective on all crop types. "
+            "Protects from thrips, jassids, aphids and other pests. Improves crop growth and yield."
+        ),
     },
     {
         "id": 8,
-        "name": "BHUMI SHAKTI",
+        "name": "Grow Up-7",
         "category": "GROWTH BOOSTER",
-        "price": 1104,
-        "original_price": 1380,
-        "discount": 20,
-        "image": "https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=600&q=80",
-        "description": "Boost soil energy and plant health.",
-    },
-    {
-        "id": 9,
-        "name": "CROP GROW-30",
-        "category": "GROWTH BOOSTER",
-        "price": 1288,
-        "original_price": 1610,
-        "discount": 20,
-        "image": "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
-        "description": "Premium 30-day crop growth formula.",
-    },
-    {
-        "id": 10,
-        "name": "VERMI COMPOST",
-        "category": "VERMI COMPOST",
-        "price": 40,
-        "original_price": 70,
-        "discount": 43,
-        "image": "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-        "description": "Pure earthworm compost for richer soil.",
-    },
-    {
-        "id": 11,
-        "name": "VERMI COMPOST",
-        "category": "VERMI COMPOST",
-        "price": 480,
-        "original_price": 600,
-        "discount": 20,
-        "image": "https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?w=600&q=80",
-        "description": "Bulk vermi-compost pack for medium farms.",
-    },
-    {
-        "id": 12,
-        "name": "Baghvani",
-        "category": "AGRICULTURE",
-        "price": 300000,
-        "original_price": 300000,
+        "price": 520,
+        "original_price": 520,
         "discount": 0,
-        "image": "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80",
-        "description": "Complete orchard / Baghvani farming package.",
+        "image": "/products/grow-up-7.png",
+        "description": (
+            "Complete plant nutrition with humic & amino acids. Grows strong roots, "
+            "boosts plant growth, improves yield & health. Contains N, P, K, Ca, Mg, S, Fe, Zn and B. "
+            "Organic & environmentally friendly."
+        ),
     },
 ]
 
-CATEGORIES = ["AGRICULTURE", "VERMI COMPOST", "INSECTICIDE", "GROWTH BOOSTER"]
+CATEGORIES = ["GROWTH BOOSTER", "INSECTICIDE", "SOIL CARE", "FUNGICIDE", "SPRAY ADJUVANT"]
 
 SERVICES = [
     {
@@ -257,8 +250,8 @@ COMPANY = {
     "name": "KGF Farming",
     "full_name": "Kamauput Growth Farming Pvt Ltd.",
     "email": "info@kgffarming.com",
-    "phone": "+91 11 6931 2730",
-    "address": "NEW KRISHNA COLONY GALI NO 4 JIND HARYANA 126102",
+    "phone": "+91 93552 40503",
+    "address": "1133/3, Sheetal Puri Colony, Apollo Road, Jind 126102 — Near Madhur Milan Hotel, Gali No. 03",
     "tagline": "Agriculture & Pure Eco Farming",
     "year": 2026,
 }

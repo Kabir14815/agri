@@ -18,8 +18,8 @@ export default function FaqSection() {
       <div className="container">
         <div className="faq-grid">
           <div className="faq-list">
-            <span className="section-title-eyebrow">Frequently Asked Questions</span>
-            <h2 className="section-title">How can we help you?</h2>
+            <span className="section-title-eyebrow">FAQ</span>
+            <h2 className="section-title">Get your answers the easy way</h2>
             <p>
               We answer the most common questions about our products and services.
               Get in touch if you don't find your answer below.

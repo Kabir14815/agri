@@ -45,7 +45,7 @@ export default function Contact() {
                   <span className="icon-circle"><FiMapPin /></span>
                   <div>
                     <small>Address</small>
-                    NEW KRISHNA COLONY GALI NO 4, JIND HARYANA 126102
+                    1133/3, Sheetal Puri Colony, Apollo Road, Jind 126102 — Near Madhur Milan Hotel, Gali No. 03
                   </div>
                 </li>
                 <li>
@@ -59,7 +59,7 @@ export default function Contact() {
                   <span className="icon-circle"><FiPhone /></span>
                   <div>
                     <small>Phone</small>
-                    +91 11 6931 2730
+                    <a href="tel:+919355240503">+91 93552 40503</a>
                   </div>
                 </li>
                 <li>

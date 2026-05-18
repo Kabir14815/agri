@@ -16,7 +16,7 @@ export default function ProductsPage() {
       ]}
       fields={[
         { name: 'name', label: 'Name', required: true },
-        { name: 'category', label: 'Category (AGRICULTURE / VERMI COMPOST / INSECTICIDE / GROWTH BOOSTER)', required: true },
+        { name: 'category', label: 'Category (GROWTH BOOSTER / INSECTICIDE / SOIL CARE / FUNGICIDE / SPRAY ADJUVANT)', required: true },
         { name: 'price', label: 'Price (₹)', type: 'number', required: true },
         { name: 'original_price', label: 'Original price / MRP (₹)', type: 'number', required: true },
         { name: 'discount', label: 'Discount (%)', type: 'number' },

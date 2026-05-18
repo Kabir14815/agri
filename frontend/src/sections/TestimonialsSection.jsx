@@ -36,7 +36,7 @@ export default function TestimonialsSection() {
           </div>
           <div className="stats-banner-info" style={{ textAlign: 'right' }}>
             <span>Contact us for more detail</span>
-            <h3><a href="tel:+911169312730">+91 11 6931 2730</a></h3>
+            <h3><a href="tel:+919355240503">+91 93552 40503</a></h3>
           </div>
         </div>
       </div>

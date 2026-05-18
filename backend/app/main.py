@@ -49,11 +49,19 @@ class RegisterPayload(BaseModel):
     phone: str = Field(..., min_length=6, max_length=20)
     password: str = Field(..., min_length=6, max_length=80)
     role: str = Field(default="customer")
+    address: Optional[str] = Field(default=None, max_length=200)
+    city: Optional[str] = Field(default=None, max_length=60)
+    state: Optional[str] = Field(default=None, max_length=60)
+    pincode: Optional[str] = Field(default=None, max_length=10)
 
 
 class LoginPayload(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=6, max_length=80)
+
+
+class UserAmountUpdate(BaseModel):
+    amount: float = Field(..., ge=0)
 
 
 class ProductIn(BaseModel):
@@ -137,7 +145,21 @@ def seed_demo_users() -> None:
     """Seed demo accounts so the UI is usable out of the box."""
     for demo in DEMO_USERS:
         if not any(u["email"] == demo["email"] for u in _users):
-            user = {**demo, "id": len(_users) + 1}
+            demo_amounts = {
+                "demo@kgffarming.com": 12500.0,
+                "partner@kgffarming.com": 45800.0,
+                "admin@kgffarming.com": 0.0,
+            }
+            user = {
+                **demo,
+                "id": len(_users) + 1,
+                "address": "Demo address, Jind",
+                "city": "Jind",
+                "state": "Haryana",
+                "pincode": "126102",
+                "amount": demo_amounts.get(demo["email"], 0.0),
+                "registered_at": datetime.utcnow().isoformat() + "Z",
+            }
             _users.append(user)
 
 
@@ -170,12 +192,42 @@ def _user_from_token(token: str) -> Optional[dict]:
     return next((u for u in _users if u["id"] == uid), None)
 
 
-def require_admin(authorization: Optional[str] = Header(default=None)) -> dict:
-    """Dependency that checks for `Authorization: Bearer <token>` from an admin."""
+def _public_user(u: dict) -> dict:
+    data = {k: v for k, v in u.items() if k != "password"}
+    if "amount" not in data:
+        data["amount"] = 0.0
+    return data
+
+
+def _user_dashboard_payload(u: dict) -> dict:
+    return {
+        "id": u["id"],
+        "full_name": u["full_name"],
+        "email": u["email"],
+        "amount": float(u.get("amount", 0) or 0),
+        "role": u.get("role", "customer"),
+        "phone": u.get("phone"),
+    }
+
+
+def _bearer_token(authorization: Optional[str]) -> str:
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="Missing bearer token")
-    token = authorization.split(" ", 1)[1].strip()
-    user = _user_from_token(token)
+    return authorization.split(" ", 1)[1].strip()
+
+
+def require_user(authorization: Optional[str] = Header(default=None)) -> dict:
+    user = _user_from_token(_bearer_token(authorization))
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    if user.get("role") == "admin":
+        raise HTTPException(status_code=403, detail="Use the admin panel for admin accounts")
+    return user
+
+
+def require_admin(authorization: Optional[str] = Header(default=None)) -> dict:
+    """Dependency that checks for `Authorization: Bearer <token>` from an admin."""
+    user = _user_from_token(_bearer_token(authorization))
     if not user or user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
@@ -260,11 +312,14 @@ def register(payload: RegisterPayload):
         raise HTTPException(status_code=400, detail="Email already registered")
     user = payload.model_dump()
     user["id"] = _next_id(_users)
+    user["amount"] = 0.0
+    user["registered_at"] = datetime.utcnow().isoformat() + "Z"
     _users.append(user)
+    profile = _public_user(user)
     return {
         "success": True,
         "message": "Registration successful",
-        "user": {"id": user["id"], "full_name": user["full_name"], "email": user["email"], "role": user["role"]},
+        "user": profile,
     }
 
 
@@ -275,9 +330,14 @@ def login(payload: LoginPayload):
             return {
                 "success": True,
                 "token": f"demo-token-{u['id']}",
-                "user": {"id": u["id"], "full_name": u["full_name"], "email": u["email"], "role": u["role"]},
+                "user": _user_dashboard_payload(u),
             }
     raise HTTPException(status_code=401, detail="Invalid email or password")
+
+
+@app.get("/api/user/dashboard")
+def user_dashboard(user: dict = Depends(require_user)):
+    return _user_dashboard_payload(user)
 
 
 # ------------------------------ Admin API --------------------------------
@@ -314,10 +374,14 @@ def admin_delete_contact(item_id: int, admin: dict = Depends(require_admin)):
 
 @app.get("/api/admin/users")
 def admin_users(admin: dict = Depends(require_admin)):
-    return [
-        {k: v for k, v in u.items() if k != "password"}
-        for u in _users
-    ]
+    users = [_public_user(u) for u in _users]
+    users.sort(key=lambda x: x.get("registered_at") or "", reverse=True)
+    return users
+
+
+@app.get("/api/admin/users/{user_id}")
+def admin_user_detail(user_id: int, admin: dict = Depends(require_admin)):
+    return _public_user(_find(_users, user_id))
 
 
 @app.delete("/api/admin/users/{user_id}")
@@ -326,6 +390,17 @@ def admin_delete_user(user_id: int, admin: dict = Depends(require_admin)):
         raise HTTPException(status_code=400, detail="You can't delete your own account")
     _delete(_users, user_id)
     return {"success": True}
+
+
+@app.patch("/api/admin/users/{user_id}/amount")
+def admin_update_user_amount(
+    user_id: int, payload: UserAmountUpdate, admin: dict = Depends(require_admin)
+):
+    target = _find(_users, user_id)
+    if target.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="Cannot change admin wallet amount")
+    target["amount"] = float(payload.amount)
+    return _public_user(target)
 
 
 # ---------- Generic CRUD endpoints ----------

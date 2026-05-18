@@ -1,21 +1,88 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
+const SLIDES = [
+  {
+    eyebrow: 'High Quality Vermicompost',
+    title: 'Vermicompost — black gold for your plants',
+    text: "Nutrient-rich organic fertilizer and soil conditioner made from decomposed organic matter — powered by Kamauput Growth Farming.",
+    cta: 'Join Now',
+    ctaTo: '/register',
+  },
+  {
+    eyebrow: 'Organic Crop Protection',
+    title: 'Natural products for healthier yields',
+    text: 'Bio-insecticides, growth boosters and soil care solutions — safe for crops, farmers and the environment.',
+    cta: 'View Products',
+    ctaTo: '/#products',
+  },
+]
+
 export default function Hero() {
+  const [slide, setSlide] = useState(0)
+
+  useEffect(() => {
+    const t = setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 6000)
+    return () => clearInterval(t)
+  }, [])
+
+  const current = SLIDES[slide]
+
   return (
     <section className="hero">
-      <div className="container hero-content">
-        <div className="hero-eyebrow">Welcome to KGF Farming</div>
-        <h1>
-          Agriculture &<br /> Pure Eco Farming
-        </h1>
-        <p>
-          Kamauput Growth Farming Pvt Ltd. – your trusted partner in vermicomposting,
-          organic fertilizers and natural crop protection. Building a sustainable
-          future for Indian agriculture.
-        </p>
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-          <Link to="/about" className="btn btn-primary">Discover More</Link>
-          <Link to="/contact" className="btn btn-light">Contact Us</Link>
+      <div className="hero-overlay" />
+      <div className="container hero-layout">
+        <div className="hero-content">
+          <div className="hero-eyebrow">{current.eyebrow}</div>
+          <h1>{current.title}</h1>
+          <p>{current.text}</p>
+          <div className="hero-actions">
+            <Link to={current.ctaTo} className="btn btn-accent">
+              {current.cta}
+            </Link>
+            <Link to="/contact" className="btn btn-light">
+              Contact Us
+            </Link>
+          </div>
+          <div className="hero-dots">
+            {SLIDES.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`hero-dot ${i === slide ? 'active' : ''}`}
+                onClick={() => setSlide(i)}
+                aria-label={`Slide ${i + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="hero-side-card">
+          <div className="hero-side-card-inner">
+            <span className="hero-side-badge">100% Organic</span>
+            <h3>Vermicompost powered plant boost!</h3>
+            <p>
+              Rich in N, P, K and beneficial microorganisms — improves soil fertility,
+              water retention and crop quality.
+            </p>
+            <ul className="hero-stats">
+              <li>
+                <strong>50+</strong>
+                <span>Crop types</span>
+              </li>
+              <li>
+                <strong>8+</strong>
+                <span>Product range</span>
+              </li>
+              <li>
+                <strong>100%</strong>
+                <span>Eco-friendly</span>
+              </li>
+            </ul>
+            <Link to="/register" className="btn btn-primary" style={{ width: '100%' }}>
+              Register Now
+            </Link>
+          </div>
         </div>
       </div>
     </section>

@@ -16,6 +16,9 @@ frontend/dist/
 .env.*
 !.env.example
 
+# PDF extraction temp
+catalogue_pages/
+
 # OS / IDE
 .DS_Store
 Thumbs.db

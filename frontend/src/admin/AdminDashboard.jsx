@@ -28,11 +28,14 @@ export default function AdminDashboard() {
   const [recent, setRecent] = useState([])
   const [error, setError] = useState(null)
 
+  const [recentUsers, setRecentUsers] = useState([])
+
   useEffect(() => {
-    Promise.all([adminApi.stats(), adminApi.contacts()])
-      .then(([s, c]) => {
+    Promise.all([adminApi.stats(), adminApi.contacts(), adminApi.users()])
+      .then(([s, c, users]) => {
         setStats(s)
         setRecent(c.slice(0, 5))
+        setRecentUsers(users.filter((u) => u.role !== 'admin').slice(0, 5))
       })
       .catch((e) => setError(e.message))
   }, [])
@@ -59,6 +62,40 @@ export default function AdminDashboard() {
           </Link>
         ))}
       </div>
+
+      <section className="admin-panel">
+        <div className="admin-panel-head">
+          <h2>Recent registrations</h2>
+          <Link to="/admin/users" className="btn btn-outline" style={{ padding: '8px 18px' }}>
+            All members
+          </Link>
+        </div>
+        {recentUsers.length === 0 ? (
+          <p style={{ color: 'var(--color-muted)' }}>No member registrations yet.</p>
+        ) : (
+          <div className="admin-user-grid compact">
+            {recentUsers.map((u) => (
+              <Link key={u.id} to="/admin/users" className="admin-user-card mini">
+                <div className="admin-user-card-top">
+                  <div className="user-avatar sm">
+                    {(u.full_name || '?')
+                      .split(' ')
+                      .map((w) => w[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </div>
+                  <div className="admin-user-card-meta">
+                    <h3>{u.full_name}</h3>
+                    <span className="role-pill sm">{u.role}</span>
+                  </div>
+                </div>
+                <p className="mini-email">{u.email}</p>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="admin-panel">
         <div className="admin-panel-head">

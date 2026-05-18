@@ -1,4 +1,5 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
+import TopBar from './components/TopBar.jsx'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
 import ScrollToTop from './components/ScrollToTop.jsx'
@@ -17,6 +18,8 @@ import OurLegals from './pages/OurLegals.jsx'
 import NotFound from './pages/NotFound.jsx'
 
 import { AdminAuthProvider, RequireAdmin } from './admin/AdminAuth.jsx'
+import { UserAuthProvider, RequireUser } from './user/UserAuth.jsx'
+import Dashboard from './pages/Dashboard.jsx'
 import AdminLayout from './admin/AdminLayout.jsx'
 import AdminLogin from './admin/AdminLogin.jsx'
 import AdminDashboard from './admin/AdminDashboard.jsx'
@@ -35,9 +38,15 @@ export default function App() {
 
   return (
     <AdminAuthProvider>
+      <UserAuthProvider>
       <ScrollToTop />
-      {!isAdmin && <Navbar />}
-      <main>
+      {!isAdmin && (
+        <>
+          <TopBar />
+          <Navbar />
+        </>
+      )}
+      <main className="site-main">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
@@ -51,6 +60,14 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/franchisee-login" element={<FranchiseeLogin />} />
+          <Route
+            path="/dashboard"
+            element={
+              <RequireUser>
+                <Dashboard />
+              </RequireUser>
+            }
+          />
 
           {/* Admin */}
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -77,6 +94,7 @@ export default function App() {
         </Routes>
       </main>
       {!isAdmin && <Footer />}
+      </UserAuthProvider>
     </AdminAuthProvider>
   )
 }

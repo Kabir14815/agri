@@ -1,0 +1,22 @@
+import { Link } from 'react-router-dom'
+
+export default function CtaBanner() {
+  return (
+    <section className="cta-banner">
+      <div className="container cta-banner-inner">
+        <div>
+          <span className="cta-banner-eyebrow">Join KGF Farming</span>
+          <h2>High quality vermicompost & organic crop care</h2>
+          <p>
+            Register today to partner with Kamauput Growth Farming — eco-friendly products,
+            expert support and sustainable solutions for your farm.
+          </p>
+        </div>
+        <div className="cta-banner-actions">
+          <Link to="/register" className="btn btn-accent">Join Now</Link>
+          <Link to="/contact" className="btn btn-light">Contact Us</Link>
+        </div>
+      </div>
+    </section>
+  )
+}

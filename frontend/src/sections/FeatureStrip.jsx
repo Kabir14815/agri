@@ -1,10 +1,26 @@
-import { FiCpu, FiUsers, FiAward, FiTruck } from 'react-icons/fi'
+import { FiActivity, FiDroplet, FiShield, FiTruck } from 'react-icons/fi'
 
 const FEATURES = [
-  { icon: <FiCpu />, title: 'Technology', text: "We've been using tech" },
-  { icon: <FiUsers />, title: 'Best Farmers', text: 'Skilled team of farmers' },
-  { icon: <FiAward />, title: "We're Certified", text: 'Certified market leader' },
-  { icon: <FiTruck />, title: 'We Deliver', text: 'We deliver everywhere' },
+  {
+    icon: <FiActivity />,
+    title: 'Microorganisms',
+    text: 'Beneficial bacteria for living soil',
+  },
+  {
+    icon: <FiDroplet />,
+    title: 'Rich Nutrients',
+    text: 'N, P, K, Mg & trace elements',
+  },
+  {
+    icon: <FiShield />,
+    title: '100% Organic',
+    text: 'Safe for crops & environment',
+  },
+  {
+    icon: <FiTruck />,
+    title: 'We Deliver',
+    text: 'Pan-India partner network',
+  },
 ]
 
 export default function FeatureStrip() {

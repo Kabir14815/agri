@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api.js'
+import { useUserAuth } from '../user/UserAuth.jsx'
 
 export default function FranchiseeLogin() {
   const navigate = useNavigate()
+  const { applySession } = useUserAuth()
   const [form, setForm] = useState({ email: '', password: '' })
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -16,10 +18,13 @@ export default function FranchiseeLogin() {
     setStatus(null)
     try {
       const res = await api.login(form)
-      localStorage.setItem('kgf_franchisee_token', res.token)
-      localStorage.setItem('kgf_franchisee_user', JSON.stringify(res.user))
+      if (res.user.role === 'admin') {
+        setStatus({ type: 'error', text: 'Please use the main login page for admin access.' })
+        return
+      }
+      applySession(res.token, res.user, 'franchisee')
       setStatus({ type: 'success', text: `Welcome, partner ${res.user.full_name}!` })
-      setTimeout(() => navigate('/'), 800)
+      setTimeout(() => navigate('/dashboard', { replace: true }), 700)
     } catch (err) {
       setStatus({ type: 'error', text: err.message })
     } finally {
