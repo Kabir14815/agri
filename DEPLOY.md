@@ -40,8 +40,15 @@ Database name used by the app: **`kgf_farming`**
 | `MONGODB_URI` | Your Atlas connection string |
 | `MONGODB_DB_NAME` | `kgf_farming` |
 | `CORS_ORIGINS` | `https://agriit.netlify.app,http://localhost:5173` |
+| `PYTHON_VERSION` | `3.12.8` (**required** — avoids Python 3.14 build failures with pydantic) |
+
+**Root Directory** must be `backend`.
 
 Test: `https://YOUR-SERVICE.onrender.com/api/health` → `{"status":"ok","database":"mongodb",...}`
+
+### Build failed (pydantic-core / metadata generation)
+
+Render defaulted to Python 3.14. Fix: add env var **`PYTHON_VERSION`** = `3.12.8`, then **Manual Deploy** → Clear build cache & deploy.
 
 ---
 
