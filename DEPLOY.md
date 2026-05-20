@@ -46,6 +46,22 @@ Database name used by the app: **`kgf_farming`**
 
 Test: `https://YOUR-SERVICE.onrender.com/api/health` → `{"status":"ok","database":"mongodb",...}`
 
+### Start failed (exit status 127 / gunicorn not found)
+
+Your **Start Command** is wrong. In Render → **Settings** → change it to:
+
+```
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Or use the script from the repo (with Root Directory = `backend`):
+
+```
+bash start.sh
+```
+
+Then **Manual Deploy** again.
+
 ### Build failed (pydantic-core / metadata generation)
 
 Render defaulted to Python 3.14. Fix: add env var **`PYTHON_VERSION`** = `3.12.8`, then **Manual Deploy** → Clear build cache & deploy.
