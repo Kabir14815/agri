@@ -26,7 +26,9 @@ Follow these steps **in order**. Copy-paste the values below.
    | **Environment** | **Docker** (change from Python if needed) |
    | **Root Directory** | `backend` |
    | **Dockerfile Path** | `Dockerfile` |
-   | **Start Command** | **leave empty** (delete `gunicorn...` if it is there) |
+   | **Start Command** | `python -m gunicorn your_application.wsgi -c gunicorn.conf.py` |
+
+   > Do **not** use plain `gunicorn` — use `python -m gunicorn` (fixes "command not found").
 
 5. Click **Environment** (left side) and add these 3 variables:
 
