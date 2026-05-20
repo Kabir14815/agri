@@ -1,8 +1,9 @@
 # Netlify: build the Vite app from /frontend and publish /frontend/dist
 # https://docs.netlify.com/configure-builds/file-based-configuration/
 #
+# Domains: agriit.netlify.app, kgffarmingindia.com, www.kgffarmingindia.com
 # Required env var in Netlify UI (Site settings → Environment variables):
-#   VITE_API_URL = https://YOUR-RENDER-SERVICE.onrender.com/api
+#   VITE_API_URL = https://agri-n5jz.onrender.com/api
 
 [build]
   # `publish` is relative to `base`, not the repo root — see Netlify docs.

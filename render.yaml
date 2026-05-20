@@ -14,4 +14,4 @@ services:
       - key: MONGODB_DB_NAME
         value: kgf_farming
       - key: CORS_ORIGINS
-        value: https://agriit.netlify.app,http://localhost:5173,http://127.0.0.1:5173
+        value: https://kgffarmingindia.com,https://www.kgffarmingindia.com,https://agriit.netlify.app,http://localhost:5173,http://127.0.0.1:5173

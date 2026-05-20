@@ -36,7 +36,7 @@ Follow these steps **in order**. Copy-paste the values below.
    |-----|----------------------|
    | `MONGODB_URI` | `mongodb+srv://Task:1234@cluster0.lnxh7gs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0` |
    | `MONGODB_DB_NAME` | `kgf_farming` |
-   | `CORS_ORIGINS` | `https://agriit.netlify.app,http://localhost:5173` |
+   | `CORS_ORIGINS` | `https://kgffarmingindia.com,https://www.kgffarmingindia.com,https://agriit.netlify.app,http://localhost:5173` |
 
 6. **Save** everything.
 7. Click **Manual Deploy** → **Deploy latest commit**
