@@ -1,4 +1,4 @@
-/** In production (Netlify), set VITE_API_URL to your Render API, e.g. https://kgf-farming-api.onrender.com/api */
+/** Netlify proxies /api → Render; local dev uses Vite proxy (vite.config.js) */
 const BASE = import.meta.env.VITE_API_URL || '/api'
 
 function authHeader() {

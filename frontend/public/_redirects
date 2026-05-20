@@ -1,1 +1,5 @@
+# API → Render backend (same-origin, fixes "Failed to fetch" on custom domain)
+/api/*  https://agri-n5jz.onrender.com/api/:splat  200
+
+# SPA fallback
 /*    /index.html   200
