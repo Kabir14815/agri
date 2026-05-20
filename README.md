@@ -7,7 +7,8 @@ A React + FastAPI clone of [kgffarming.com](https://kgffarming.com/), built with
 ## Tech Stack
 
 - **Frontend:** React 18 (Vite), React Router v6, react-icons, plain CSS (custom design system)
-- **Backend:** FastAPI, Pydantic v2, Uvicorn (ASGI)
+- **Backend:** FastAPI, Pydantic v2, Uvicorn, **MongoDB Atlas** (PyMongo)
+- **Deploy:** Render (API) + Netlify (frontend) — see [DEPLOY.md](./DEPLOY.md)
 
 ## Project Structure
 
@@ -108,6 +109,6 @@ npm run preview
 
 ## Notes & Next Steps
 
-- Data is currently in-memory in `backend/app/data.py`. Swap it for a database (SQLAlchemy + SQLite/Postgres) when ready.
+- Data is stored in **MongoDB Atlas** (`MONGODB_URI`). Default catalogue is seeded from `backend/app/data.py` on first run.
 - The auth flow stores plaintext credentials in memory — **do not use as-is in production**. Replace with hashed passwords (e.g. `passlib[bcrypt]`) and proper JWTs.
 - Images are pulled from Unsplash for the demo; replace with your own assets when deploying.

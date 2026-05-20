@@ -1,4 +1,5 @@
-const BASE = '/api'
+/** In production (Netlify), set VITE_API_URL to your Render API, e.g. https://kgf-farming-api.onrender.com/api */
+const BASE = import.meta.env.VITE_API_URL || '/api'
 
 function authHeader() {
   const token = localStorage.getItem('kgf_admin_token')

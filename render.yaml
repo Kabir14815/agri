@@ -1,0 +1,19 @@
+# Render Blueprint — deploy backend API
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: kgf-farming-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: MONGODB_DB_NAME
+        value: kgf_farming
+      - key: MONGODB_URI
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://agriit.netlify.app,http://localhost:5173,http://127.0.0.1:5173

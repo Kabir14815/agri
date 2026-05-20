@@ -1,11 +1,18 @@
 # Netlify: build the Vite app from /frontend and publish /frontend/dist
 # https://docs.netlify.com/configure-builds/file-based-configuration/
+#
+# Required env var in Netlify UI (Site settings → Environment variables):
+#   VITE_API_URL = https://YOUR-RENDER-SERVICE.onrender.com/api
 
 [build]
   # `publish` is relative to `base`, not the repo root — see Netlify docs.
   base = "frontend"
   command = "npm install && npm run build"
   publish = "dist"
+
+[build.environment]
+  # Update after Render deploy if your service name differs
+  VITE_API_URL = "https://kgf-farming-api.onrender.com/api"
 
 # React Router (SPA): serve index.html for all paths so /admin, /blog/1, etc. work
 [[redirects]]

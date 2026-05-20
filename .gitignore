@@ -15,6 +15,7 @@ frontend/dist/
 .env
 .env.*
 !.env.example
+backend/.env
 
 # PDF extraction temp
 catalogue_pages/
