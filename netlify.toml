@@ -11,8 +11,8 @@
   publish = "dist"
 
 [build.environment]
-  # Update after Render deploy if your service name differs
-  VITE_API_URL = "https://kgf-farming-api.onrender.com/api"
+  # Change agri to your Render service name after backend is live
+  VITE_API_URL = "https://agri.onrender.com/api"
 
 # React Router (SPA): serve index.html for all paths so /admin, /blog/1, etc. work
 [[redirects]]
