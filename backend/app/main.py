@@ -32,6 +32,11 @@ class ContactMessage(BaseModel):
     message: str = Field(..., min_length=5, max_length=2000)
 
 
+class ReferralTrackIn(BaseModel):
+    code: str = Field(..., min_length=3, max_length=20)
+    path: Optional[str] = Field(default="", max_length=300)
+
+
 class RegisterPayload(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=80)
     email: EmailStr
@@ -332,6 +337,31 @@ def get_blog(post_id: int, store: MongoStore = Depends(get_store)):
     return _find(store, "blog", post_id)
 
 
+@app.get("/api/referral/lookup")
+def referral_lookup(code: str, store: MongoStore = Depends(get_store)):
+    from .referral import normalize_member_id
+
+    result = store.lookup_referral_code(normalize_member_id(code))
+    if not result:
+        raise HTTPException(status_code=404, detail="Invalid referral code")
+    return result
+
+
+@app.post("/api/referral/track-visit", status_code=status.HTTP_201_CREATED)
+def referral_track_visit(
+    payload: ReferralTrackIn, store: MongoStore = Depends(get_store)
+):
+    from .referral import normalize_member_id
+
+    try:
+        visit = store.track_referral_visit(
+            normalize_member_id(payload.code), payload.path or ""
+        )
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Invalid referral code") from None
+    return {"success": True, "visit": visit}
+
+
 @app.post("/api/contact", status_code=status.HTTP_201_CREATED)
 def submit_contact(payload: ContactMessage, store: MongoStore = Depends(get_store)):
     record = store.create_contact(payload.model_dump())
@@ -620,6 +650,7 @@ def admin_stats(admin: dict = Depends(require_admin), store: MongoStore = Depend
         "help_tickets_open": store.db.help_tickets.count_documents({"status": "open"}),
         "exchange_requests": store.db.exchange_requests.count_documents({}),
         "exchange_pending": store.db.exchange_requests.count_documents({"status": "pending"}),
+        "referral_visits": store.db.referral_visits.count_documents({}),
     }
 
 
@@ -783,20 +814,30 @@ def admin_referrals_overview(
     for u in users:
         if u.get("role") == "admin":
             continue
+        mid = u.get("member_id")
         rows.append(
             {
                 "user_id": u["id"],
-                "member_id": u.get("member_id"),
+                "member_id": mid,
                 "full_name": u.get("full_name"),
                 "email": u.get("email"),
                 "sponsor_member_id": u.get("sponsor_member_id"),
                 "sponsor_name": u.get("sponsor_name"),
                 "direct_referral_count": u.get("direct_referral_count", 0),
+                "link_visits": store.count_referral_visits(mid) if mid else 0,
+                "referral_link": f"/ref/{mid}" if mid else "",
                 "amount": u.get("amount", 0),
                 "registered_at": u.get("registered_at"),
             }
         )
     return rows
+
+
+@app.get("/api/admin/referral-visits")
+def admin_referral_visits(
+    admin: dict = Depends(require_admin), store: MongoStore = Depends(get_store)
+):
+    return store.list_referral_visits()
 
 
 @app.get("/api/admin/help-desk")

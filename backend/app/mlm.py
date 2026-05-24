@@ -283,7 +283,7 @@ def build_dashboard_payload(user: dict, site_base: str = "https://kgffarmingindi
     ranks, active_rank = compute_ranks(main_leg, rest_leg)
 
     member_id = stats["member_id"]
-    referral_link = f"{site_base.rstrip('/')}/register?ref={member_id}"
+    referral_link = f"{site_base.rstrip('/')}/ref/{member_id}"
 
     incomes = [
         {"key": "self_unit_profit", "label": "Self Unit Profit", "value": stats["self_unit_profit"]},

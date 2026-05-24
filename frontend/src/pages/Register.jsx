@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { FiUser, FiMail, FiPhone, FiMapPin, FiLock } from 'react-icons/fi'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { FiUser, FiMail, FiPhone, FiMapPin, FiLock, FiTag } from 'react-icons/fi'
 import { api } from '../api.js'
+import {
+  resolveReferralCode,
+  normalizeReferralCode,
+  clearStoredReferralCode,
+  buildLoginPath,
+} from '../utils/referral.js'
 
 export default function Register() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const refCode = searchParams.get('ref') || ''
+  const { code: routeCode } = useParams()
+  const initialCode = resolveReferralCode(searchParams, routeCode)
+
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -18,16 +26,42 @@ export default function Register() {
     state: 'Haryana',
     pincode: '',
     country: 'India',
-    sponsor_member_id: refCode,
+    sponsor_member_id: initialCode,
   })
+  const [sponsorName, setSponsorName] = useState(null)
+  const [codeStatus, setCodeStatus] = useState(null)
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
 
+  const activeCode = normalizeReferralCode(form.sponsor_member_id)
+
   useEffect(() => {
-    if (refCode) {
-      setForm((f) => ({ ...f, sponsor_member_id: refCode.toUpperCase() }))
+    const code = resolveReferralCode(searchParams, routeCode)
+    if (code) {
+      setForm((f) => ({ ...f, sponsor_member_id: code }))
     }
-  }, [refCode])
+  }, [searchParams, routeCode])
+
+  useEffect(() => {
+    if (!activeCode || activeCode.length < 3) {
+      setSponsorName(null)
+      setCodeStatus(null)
+      return
+    }
+    const t = setTimeout(() => {
+      api
+        .lookupReferral(activeCode)
+        .then((r) => {
+          setSponsorName(r.sponsor_name)
+          setCodeStatus({ type: 'success', text: `Valid — sponsor: ${r.sponsor_name}` })
+        })
+        .catch(() => {
+          setSponsorName(null)
+          setCodeStatus({ type: 'error', text: 'Invalid referral code' })
+        })
+    }, 400)
+    return () => clearTimeout(t)
+  }, [activeCode])
 
   const onChange = (e) => {
     const { name, value } = e.target
@@ -42,16 +76,18 @@ export default function Register() {
     setLoading(true)
     setStatus(null)
     try {
+      const sponsor = normalizeReferralCode(form.sponsor_member_id)
       const payload = {
         ...form,
-        sponsor_member_id: form.sponsor_member_id?.trim().toUpperCase() || undefined,
+        sponsor_member_id: sponsor || undefined,
       }
       const res = await api.register(payload)
+      clearStoredReferralCode()
       setStatus({
         type: 'success',
         text: `${res.message}! Your profile is saved — redirecting to login…`,
       })
-      setTimeout(() => navigate('/login'), 1400)
+      setTimeout(() => navigate(buildLoginPath(sponsor)), 1400)
     } catch (err) {
       setStatus({ type: 'error', text: err.message })
     } finally {
@@ -66,28 +102,45 @@ export default function Register() {
           <span className="auth-visual-badge">Join KGF Farming</span>
           <h2>Create your member profile</h2>
           <p>
-            Register once — your details appear instantly in our admin panel so our team
-            can support you with products, pricing and delivery.
+            Use your sponsor&apos;s referral code so they appear in your team tree and admin
+            can track the referral.
           </p>
           <ul className="auth-visual-list">
-            <li>Organic vermicompost & crop care</li>
-            <li>Pan-India partner network</li>
-            <li>Secure member account</li>
+            <li>Referral link: /ref/KGF123456</li>
+            <li>Or enter code manually below</li>
+            <li>Tracked in admin → Referrals</li>
           </ul>
         </aside>
 
         <div className="auth-card auth-card-premium">
           <h2>Register</h2>
           <p className="sub">Fill in your profile to get started.</p>
-          {refCode && (
-            <p className="sub" style={{ color: 'var(--color-primary)' }}>
-              Referred by: <strong>{refCode}</strong>
-            </p>
-          )}
 
           {status && <div className={`form-message ${status.type}`}>{status.text}</div>}
 
           <form onSubmit={onSubmit}>
+            <div className="form-group referral-code-group">
+              <label>
+                <FiTag /> Referral / sponsor code
+              </label>
+              <input
+                className="form-control"
+                name="sponsor_member_id"
+                value={form.sponsor_member_id}
+                onChange={onChange}
+                placeholder="e.g. KGF870365"
+                autoComplete="off"
+              />
+              {codeStatus && (
+                <small className={`referral-code-hint ${codeStatus.type}`}>
+                  {codeStatus.text}
+                </small>
+              )}
+              {sponsorName && !codeStatus?.type && (
+                <small className="referral-code-hint success">Sponsor: {sponsorName}</small>
+              )}
+            </div>
+
             <div className="form-group">
               <label><FiUser /> Full name</label>
               <input
@@ -178,19 +231,6 @@ export default function Register() {
               </div>
             </div>
 
-            {refCode && (
-              <div className="form-group">
-                <label>Sponsor member ID</label>
-                <input
-                  className="form-control"
-                  name="sponsor_member_id"
-                  value={form.sponsor_member_id}
-                  onChange={onChange}
-                  readOnly
-                />
-              </div>
-            )}
-
             <div className="form-row">
               <div className="form-group">
                 <label><FiLock /> Password</label>
@@ -224,7 +264,7 @@ export default function Register() {
           </form>
 
           <p className="alt-link">
-            Already registered? <Link to="/login">Sign in</Link>
+            Already registered? <Link to={buildLoginPath(activeCode)}>Sign in</Link>
           </p>
         </div>
       </div>

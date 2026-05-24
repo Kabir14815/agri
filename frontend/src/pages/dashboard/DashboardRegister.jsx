@@ -50,12 +50,12 @@ export default function DashboardRegister() {
 
       <div className="mlm-register-actions">
         <Link
-          to={`/register?ref=${encodeURIComponent(info.member_id)}`}
+          to={`/ref/${encodeURIComponent(info.member_id)}`}
           className="btn btn-primary"
           target="_blank"
           rel="noreferrer"
         >
-          <FiUserPlus /> Open registration page
+          <FiUserPlus /> Open referral page
         </Link>
         <a
           href={info.referral_link}
@@ -65,6 +65,10 @@ export default function DashboardRegister() {
         >
           <FiExternalLink /> Share link
         </a>
+        <p className="mlm-hint" style={{ width: '100%', marginTop: 8 }}>
+          Short URL: <strong>/ref/{info.member_id}</strong> — also works: /register?ref=
+          {info.member_id}
+        </p>
       </div>
     </>
   )

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { FiUsers, FiGitBranch } from 'react-icons/fi'
+import { FiUsers, FiGitBranch, FiEye } from 'react-icons/fi'
 import { adminApi } from '../../api.js'
 import AdminReferralTreeModal from '../components/AdminReferralTreeModal.jsx'
+import { buildReferralShareUrl } from '../../utils/referral.js'
 
 function formatInr(n) {
   return new Intl.NumberFormat('en-IN', {
@@ -16,11 +17,15 @@ export default function ReferralsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [treeUser, setTreeUser] = useState(null)
+  const [visits, setVisits] = useState([])
+  const [tab, setTab] = useState('members')
 
   useEffect(() => {
-    adminApi
-      .referrals()
-      .then(setRows)
+    Promise.all([adminApi.referrals(), adminApi.referralVisits()])
+      .then(([members, v]) => {
+        setRows(members)
+        setVisits(v)
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }, [])
@@ -36,8 +41,60 @@ export default function ReferralsPage() {
 
       {error && <div className="form-message error">{error}</div>}
 
+      <div className="admin-filter-tabs">
+        <button
+          type="button"
+          className={`admin-filter-tab ${tab === 'members' ? 'active' : ''}`}
+          onClick={() => setTab('members')}
+        >
+          Members <span className="tab-count">{rows.length}</span>
+        </button>
+        <button
+          type="button"
+          className={`admin-filter-tab ${tab === 'visits' ? 'active' : ''}`}
+          onClick={() => setTab('visits')}
+        >
+          Link visits <span className="tab-count">{visits.length}</span>
+        </button>
+      </div>
+
       {loading ? (
         <p>Loading referral data…</p>
+      ) : tab === 'visits' ? (
+        visits.length === 0 ? (
+          <section className="admin-panel admin-empty-state">
+            <FiEye size={48} />
+            <h3>No link visits yet</h3>
+            <p>Visits are recorded when someone opens /ref/CODE or ?ref=CODE</p>
+          </section>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Sponsor</th>
+                  <th>Path</th>
+                  <th>When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visits.map((v) => (
+                  <tr key={v.id}>
+                    <td>
+                      <strong>{v.code}</strong>
+                    </td>
+                    <td>{v.sponsor_name}</td>
+                    <td>
+                      <small>{v.path || '—'}</small>
+                    </td>
+                    <td>{v.visited_at?.slice(0, 16).replace('T', ' ')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       ) : rows.length === 0 ? (
         <section className="admin-panel admin-empty-state">
           <FiUsers size={48} />
@@ -53,6 +110,8 @@ export default function ReferralsPage() {
                 <th>Email</th>
                 <th>Sponsor</th>
                 <th>Direct refs</th>
+                <th>Link visits</th>
+                <th>Referral URL</th>
                 <th>Package</th>
                 <th>Joined</th>
                 <th>Tree</th>
@@ -82,6 +141,16 @@ export default function ReferralsPage() {
                     )}
                   </td>
                   <td>{r.direct_referral_count}</td>
+                  <td>{r.link_visits ?? 0}</td>
+                  <td>
+                    <a
+                      href={buildReferralShareUrl(window.location.origin, r.member_id)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      /ref/{r.member_id}
+                    </a>
+                  </td>
                   <td>{formatInr(r.amount)}</td>
                   <td>{r.registered_at?.slice(0, 10)}</td>
                   <td>

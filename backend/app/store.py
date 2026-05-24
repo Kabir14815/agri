@@ -143,10 +143,63 @@ class MongoStore:
             "wallet_ledger",
             "help_tickets",
             "exchange_requests",
+            "referral_visits",
         ]:
             self.db[name].create_index([("id", ASCENDING)], unique=True)
+        self.db.referral_visits.create_index([("code", ASCENDING)])
+        self.db.referral_visits.create_index([("visited_at", DESCENDING)])
         self.db.users.create_index([("sponsor_member_id", ASCENDING)])
         self.db.users.create_index([("mlm.member_id", ASCENDING)])
+
+    # ----------------------------- Referral tracking -----------------------
+
+    def lookup_referral_code(self, code: str) -> Optional[dict]:
+        from .referral import normalize_member_id
+
+        member_id = normalize_member_id(code)
+        if not member_id:
+            return None
+        sponsor = self.find_user_by_member_id(member_id)
+        if not sponsor:
+            return None
+        return {
+            "valid": True,
+            "member_id": member_id,
+            "sponsor_name": sponsor.get("full_name"),
+            "sponsor_user_id": sponsor["id"],
+        }
+
+    def track_referral_visit(self, code: str, path: str = "") -> dict:
+        from .referral import normalize_member_id
+
+        member_id = normalize_member_id(code)
+        lookup = self.lookup_referral_code(member_id)
+        if not lookup:
+            raise KeyError("invalid")
+        record = {
+            "id": self._next_id(self.db.referral_visits),
+            "code": member_id,
+            "sponsor_user_id": lookup["sponsor_user_id"],
+            "sponsor_name": lookup["sponsor_name"],
+            "path": path or "",
+            "visited_at": datetime.utcnow().isoformat() + "Z",
+        }
+        self.db.referral_visits.insert_one(record)
+        return self._serialize(record)
+
+    def count_referral_visits(self, code: str) -> int:
+        from .referral import normalize_member_id
+
+        return self.db.referral_visits.count_documents(
+            {"code": normalize_member_id(code)}
+        )
+
+    def list_referral_visits(self, limit: int = 200) -> List[dict]:
+        return self._serialize_many(
+            self.db.referral_visits.find()
+            .sort("id", DESCENDING)
+            .limit(limit)
+        )
 
     # ----------------------------- Public reads ----------------------------
 

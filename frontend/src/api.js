@@ -42,6 +42,13 @@ export const api = {
   getCompany: () => request('/company'),
   submitContact: (data) =>
     request('/contact', { method: 'POST', body: JSON.stringify(data) }),
+  lookupReferral: (code) =>
+    request(`/referral/lookup?code=${encodeURIComponent(code)}`),
+  trackReferralVisit: (data) =>
+    request('/referral/track-visit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   register: (data) =>
     request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   login: (data) =>
@@ -136,6 +143,7 @@ export const adminApi = {
       { auth: true },
     ),
   referrals: () => request('/admin/referrals', { auth: true }),
+  referralVisits: () => request('/admin/referral-visits', { auth: true }),
   updateUserMlm: (userId, data) =>
     request(`/admin/users/${userId}/mlm`, {
       method: 'PATCH',

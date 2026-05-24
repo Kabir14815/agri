@@ -1,16 +1,35 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAdminAuth } from '../admin/AdminAuth.jsx'
 import { useUserAuth } from '../user/UserAuth.jsx'
+import {
+  resolveReferralCode,
+  buildRegisterPath,
+  normalizeReferralCode,
+} from '../utils/referral.js'
 
 export default function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { applySession: applyAdminSession } = useAdminAuth()
   const { applySession: applyUserSession } = useUserAuth()
   const [form, setForm] = useState({ email: '', password: '' })
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [referralCode, setReferralCode] = useState('')
+  const [sponsorName, setSponsorName] = useState(null)
+
+  useEffect(() => {
+    const code = resolveReferralCode(searchParams, '')
+    setReferralCode(code)
+    if (code) {
+      api
+        .lookupReferral(code)
+        .then((r) => setSponsorName(r.sponsor_name))
+        .catch(() => setSponsorName(null))
+    }
+  }, [searchParams])
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -44,24 +63,35 @@ export default function Login() {
     }
   }
 
+  const ref = normalizeReferralCode(referralCode)
+
   return (
     <div className="auth-wrap auth-premium">
       <div className="auth-card auth-card-premium" style={{ maxWidth: 480 }}>
         <h2>Login</h2>
         <p className="sub">
-          Sign in to your KGF Farming account. Admins are taken straight to the
-          admin panel.
+          Sign in to your KGF Farming account. Admins are taken straight to the admin panel.
         </p>
+
+        {ref && (
+          <div className="referral-login-banner">
+            <strong>Referral code: {ref}</strong>
+            {sponsorName && <span> — invited by {sponsorName}</span>}
+            <p>
+              New member?{' '}
+              <Link to={buildRegisterPath(ref)}>Register with this referral code</Link> so we
+              can track your sponsor.
+            </p>
+          </div>
+        )}
 
         <div className="demo-creds">
           <strong>Demo accounts</strong>
           <div>
-            Customer: <code>demo@kgffarming.com</code> /{' '}
-            <code>demo1234</code>
+            Customer: <code>demo@kgffarming.com</code> / <code>demo1234</code>
           </div>
           <div>
-            Admin: <code>admin@kgffarming.com</code> /{' '}
-            <code>admin1234</code>
+            Admin: <code>admin@kgffarming.com</code> / <code>admin1234</code>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
             <button
@@ -117,7 +147,7 @@ export default function Login() {
         </form>
 
         <p className="alt-link">
-          New here? <Link to="/register">Create an account</Link>
+          New here? <Link to={buildRegisterPath(ref)}>Create an account</Link>
         </p>
       </div>
     </div>
