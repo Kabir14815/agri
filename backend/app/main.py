@@ -112,6 +112,12 @@ class AdminUserMlmUpdate(BaseModel):
     amount: Optional[float] = Field(default=None, ge=0)
 
 
+class AdminRecordDepositIn(BaseModel):
+    amount: float = Field(..., gt=0)
+    note: str = Field(default="", max_length=200)
+    payment_mode: str = Field(default="Admin activation", max_length=60)
+
+
 class HelpTicketIn(BaseModel):
     subject: str = Field(..., min_length=3, max_length=120)
     message: str = Field(..., min_length=10, max_length=2000)
@@ -528,7 +534,7 @@ def user_referral_tree(
 
 @app.get("/api/user/deposits")
 def user_deposits(user: dict = Depends(require_user), store: MongoStore = Depends(get_store)):
-    return store.list_deposits_for_user(user["id"])
+    return {"deposits": store.list_deposits_for_user(user["id"])}
 
 
 async def _read_receipt_upload(receipt: Optional[UploadFile]) -> tuple[Optional[str], Optional[str]]:
@@ -897,7 +903,33 @@ def admin_list_deposits(admin: dict = Depends(require_admin), store: MongoStore 
                 "user_email": u.get("email") if u else "",
             }
         )
-    return out
+    return {"deposits": out}
+
+
+@app.post("/api/admin/users/{user_id}/record-deposit", status_code=201)
+def admin_record_deposit(
+    user_id: int,
+    payload: AdminRecordDepositIn,
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    if not store.find_user_by_id(user_id):
+        raise _not_found()
+    dep = store.record_admin_deposit(
+        user_id,
+        payload.amount,
+        note=payload.note,
+        payment_mode=payload.payment_mode,
+    )
+    u = store.find_user_by_id(user_id)
+    return {
+        "success": True,
+        "deposit": {
+            **dep,
+            "user_name": u.get("full_name") if u else "Unknown",
+            "user_email": u.get("email") if u else "",
+        },
+    }
 
 
 @app.get("/api/admin/deposits/{deposit_id}/receipt")

@@ -22,7 +22,7 @@ export default function DepositsPage() {
     setLoading(true)
     adminApi
       .deposits()
-      .then(setItems)
+      .then((rows) => setItems(rows || []))
       .catch((e) => setStatus({ type: 'error', text: e.message }))
       .finally(() => setLoading(false))
   }
@@ -98,8 +98,16 @@ export default function DepositsPage() {
         <p>Loading deposits…</p>
       ) : filtered.length === 0 ? (
         <section className="admin-panel admin-empty-state">
-          <h3>No deposits</h3>
-          <p>Member deposit requests will appear here.</p>
+          <h3>No deposit requests yet</h3>
+          <p>
+            Deposits appear here when a member submits from{' '}
+            <strong>Dashboard → Deposit → Send Request</strong>.
+          </p>
+          <p style={{ marginTop: 12, fontSize: 14, color: 'var(--color-muted)' }}>
+            If you activated someone from <strong>Users → Approve &amp; Activate</strong>, that
+            sets their investment directly (new activations also create a record here after the
+            latest update).
+          </p>
         </section>
       ) : (
         <div className="admin-table-wrap">

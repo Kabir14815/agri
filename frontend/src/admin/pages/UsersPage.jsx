@@ -57,7 +57,7 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
   const loadDeposits = (userId) => {
     adminApi
       .deposits()
-      .then((all) => setDeposits(all.filter((d) => d.user_id === userId)))
+      .then((all) => setDeposits((all || []).filter((d) => d.user_id === userId)))
       .catch(() => setDeposits([]))
   }
 
@@ -100,6 +100,10 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
       await adminApi.updateUserMlm(user.id, {
         amount: value,
         sponsor_member_id: sponsorId.trim().toUpperCase() || null,
+      })
+      await adminApi.recordMemberDeposit(user.id, {
+        amount: value,
+        note: `Admin activation — ${user.member_id || user.id}`,
       })
       const refreshed = await adminApi.getUserReferrals(user.id)
       setReferrals(refreshed)

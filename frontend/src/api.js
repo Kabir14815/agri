@@ -88,7 +88,10 @@ export const api = {
       `/user/referral-tree${memberId ? `?member_id=${encodeURIComponent(memberId)}` : ''}`,
       { auth: 'user' },
     ),
-  listDeposits: () => request('/user/deposits', { auth: 'user' }),
+  listDeposits: () =>
+    request('/user/deposits', { auth: 'user' }).then((d) =>
+      Array.isArray(d) ? d : d.deposits || [],
+    ),
   getDepositModes: () => request('/user/deposit-modes', { auth: 'user' }),
   createDeposit: (formData) => {
     const headers = userAuthHeader()
@@ -99,7 +102,7 @@ export const api = {
     }).then(async (res) => {
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: 'Request failed' }))
-        throw new Error(err.detail || 'Request failed')
+        throw new Error(formatApiError(err.detail))
       }
       return res.json()
     })
@@ -159,7 +162,16 @@ export const adminApi = {
   users: () => request('/admin/users', { auth: true }),
   deleteUser: (id) =>
     request(`/admin/users/${id}`, { method: 'DELETE', auth: true }),
-  deposits: () => request('/admin/deposits', { auth: true }),
+  deposits: () =>
+    request('/admin/deposits', { auth: true }).then((d) =>
+      Array.isArray(d) ? d : d.deposits || [],
+    ),
+  recordMemberDeposit: (userId, data) =>
+    request(`/admin/users/${userId}/record-deposit`, {
+      method: 'POST',
+      auth: true,
+      body: JSON.stringify(data),
+    }),
   updateDeposit: (id, status) =>
     request(`/admin/deposits/${id}`, {
       method: 'PATCH',

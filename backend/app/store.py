@@ -508,6 +508,33 @@ class MongoStore:
     def list_all_deposits(self) -> List[dict]:
         return [self.deposit_public(d) for d in self.db.deposits.find().sort("id", DESCENDING)]
 
+    def record_admin_deposit(
+        self,
+        user_id: int,
+        amount: float,
+        note: str = "",
+        payment_mode: str = "Admin activation",
+    ) -> dict:
+        """Audit trail when admin sets investment directly (does not change balance again)."""
+        now = datetime.utcnow().isoformat() + "Z"
+        dep_id = self._next_id(self.db.deposits)
+        record = {
+            "id": dep_id,
+            "user_id": user_id,
+            "amount": float(amount),
+            "payment_mode": payment_mode,
+            "transaction_number": f"ADMIN-{user_id}-{dep_id}",
+            "status": "approved",
+            "note": note or "Approved from admin users panel",
+            "receipt_filename": "",
+            "receipt_data": "",
+            "created_at": now,
+            "reviewed_at": now,
+            "source": "admin_manual",
+        }
+        self.db.deposits.insert_one(record)
+        return self.deposit_public(record)
+
     def find_deposit(self, deposit_id: int) -> Optional[dict]:
         return self._serialize(self.db.deposits.find_one({"id": deposit_id}))
 
