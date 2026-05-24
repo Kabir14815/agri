@@ -16,6 +16,7 @@ except ImportError:
     pass
 
 from .database import close_database, get_database
+from .mlm import build_dashboard_payload, default_mlm_stats
 from .store import MongoStore
 
 # ----------------------------- Schemas -----------------------------------
@@ -165,14 +166,7 @@ def _public_user(u: dict) -> dict:
 
 
 def _user_dashboard_payload(u: dict) -> dict:
-    return {
-        "id": u["id"],
-        "full_name": u["full_name"],
-        "email": u["email"],
-        "amount": float(u.get("amount", 0) or 0),
-        "role": u.get("role", "customer"),
-        "phone": u.get("phone"),
-    }
+    return build_dashboard_payload(u)
 
 
 def _bearer_token(authorization: Optional[str]) -> str:

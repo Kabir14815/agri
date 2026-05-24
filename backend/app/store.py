@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from pymongo import ASCENDING, DESCENDING
 from pymongo.database import Database
 
+from .mlm import DEMO_MLM_BY_EMAIL, default_mlm_stats
 from .data import (
     ACHIEVERS,
     BLOG_POSTS,
@@ -129,6 +130,8 @@ class MongoStore:
             if self.db.users.find_one({"email": demo["email"]}) is None:
                 user = {**demo, "registered_at": now}
                 user["id"] = self._next_id(self.db.users)
+                if demo["email"] in DEMO_MLM_BY_EMAIL:
+                    user["mlm"] = DEMO_MLM_BY_EMAIL[demo["email"]]
                 self.db.users.insert_one(user)
 
         self.db.users.create_index([("email", ASCENDING)], unique=True)
@@ -184,6 +187,7 @@ class MongoStore:
         user["id"] = self._next_id(coll)
         user["amount"] = float(user.get("amount", 0) or 0)
         user["registered_at"] = datetime.utcnow().isoformat() + "Z"
+        user["mlm"] = default_mlm_stats(user["id"], user["amount"])
         coll.insert_one(user)
         return self._serialize(user)
 

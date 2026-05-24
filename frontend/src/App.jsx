@@ -35,12 +35,13 @@ import UsersPage from './admin/pages/UsersPage.jsx'
 export default function App() {
   const { pathname } = useLocation()
   const isAdmin = pathname.startsWith('/admin')
+  const isMemberDash = pathname.startsWith('/dashboard')
 
   return (
     <AdminAuthProvider>
       <UserAuthProvider>
       <ScrollToTop />
-      {!isAdmin && (
+      {!isAdmin && !isMemberDash && (
         <>
           <TopBar />
           <Navbar />
@@ -93,7 +94,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-      {!isAdmin && <Footer />}
+      {!isAdmin && !isMemberDash && <Footer />}
       </UserAuthProvider>
     </AdminAuthProvider>
   )
