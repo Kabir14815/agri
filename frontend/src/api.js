@@ -47,6 +47,25 @@ export const api = {
   login: (data) =>
     request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   userDashboard: () => request('/user/dashboard', { auth: 'user' }),
+  getProfile: () => request('/user/profile', { auth: 'user' }),
+  updateProfile: (data) =>
+    request('/user/profile', {
+      method: 'PATCH',
+      auth: 'user',
+      body: JSON.stringify(data),
+    }),
+  updateBank: (data) =>
+    request('/user/bank', {
+      method: 'PATCH',
+      auth: 'user',
+      body: JSON.stringify(data),
+    }),
+  changePassword: (data) =>
+    request('/user/password', {
+      method: 'PATCH',
+      auth: 'user',
+      body: JSON.stringify(data),
+    }),
 }
 
 // ---------- Admin API ----------

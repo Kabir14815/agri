@@ -19,6 +19,7 @@ import NotFound from './pages/NotFound.jsx'
 
 import { AdminAuthProvider, RequireAdmin } from './admin/AdminAuth.jsx'
 import { UserAuthProvider, RequireUser } from './user/UserAuth.jsx'
+import { CompanyProvider } from './context/CompanyContext.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import AdminLayout from './admin/AdminLayout.jsx'
 import AdminLogin from './admin/AdminLogin.jsx'
@@ -40,6 +41,7 @@ export default function App() {
   return (
     <AdminAuthProvider>
       <UserAuthProvider>
+      <CompanyProvider>
       <ScrollToTop />
       {!isAdmin && !isMemberDash && (
         <>
@@ -95,6 +97,7 @@ export default function App() {
         </Routes>
       </main>
       {!isAdmin && !isMemberDash && <Footer />}
+      </CompanyProvider>
       </UserAuthProvider>
     </AdminAuthProvider>
   )

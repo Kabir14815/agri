@@ -8,15 +8,20 @@ import {
   FiInstagram,
   FiYoutube,
 } from 'react-icons/fi'
+import { useCompany } from '../context/CompanyContext.jsx'
 
 export default function Footer() {
+  const { company } = useCompany()
+  const phone = company.phone?.replace(/\s/g, '') || '+919355240503'
+  const tel = phone.startsWith('+') ? phone : `+${phone}`
+
   return (
     <footer>
       <div className="footer-top-banner">
         <div className="container">
           <p>
-            <strong>Vermicompost powered plant boost!</strong> Nutrient-rich organic fertilizer
-            and soil conditioner — Kamauput Growth Farming Pvt Ltd.
+            <strong>{company.tagline || 'Vermicompost powered plant boost!'}</strong> —{' '}
+            {company.full_name || company.name}
           </p>
         </div>
       </div>
@@ -26,9 +31,9 @@ export default function Footer() {
             <div className="brand" style={{ color: '#fff' }}>
               <div className="brand-logo">K</div>
               <div>
-                <div style={{ color: '#fff' }}>KGF Farming</div>
+                <div style={{ color: '#fff' }}>{company.name}</div>
                 <div className="brand-sub" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                  Kamauput Growth Farming
+                  {company.full_name}
                 </div>
               </div>
             </div>
@@ -70,25 +75,22 @@ export default function Footer() {
             <ul className="footer-contact">
               <li>
                 <span className="icon"><FiPhone /></span>
-                <a href="tel:+919355240503">+91 93552 40503</a>
+                <a href={`tel:${tel}`}>{company.phone}</a>
               </li>
               <li>
                 <span className="icon"><FiMail /></span>
-                <a href="mailto:info@kgffarming.com">info@kgffarming.com</a>
+                <a href={`mailto:${company.email}`}>{company.email}</a>
               </li>
               <li>
                 <span className="icon"><FiMapPin /></span>
-                <span>
-                  1133/3, Sheetal Puri Colony, Apollo Road, Jind 126102 — Near Madhur Milan
-                  Hotel, Gali No. 03
-                </span>
+                <span>{company.address}</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="footer-bottom">
-          <div>© {new Date().getFullYear()} Kamauput Growth Farming Pvt Ltd.</div>
+          <div>© {new Date().getFullYear()} {company.full_name || company.name}</div>
           <div>Healthy Soil · Healthy Plants · Healthy Yield</div>
         </div>
       </div>

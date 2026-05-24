@@ -17,6 +17,7 @@ except ImportError:
 
 from .database import close_database, get_database
 from .mlm import build_dashboard_payload, default_mlm_stats
+from .profile_utils import DEMO_PROFILE_OVERRIDES, user_profile_payload
 from .store import MongoStore
 
 # ----------------------------- Schemas -----------------------------------
@@ -40,6 +41,32 @@ class RegisterPayload(BaseModel):
     city: Optional[str] = Field(default=None, max_length=60)
     state: Optional[str] = Field(default=None, max_length=60)
     pincode: Optional[str] = Field(default=None, max_length=10)
+    country: Optional[str] = Field(default="India", max_length=60)
+
+
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = Field(default=None, min_length=2, max_length=80)
+    phone: Optional[str] = Field(default=None, min_length=6, max_length=20)
+    address: Optional[str] = Field(default=None, max_length=200)
+    city: Optional[str] = Field(default=None, max_length=60)
+    state: Optional[str] = Field(default=None, max_length=60)
+    pincode: Optional[str] = Field(default=None, max_length=10)
+    country: Optional[str] = Field(default=None, max_length=60)
+    gst_no: Optional[str] = Field(default=None, max_length=20)
+    nominee_name: Optional[str] = Field(default=None, max_length=80)
+    nominee_relation: Optional[str] = Field(default=None, max_length=40)
+
+
+class BankUpdate(BaseModel):
+    account_holder: str = Field(..., min_length=2, max_length=80)
+    bank_name: str = Field(..., min_length=2, max_length=80)
+    account_number: str = Field(..., min_length=6, max_length=24)
+    ifsc: str = Field(..., min_length=8, max_length=16)
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(..., min_length=6, max_length=80)
+    new_password: str = Field(..., min_length=6, max_length=80)
 
 
 class LoginPayload(BaseModel):
@@ -303,6 +330,71 @@ def login(payload: LoginPayload, store: MongoStore = Depends(get_store)):
 @app.get("/api/user/dashboard")
 def user_dashboard(user: dict = Depends(require_user)):
     return _user_dashboard_payload(user)
+
+
+def _profile_for_user(user: dict) -> dict:
+    merged = dict(user)
+    overrides = DEMO_PROFILE_OVERRIDES.get(user.get("email", ""))
+    if overrides:
+        for key, val in overrides.items():
+            if key == "bank":
+                merged["bank"] = {**(merged.get("bank") or {}), **val}
+            else:
+                merged[key] = val
+    profile = user_profile_payload(merged)
+    dash = build_dashboard_payload(merged)
+    profile["member_id"] = dash["member_id"]
+    profile["rank"] = dash["rank"]
+    return profile
+
+
+@app.get("/api/user/profile")
+def user_profile(user: dict = Depends(require_user)):
+    return _profile_for_user(user)
+
+
+@app.patch("/api/user/profile")
+def user_profile_update(
+    payload: ProfileUpdate,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    data = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    try:
+        updated = store.update_user(user["id"], data)
+    except KeyError:
+        raise _not_found() from None
+    return {"success": True, "profile": _profile_for_user(updated)}
+
+
+@app.patch("/api/user/bank")
+def user_bank_update(
+    payload: BankUpdate,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    try:
+        updated = store.update_user(user["id"], {"bank": payload.model_dump()})
+    except KeyError:
+        raise _not_found() from None
+    return {"success": True, "profile": _profile_for_user(updated)}
+
+
+@app.patch("/api/user/password")
+def user_password_change(
+    payload: PasswordChange,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    if user.get("password") != payload.current_password:
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    try:
+        store.update_user(user["id"], {"password": payload.new_password})
+    except KeyError:
+        raise _not_found() from None
+    return {"success": True, "message": "Password updated successfully"}
 
 
 # ------------------------------ Admin API --------------------------------

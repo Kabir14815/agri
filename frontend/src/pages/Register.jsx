@@ -15,6 +15,7 @@ export default function Register() {
     city: '',
     state: 'Haryana',
     pincode: '',
+    country: 'India',
   })
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -129,6 +130,15 @@ export default function Register() {
                   className="form-control"
                   name="state"
                   value={form.state}
+                  onChange={onChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>Country</label>
+                <input
+                  className="form-control"
+                  name="country"
+                  value={form.country}
                   onChange={onChange}
                 />
               </div>

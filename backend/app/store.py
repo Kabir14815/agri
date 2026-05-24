@@ -187,9 +187,46 @@ class MongoStore:
         user["id"] = self._next_id(coll)
         user["amount"] = float(user.get("amount", 0) or 0)
         user["registered_at"] = datetime.utcnow().isoformat() + "Z"
+        user.setdefault("country", data.get("country") or "India")
+        user.setdefault("gst_no", "")
+        user.setdefault("nominee_name", "")
+        user.setdefault("nominee_relation", "")
+        user.setdefault("bank", {
+            "account_holder": user.get("full_name", ""),
+            "bank_name": "",
+            "account_number": "",
+            "ifsc": "",
+        })
         user["mlm"] = default_mlm_stats(user["id"], user["amount"])
         coll.insert_one(user)
         return self._serialize(user)
+
+    def update_user(self, user_id: int, updates: dict) -> dict:
+        allowed = {
+            "full_name",
+            "phone",
+            "address",
+            "city",
+            "state",
+            "pincode",
+            "country",
+            "gst_no",
+            "nominee_name",
+            "nominee_relation",
+            "bank",
+            "password",
+        }
+        payload = {k: v for k, v in updates.items() if k in allowed}
+        if not payload:
+            raise ValueError("No valid fields to update")
+        result = self.db.users.find_one_and_update(
+            {"id": user_id},
+            {"$set": payload},
+            return_document=True,
+        )
+        if not result:
+            raise KeyError("not_found")
+        return self._serialize(result)
 
     def list_users_public(self) -> List[dict]:
         users = self._serialize_many(self.db.users.find())

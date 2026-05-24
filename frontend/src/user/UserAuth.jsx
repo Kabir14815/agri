@@ -72,8 +72,24 @@ export function UserAuthProvider({ children }) {
     setUser(null)
   }
 
+  const refreshUser = (userData) => {
+    setUser(userData)
+    const key = localStorage.getItem('kgf_franchisee_token')
+      ? 'kgf_franchisee_user'
+      : 'kgf_user'
+    localStorage.setItem(key, JSON.stringify(userData))
+  }
+
+  const reloadUser = () =>
+    api.userDashboard().then((data) => {
+      refreshUser(data)
+      return data
+    })
+
   return (
-    <UserAuthContext.Provider value={{ user, applySession, logout, bootstrapped }}>
+    <UserAuthContext.Provider
+      value={{ user, applySession, logout, refreshUser, reloadUser, bootstrapped }}
+    >
       {children}
     </UserAuthContext.Provider>
   )
