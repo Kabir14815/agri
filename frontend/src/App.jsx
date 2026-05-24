@@ -67,7 +67,7 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/franchisee-login" element={<FranchiseeLogin />} />
           <Route
-            path="/dashboard"
+            path="/dashboard/*"
             element={
               <RequireUser>
                 <Dashboard />
