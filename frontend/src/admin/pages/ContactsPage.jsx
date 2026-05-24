@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { FiTrash2 } from 'react-icons/fi'
 import { adminApi } from '../../api.js'
+import { useAdminDialog } from '../AdminDialog.jsx'
 
 export default function ContactsPage() {
+  const dialog = useAdminDialog()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState(null)
@@ -18,7 +20,13 @@ export default function ContactsPage() {
   useEffect(load, [])
 
   const remove = async (id) => {
-    if (!confirm('Delete this contact message?')) return
+    const ok = await dialog.confirm({
+      title: 'Delete message?',
+      message: 'This contact message will be removed permanently.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    })
+    if (!ok) return
     try {
       await adminApi.deleteContact(id)
       load()

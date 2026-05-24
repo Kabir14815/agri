@@ -20,6 +20,7 @@ import {
   FiExternalLink,
 } from 'react-icons/fi'
 import { useAdminAuth } from './AdminAuth.jsx'
+import { AdminDialogProvider } from './AdminDialog.jsx'
 
 const NAV = [
   { to: '/admin', icon: <FiGrid />, label: 'Dashboard', end: true },
@@ -49,6 +50,7 @@ export default function AdminLayout() {
   }
 
   return (
+    <AdminDialogProvider>
     <div className="admin-shell">
       <aside className={`admin-sidebar ${open ? 'open' : ''}`}>
         <div className="admin-brand">
@@ -115,5 +117,6 @@ export default function AdminLayout() {
         </div>
       </div>
     </div>
+    </AdminDialogProvider>
   )
 }

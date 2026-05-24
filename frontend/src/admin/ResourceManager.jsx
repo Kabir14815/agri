@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FiEdit2, FiTrash2, FiPlus, FiX } from 'react-icons/fi'
 import { adminApi } from '../api.js'
+import { useAdminDialog } from './AdminDialog.jsx'
 
 function emptyFromFields(fields) {
   const obj = {}
@@ -18,6 +19,7 @@ export default function ResourceManager({
   columns,
   imageField,
 }) {
+  const dialog = useAdminDialog()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null) // null = closed, {} = creating, {...} = editing existing
@@ -81,7 +83,14 @@ export default function ResourceManager({
   }
 
   const remove = async (item) => {
-    if (!confirm(`Delete "${item[columns[0].key] || item.id}"?`)) return
+    const label = item[columns[0].key] || item.id
+    const ok = await dialog.confirm({
+      title: 'Delete item?',
+      message: `Remove "${label}" permanently?`,
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    })
+    if (!ok) return
     try {
       await adminApi.remove(resource, item.id)
       setStatus({ type: 'success', text: 'Deleted.' })

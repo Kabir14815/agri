@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fi'
 import { adminApi } from '../../api.js'
 import { useAdminAuth } from '../AdminAuth.jsx'
+import { useAdminDialog, confirmDelete } from '../AdminDialog.jsx'
 import AdminReferralTreeModal from '../components/AdminReferralTreeModal.jsx'
 
 const ROLE_COLORS = {
@@ -45,6 +46,7 @@ function formatInr(n) {
 }
 
 function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onViewTree }) {
+  const dialog = useAdminDialog()
   const [amount, setAmount] = useState('')
   const [sponsorId, setSponsorId] = useState('')
   const [referrals, setReferrals] = useState(null)
@@ -81,16 +83,18 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
   const approveActivate = async () => {
     const value = Number(amount)
     if (!value || value <= 0) {
-      alert('Enter the approved investment amount (₹) first.')
+      await dialog.error('Enter the approved investment amount (₹) first.', 'Amount required')
       return
     }
-    if (
-      !confirm(
-        `Approve & activate ${user.full_name} with investment ₹${value.toLocaleString('en-IN')}?`,
-      )
-    ) {
-      return
-    }
+    const ok = await dialog.confirm({
+      title: 'Approve & activate member?',
+      message: `Activate ${user.full_name} with this investment package.`,
+      detail: formatInr(value),
+      confirmLabel: 'Approve & Activate',
+      variant: 'primary',
+    })
+    if (!ok) return
+
     setSaving(true)
     try {
       await adminApi.updateUserMlm(user.id, {
@@ -100,27 +104,35 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
       const refreshed = await adminApi.getUserReferrals(user.id)
       setReferrals(refreshed)
       onAmountSaved?.(value)
-      alert('Member approved and activated. Daily interest will accrue on this amount.')
+      await dialog.success(
+        'Member approved and activated. Daily interest (10% p.m., 1% TDS) will accrue to their income wallet.',
+        'Member activated',
+      )
     } catch (e) {
-      alert(e.message)
+      await dialog.error(e.message)
     } finally {
       setSaving(false)
     }
   }
 
   const reviewDeposit = async (depositId, newStatus) => {
-    if (
-      !confirm(
-        `${newStatus === 'approved' ? 'Approve' : 'Reject'} deposit #${depositId} for ${user.full_name}?`,
-      )
-    ) {
-      return
-    }
+    const isApprove = newStatus === 'approved'
+    const ok = await dialog.confirm({
+      title: isApprove ? 'Approve deposit?' : 'Reject deposit?',
+      message: `Deposit #${depositId} for ${user.full_name}`,
+      detail: isApprove
+        ? 'This credits their package amount and starts investment returns.'
+        : 'The member will need to submit a new deposit request.',
+      confirmLabel: isApprove ? 'Approve deposit' : 'Reject deposit',
+      variant: isApprove ? 'primary' : 'danger',
+    })
+    if (!ok) return
+
     setDepositBusy(depositId)
     try {
       await adminApi.updateDeposit(depositId, newStatus)
       loadDeposits(user.id)
-      if (newStatus === 'approved') {
+      if (isApprove) {
         const all = await adminApi.deposits()
         const approved = all.find((d) => d.id === depositId)
         if (approved) {
@@ -128,17 +140,23 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
           onAmountSaved?.(approved.amount)
         }
       }
-      alert(`Deposit #${depositId} ${newStatus}.`)
+      await dialog.success(
+        `Deposit #${depositId} has been ${newStatus}.`,
+        isApprove ? 'Deposit approved' : 'Deposit rejected',
+      )
     } catch (e) {
-      alert(e.message)
+      await dialog.error(e.message)
     } finally {
       setDepositBusy(null)
     }
   }
 
   return (
-    <div className="admin-modal-backdrop" onClick={onClose}>
-      <div className="admin-modal admin-profile-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="admin-modal-backdrop admin-modal-backdrop--profile" onClick={onClose}>
+      <div
+        className="admin-modal admin-profile-modal admin-profile-modal-v2"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="admin-modal-head">
           <h3>Member profile</h3>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
@@ -347,6 +365,7 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
 
 export default function UsersPage() {
   const { user: me } = useAdminAuth()
+  const dialog = useAdminDialog()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState(null)
@@ -365,7 +384,8 @@ export default function UsersPage() {
   useEffect(load, [])
 
   const remove = async (u) => {
-    if (!confirm(`Delete user "${u.full_name}"?`)) return
+    const ok = await dialog.confirm(confirmDelete(u.full_name, 'member'))
+    if (!ok) return
     try {
       await adminApi.deleteUser(u.id)
       setSelected(null)

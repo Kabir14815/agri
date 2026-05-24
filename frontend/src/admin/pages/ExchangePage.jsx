@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FiCheck, FiX } from 'react-icons/fi'
 import { adminApi } from '../../api.js'
+import { useAdminDialog } from '../AdminDialog.jsx'
 
 function formatInr(n) {
   return new Intl.NumberFormat('en-IN', {
@@ -11,6 +12,7 @@ function formatInr(n) {
 }
 
 export default function ExchangePage() {
+  const dialog = useAdminDialog()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState(null)
@@ -28,7 +30,14 @@ export default function ExchangePage() {
   useEffect(load, [])
 
   const review = async (id, newStatus) => {
-    if (!confirm(`${newStatus === 'approved' ? 'Approve' : 'Reject'} exchange #${id}?`)) return
+    const isApprove = newStatus === 'approved'
+    const ok = await dialog.confirm({
+      title: isApprove ? 'Approve exchange?' : 'Reject exchange?',
+      message: `Exchange request #${id}`,
+      confirmLabel: isApprove ? 'Approve' : 'Reject',
+      variant: isApprove ? 'primary' : 'danger',
+    })
+    if (!ok) return
     try {
       await adminApi.updateExchange(id, newStatus)
       setStatus({ type: 'success', text: `Exchange #${id} ${newStatus}.` })
