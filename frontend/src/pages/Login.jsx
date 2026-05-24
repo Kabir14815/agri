@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAdminAuth } from '../admin/AdminAuth.jsx'
 import { useUserAuth } from '../user/UserAuth.jsx'
 import {
-  resolveReferralCode,
+  resolveReferralCodeFromUrl,
+  clearStoredReferralCode,
   buildRegisterPath,
   normalizeReferralCode,
 } from '../utils/referral.js'
 
 export default function Login() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [searchParams] = useSearchParams()
   const { applySession: applyAdminSession } = useAdminAuth()
   const { applySession: applyUserSession } = useUserAuth()
@@ -21,15 +23,24 @@ export default function Login() {
   const [sponsorName, setSponsorName] = useState(null)
 
   useEffect(() => {
-    const code = resolveReferralCode(searchParams, '')
+    const code = resolveReferralCodeFromUrl(searchParams, '', pathname)
     setReferralCode(code)
     if (code) {
       api
         .lookupReferral(code)
         .then((r) => setSponsorName(r.sponsor_name))
         .catch(() => setSponsorName(null))
+    } else {
+      setSponsorName(null)
     }
-  }, [searchParams])
+  }, [searchParams, pathname])
+
+  const dismissReferral = () => {
+    clearStoredReferralCode()
+    setReferralCode('')
+    setSponsorName(null)
+    navigate('/login', { replace: true })
+  }
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -76,12 +87,19 @@ export default function Login() {
         {ref && (
           <div className="referral-login-banner">
             <strong>Referral code: {ref}</strong>
-            {sponsorName && <span> — invited by {sponsorName}</span>}
+            {sponsorName ? (
+              <span> — invited by {sponsorName}</span>
+            ) : (
+              <span> — checking sponsor…</span>
+            )}
             <p>
               New member?{' '}
               <Link to={buildRegisterPath(ref)}>Register with this referral code</Link> so we
               can track your sponsor.
             </p>
+            <button type="button" className="referral-banner-dismiss" onClick={dismissReferral}>
+              Not joining under this sponsor
+            </button>
           </div>
         )}
 
@@ -147,7 +165,7 @@ export default function Login() {
         </form>
 
         <p className="alt-link">
-          New here? <Link to={buildRegisterPath(ref)}>Create an account</Link>
+          New here? <Link to={ref ? buildRegisterPath(ref) : '/register'}>Create an account</Link>
         </p>
       </div>
     </div>

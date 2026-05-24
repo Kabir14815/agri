@@ -4,7 +4,7 @@ import { api } from '../api.js'
 import {
   persistReferralCode,
   referralCodeFromPathname,
-  resolveReferralCode,
+  resolveReferralCodeFromUrl,
 } from '../utils/referral.js'
 
 /** Captures ?ref= and /ref/CODE from any public page; records visit once per session */
@@ -16,7 +16,7 @@ export default function ReferralTracker() {
 
     const searchParams = new URLSearchParams(search)
     const pathCode = referralCodeFromPathname(pathname)
-    const code = resolveReferralCode(searchParams, pathCode)
+    const code = resolveReferralCodeFromUrl(searchParams, pathCode, pathname)
     if (!code) return
 
     persistReferralCode(code)

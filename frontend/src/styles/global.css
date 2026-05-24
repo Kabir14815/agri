@@ -1555,6 +1555,22 @@ textarea.form-control {
   font-weight: 700;
 }
 
+.referral-banner-dismiss {
+  display: block;
+  margin-top: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #166534;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.referral-banner-dismiss:hover {
+  color: #14532d;
+}
+
 .referral-code-group {
   background: var(--color-bg-soft);
   border: 1px dashed var(--color-primary-light);

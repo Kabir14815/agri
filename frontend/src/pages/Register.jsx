@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { FiUser, FiMail, FiPhone, FiMapPin, FiLock, FiTag } from 'react-icons/fi'
 import { api } from '../api.js'
 import {
@@ -12,9 +12,10 @@ import {
 
 export default function Register() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [searchParams] = useSearchParams()
   const { code: routeCode } = useParams()
-  const initialCode = resolveReferralCode(searchParams, routeCode)
+  const initialCode = resolveReferralCode(searchParams, routeCode, pathname)
 
   const [form, setForm] = useState({
     full_name: '',
@@ -37,11 +38,9 @@ export default function Register() {
   const activeCode = normalizeReferralCode(form.sponsor_member_id)
 
   useEffect(() => {
-    const code = resolveReferralCode(searchParams, routeCode)
-    if (code) {
-      setForm((f) => ({ ...f, sponsor_member_id: code }))
-    }
-  }, [searchParams, routeCode])
+    const code = resolveReferralCode(searchParams, routeCode, pathname)
+    setForm((f) => ({ ...f, sponsor_member_id: code }))
+  }, [searchParams, routeCode, pathname])
 
   useEffect(() => {
     if (!activeCode || activeCode.length < 3) {
@@ -155,7 +154,7 @@ export default function Register() {
                 name="sponsor_member_id"
                 value={form.sponsor_member_id}
                 onChange={onChange}
-                placeholder="e.g. KGF870365"
+                placeholder="Sponsor member ID (any KGF member)"
                 autoComplete="off"
               />
               {codeStatus && (

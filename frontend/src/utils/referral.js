@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'kgf_referral_code'
+const SESSION_FLAG = 'kgf_referral_session'
 
 /** Normalize referral / member id from user input or URL */
 export function normalizeReferralCode(raw) {
@@ -28,10 +29,19 @@ export function persistReferralCode(code) {
   try {
     localStorage.setItem(STORAGE_KEY, normalized)
     sessionStorage.setItem(STORAGE_KEY, normalized)
+    sessionStorage.setItem(SESSION_FLAG, '1')
   } catch {
     /* private browsing */
   }
   return normalized
+}
+
+export function hasActiveReferralSession() {
+  try {
+    return sessionStorage.getItem(SESSION_FLAG) === '1'
+  } catch {
+    return false
+  }
 }
 
 export function getStoredReferralCode() {
@@ -50,18 +60,32 @@ export function clearStoredReferralCode() {
   try {
     localStorage.removeItem(STORAGE_KEY)
     sessionStorage.removeItem(STORAGE_KEY)
+    sessionStorage.removeItem(SESSION_FLAG)
   } catch {
     /* ignore */
   }
 }
 
-/** URL param > stored > empty */
-export function resolveReferralCode(searchParams, routeCode) {
-  const fromUrl = getRefFromSearchParams(searchParams)
+/** Referral from current URL only (no stale storage) — use for login banners */
+export function resolveReferralCodeFromUrl(searchParams, routeCode, pathname = '') {
   const fromRoute = normalizeReferralCode(routeCode)
   if (fromRoute) return persistReferralCode(fromRoute)
+  const fromUrl = getRefFromSearchParams(searchParams)
   if (fromUrl) return persistReferralCode(fromUrl)
-  return getStoredReferralCode()
+  const fromPath = referralCodeFromPathname(pathname)
+  if (fromPath) return persistReferralCode(fromPath)
+  return ''
+}
+
+/**
+ * Referral for registration: current URL first, then stored code only if the
+ * user opened a referral link this browser session (supports many sponsors).
+ */
+export function resolveReferralCode(searchParams, routeCode, pathname = '') {
+  const fromUrl = resolveReferralCodeFromUrl(searchParams, routeCode, pathname)
+  if (fromUrl) return fromUrl
+  if (hasActiveReferralSession()) return getStoredReferralCode()
+  return ''
 }
 
 export function buildRegisterPath(code) {
