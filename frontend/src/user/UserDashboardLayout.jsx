@@ -37,17 +37,7 @@ const NAV = [
       { to: '/dashboard/profile/password', label: 'Change Password' },
     ],
   },
-  {
-    key: 'deposit',
-    to: '/dashboard/deposit',
-    icon: FiPlusCircle,
-    label: 'Deposit',
-    color: '#22c55e',
-    submenu: [
-      { to: '/dashboard/deposit', end: true, label: 'Request Deposit' },
-      { to: '/dashboard/deposit/history', label: 'Deposit History' },
-    ],
-  },
+  { to: '/dashboard/deposit', icon: FiPlusCircle, label: 'Deposit', color: '#22c55e' },
   {
     key: 'team',
     to: '/dashboard/team',
@@ -115,13 +105,12 @@ export default function UserDashboardLayout() {
   const { pathname } = useLocation()
   const [openMenus, setOpenMenus] = useState({
     profile: pathname.startsWith('/dashboard/profile'),
-    deposit: pathname.startsWith('/dashboard/deposit'),
     team: pathname.startsWith('/dashboard/team'),
     wallet: pathname.startsWith('/dashboard/wallet'),
   })
 
   useEffect(() => {
-    const keys = ['profile', 'deposit', 'team', 'wallet']
+    const keys = ['profile', 'team', 'wallet']
     keys.forEach((key) => {
       if (pathname.startsWith(`/dashboard/${key}`)) {
         setOpenMenus((o) => ({ ...o, [key]: true }))

@@ -1,10 +1,6 @@
-import DashboardSectionLayout from '../../components/DashboardSectionLayout.jsx'
+import { Outlet } from 'react-router-dom'
 
-const TABS = [
-  { to: '/dashboard/deposit', end: true, label: 'Request Deposit' },
-  { to: '/dashboard/deposit/history', label: 'Deposit History' },
-]
-
+/** Deposit pages use full-width card layout (no sub-tabs). */
 export default function DepositLayout() {
-  return <DashboardSectionLayout tabs={TABS} />
+  return <Outlet />
 }

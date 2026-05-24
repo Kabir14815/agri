@@ -79,12 +79,21 @@ export const api = {
       { auth: 'user' },
     ),
   listDeposits: () => request('/user/deposits', { auth: 'user' }),
-  createDeposit: (data) =>
-    request('/user/deposits', {
+  getDepositModes: () => request('/user/deposit-modes', { auth: 'user' }),
+  createDeposit: (formData) => {
+    const headers = userAuthHeader()
+    return fetch(`${BASE}/user/deposits`, {
       method: 'POST',
-      auth: 'user',
-      body: JSON.stringify(data),
-    }),
+      headers,
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Request failed' }))
+        throw new Error(err.detail || 'Request failed')
+      }
+      return res.json()
+    })
+  },
   getWallet: () => request('/user/wallet', { auth: 'user' }),
   getWalletStatement: (wallet) =>
     request(
@@ -135,6 +144,7 @@ export const adminApi = {
       auth: true,
       body: JSON.stringify({ status }),
     }),
+  getDepositReceipt: (id) => request(`/admin/deposits/${id}/receipt`, { auth: true }),
   getUserReferrals: (userId) =>
     request(`/admin/users/${userId}/referrals`, { auth: true }),
   getUserReferralTree: (userId, memberId) =>

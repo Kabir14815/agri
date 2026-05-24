@@ -1195,6 +1195,164 @@
   }
 }
 
+/* Deposit page — reference layout */
+.mlm-deposit-page {
+  width: 100%;
+}
+
+.mlm-deposit-card {
+  background: #1a1d23;
+  border: 1px solid #2d323c;
+  border-radius: 14px;
+  min-height: 420px;
+  padding: 28px 32px 36px;
+  display: grid;
+  grid-template-columns: 1fr minmax(280px, 420px);
+  gap: 24px 48px;
+  align-items: start;
+}
+
+.mlm-deposit-title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 2.25rem;
+  font-weight: 400;
+  color: #f8fafc;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.mlm-deposit-form-wrap {
+  width: 100%;
+}
+
+.mlm-deposit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.mlm-deposit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mlm-deposit-field label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #f1f5f9;
+}
+
+.mlm-deposit-field label .req {
+  color: #f87171;
+  margin-left: 2px;
+}
+
+.mlm-deposit-field select,
+.mlm-deposit-field input[type='text'],
+.mlm-deposit-field input[type='number'] {
+  width: 100%;
+  background: #0f1114;
+  border: 1px solid #3f4654;
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: #f8fafc;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.mlm-deposit-field select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239ca3af' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.mlm-deposit-field select option {
+  background: #1a1d23;
+  color: #f8fafc;
+}
+
+.mlm-file-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mlm-file-btn {
+  background: #f8fafc;
+  color: #1a1d23;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mlm-file-btn:hover {
+  background: #e2e8f0;
+}
+
+.mlm-file-name {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.mlm-deposit-submit {
+  align-self: flex-start;
+  min-width: 160px;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: filter 0.15s, transform 0.15s;
+}
+
+.mlm-deposit-submit:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.mlm-deposit-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.mlm-deposit-history-link {
+  margin-top: 20px;
+  font-size: 13px;
+}
+
+.mlm-deposit-history-link a {
+  color: #60a5fa;
+  text-decoration: none;
+}
+
+.mlm-deposit-history-link a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .mlm-deposit-card {
+    grid-template-columns: 1fr;
+    padding: 22px 20px 28px;
+  }
+
+  .mlm-deposit-form-wrap {
+    max-width: 100%;
+  }
+}
+
 /* Referral tree */
 .mlm-tree-title {
   font-family: Georgia, 'Times New Roman', serif;

@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Header, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Header, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 
@@ -87,7 +87,20 @@ class UserAmountUpdate(BaseModel):
 
 class DepositRequest(BaseModel):
     amount: float = Field(..., gt=0)
+    payment_mode: str = Field(..., min_length=2, max_length=40)
+    transaction_number: str = Field(..., min_length=3, max_length=80)
     note: Optional[str] = Field(default="", max_length=200)
+
+
+DEPOSIT_PAYMENT_MODES = (
+    "UPI",
+    "Bank Transfer",
+    "NEFT",
+    "RTGS",
+    "IMPS",
+    "Cash",
+    "Other",
+)
 
 
 class DepositStatusUpdate(BaseModel):
@@ -499,13 +512,71 @@ def user_deposits(user: dict = Depends(require_user), store: MongoStore = Depend
     return store.list_deposits_for_user(user["id"])
 
 
-@app.post("/api/user/deposits", status_code=201)
-def user_create_deposit(
+async def _read_receipt_upload(receipt: Optional[UploadFile]) -> tuple[Optional[str], Optional[str]]:
+    if not receipt or not receipt.filename:
+        return None, None
+    raw = await receipt.read()
+    if not raw:
+        return None, None
+    if len(raw) > 2_500_000:
+        raise HTTPException(status_code=400, detail="Receipt file too large (max 2.5MB)")
+    import base64
+
+    mime = receipt.content_type or "application/octet-stream"
+    encoded = base64.b64encode(raw).decode("ascii")
+    return receipt.filename, f"data:{mime};base64,{encoded}"
+
+
+@app.get("/api/user/deposit-modes")
+def user_deposit_modes():
+    return {"modes": list(DEPOSIT_PAYMENT_MODES)}
+
+
+@app.post("/api/user/deposits", status_code=status.HTTP_201_CREATED)
+async def user_create_deposit(
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+    payment_mode: str = Form(...),
+    amount: float = Form(...),
+    transaction_number: str = Form(...),
+    receipt: Optional[UploadFile] = File(None),
+):
+    mode = payment_mode.strip()
+    if mode not in DEPOSIT_PAYMENT_MODES:
+        raise HTTPException(status_code=400, detail="Invalid payment mode")
+    txn = transaction_number.strip()
+    if not txn:
+        raise HTTPException(status_code=400, detail="Transaction number is required")
+    if float(amount) <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be greater than zero")
+    filename, data = await _read_receipt_upload(receipt)
+    dep = store.create_deposit_request(
+        user["id"],
+        float(amount),
+        payment_mode=mode,
+        transaction_number=txn,
+        note=txn,
+        receipt_filename=filename,
+        receipt_data=data,
+    )
+    return {"success": True, "deposit": dep}
+
+
+@app.post("/api/user/deposits/json", status_code=status.HTTP_201_CREATED)
+def user_create_deposit_json(
     payload: DepositRequest,
     user: dict = Depends(require_user),
     store: MongoStore = Depends(get_store),
 ):
-    dep = store.create_deposit_request(user["id"], payload.amount, payload.note or "")
+    if payload.payment_mode not in DEPOSIT_PAYMENT_MODES:
+        raise HTTPException(status_code=400, detail="Invalid payment mode")
+    dep = store.create_deposit_request(
+        user["id"],
+        payload.amount,
+        payment_mode=payload.payment_mode,
+        transaction_number=payload.transaction_number.strip(),
+        note=payload.note or payload.transaction_number,
+    )
     return {"success": True, "deposit": dep}
 
 
@@ -731,6 +802,23 @@ def admin_list_deposits(admin: dict = Depends(require_admin), store: MongoStore 
             }
         )
     return out
+
+
+@app.get("/api/admin/deposits/{deposit_id}/receipt")
+def admin_deposit_receipt(
+    deposit_id: int,
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    dep = store.find_deposit(deposit_id)
+    if not dep:
+        raise _not_found()
+    if not dep.get("receipt_data"):
+        raise HTTPException(status_code=404, detail="No receipt uploaded")
+    return {
+        "filename": dep.get("receipt_filename") or "receipt",
+        "data_url": dep["receipt_data"],
+    }
 
 
 @app.patch("/api/admin/deposits/{deposit_id}")

@@ -27,6 +27,15 @@ export default function DepositsPage() {
 
   useEffect(load, [])
 
+  const viewReceipt = async (id) => {
+    try {
+      const r = await adminApi.getDepositReceipt(id)
+      window.open(r.data_url, '_blank', 'noopener,noreferrer')
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
   const review = async (id, newStatus) => {
     if (!confirm(`${newStatus === 'approved' ? 'Approve' : 'Reject'} deposit #${id}?`)) return
     try {
@@ -87,10 +96,12 @@ export default function DepositsPage() {
               <tr>
                 <th>ID</th>
                 <th>Member</th>
+                <th>Mode</th>
                 <th>Amount</th>
+                <th>Txn #</th>
+                <th>Receipt</th>
                 <th>Status</th>
                 <th>Date</th>
-                <th>Note</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -103,12 +114,28 @@ export default function DepositsPage() {
                     <br />
                     <small>{d.user_email}</small>
                   </td>
+                  <td>{d.payment_mode || '—'}</td>
                   <td>{formatInr(d.amount)}</td>
+                  <td>
+                    <small>{d.transaction_number || d.note || '—'}</small>
+                  </td>
+                  <td>
+                    {d.has_receipt ? (
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={() => viewReceipt(d.id)}
+                      >
+                        View
+                      </button>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td>
                     <span className={`role-pill sm status-${d.status}`}>{d.status}</span>
                   </td>
                   <td>{d.created_at?.slice(0, 16).replace('T', ' ')}</td>
-                  <td>{d.note || '—'}</td>
                   <td>
                     {d.status === 'pending' ? (
                       <div className="admin-row-actions">

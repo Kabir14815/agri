@@ -448,26 +448,50 @@ class MongoStore:
 
     # ----------------------------- Deposits & wallet ledger ----------------
 
-    def create_deposit_request(self, user_id: int, amount: float, note: str = "") -> dict:
+    def create_deposit_request(
+        self,
+        user_id: int,
+        amount: float,
+        payment_mode: str = "",
+        transaction_number: str = "",
+        note: str = "",
+        receipt_filename: Optional[str] = None,
+        receipt_data: Optional[str] = None,
+    ) -> dict:
         record = {
             "id": self._next_id(self.db.deposits),
             "user_id": user_id,
             "amount": float(amount),
+            "payment_mode": payment_mode or "",
+            "transaction_number": transaction_number or "",
             "status": "pending",
             "note": note or "",
+            "receipt_filename": receipt_filename or "",
+            "receipt_data": receipt_data or "",
             "created_at": datetime.utcnow().isoformat() + "Z",
             "reviewed_at": None,
         }
         self.db.deposits.insert_one(record)
-        return self._serialize(record)
+        return self.deposit_public(record)
+
+    def deposit_public(self, record: dict) -> dict:
+        """Strip large receipt payload from API responses."""
+        data = self._serialize(record)
+        if data.get("receipt_data"):
+            data["has_receipt"] = True
+        else:
+            data["has_receipt"] = False
+        data.pop("receipt_data", None)
+        return data
 
     def list_deposits_for_user(self, user_id: int) -> List[dict]:
-        return self._serialize_many(
-            self.db.deposits.find({"user_id": user_id}).sort("id", DESCENDING)
-        )
+        return [
+            self.deposit_public(d)
+            for d in self.db.deposits.find({"user_id": user_id}).sort("id", DESCENDING)
+        ]
 
     def list_all_deposits(self) -> List[dict]:
-        return self._serialize_many(self.db.deposits.find().sort("id", DESCENDING))
+        return [self.deposit_public(d) for d in self.db.deposits.find().sort("id", DESCENDING)]
 
     def find_deposit(self, deposit_id: int) -> Optional[dict]:
         return self._serialize(self.db.deposits.find_one({"id": deposit_id}))
@@ -485,14 +509,14 @@ class MongoStore:
         )
         if not result:
             raise KeyError("not_found")
-        return self._serialize(result)
+        return self.deposit_public(result)
 
     def approve_deposit(self, deposit_id: int) -> dict:
         dep = self.find_deposit(deposit_id)
         if not dep:
             raise KeyError("not_found")
         if dep["status"] != "pending":
-            return dep
+            return self.deposit_public(dep)
         user = self.find_user_by_id(dep["user_id"])
         if not user:
             raise KeyError("not_found")
