@@ -219,6 +219,13 @@ def default_mlm_stats(user_id: int, package_amount: float = 0) -> Dict[str, Any]
         "direct_active_users": 1 if pkg else 0,
         "quarterly_earnings": [0, 0, 0, round(pkg * 0.25, 2) if pkg else 0],
         "location": "India",
+        "investment_principal": pkg,
+        "investment_interest_total": 0.0,
+        "investment_tds_total": 0.0,
+        "investment_interest_gross_total": 0.0,
+        "investment_interest_today": 0.0,
+        "investment_tds_today": 0.0,
+        "investment_return_income": 0.0,
     }
 
 
@@ -277,6 +284,8 @@ def compute_ranks(main_leg: float, rest_leg: float) -> List[Dict[str, Any]]:
 
 
 def build_dashboard_payload(user: dict, site_base: str = "https://kgffarmingindia.com") -> dict:
+    from .investment_interest import investment_summary
+
     stats = resolve_mlm_stats(user)
     main_leg = float(stats["main_leg_business"])
     rest_leg = float(stats["rest_leg_business"])
@@ -285,10 +294,18 @@ def build_dashboard_payload(user: dict, site_base: str = "https://kgffarmingindi
     member_id = stats["member_id"]
     referral_link = f"{site_base.rstrip('/')}/ref/{member_id}"
 
+    investment_return = float(
+        stats.get("investment_return_income") or stats.get("investment_interest_total") or 0
+    )
     incomes = [
         {"key": "self_unit_profit", "label": "Self Unit Profit", "value": stats["self_unit_profit"]},
         {"key": "direct_income", "label": "Direct Income", "value": stats["direct_income"]},
         {"key": "level_income", "label": "Level Income", "value": stats["level_income"]},
+        {
+            "key": "investment_return",
+            "label": "Investment Return (10% p.m.)",
+            "value": investment_return,
+        },
         {"key": "reward_bonus", "label": "Reward Bonus", "value": stats["reward_bonus"]},
         {"key": "salary_bonus", "label": "Salary Bonus", "value": stats["salary_bonus"]},
     ]
@@ -297,6 +314,14 @@ def build_dashboard_payload(user: dict, site_base: str = "https://kgffarmingindi
         item["percent"] = round((item["value"] / max_income) * 100, 1)
 
     today_incomes = [
+        {
+            "label": "Investment Return Today (net)",
+            "value": float(stats.get("investment_interest_today", 0) or 0),
+        },
+        {
+            "label": "TDS on Interest Today (1%)",
+            "value": float(stats.get("investment_tds_today", 0) or 0),
+        },
         {"label": "Direct Income Today", "value": stats["direct_income_today"]},
         {"label": "Level Income Today", "value": stats["level_income_today"]},
         {"label": "Reward Bonus Today", "value": stats["reward_bonus_today"]},
@@ -346,4 +371,5 @@ def build_dashboard_payload(user: dict, site_base: str = "https://kgffarmingindi
         "direct_business": float(stats["direct_business"]),
         "direct_active_users": int(stats["direct_active_users"]),
         "ranks": ranks,
+        "investment": investment_summary(stats, float(user.get("amount", 0) or 0)),
     }

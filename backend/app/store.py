@@ -371,6 +371,9 @@ class MongoStore:
             payload["amount"] = amt
             mlm = dict(user.get("mlm") or default_mlm_stats(user_id, amt))
             mlm["package_amount"] = amt
+            from .investment_interest import initialize_accrual_fields
+
+            mlm = initialize_accrual_fields(mlm, amt)
             payload["mlm"] = mlm
         if not payload:
             raise ValueError("no_fields")
@@ -533,8 +536,11 @@ class MongoStore:
         if not user:
             raise KeyError("not_found")
         new_amount = float(user.get("amount", 0) or 0) + float(dep["amount"])
-        mlm = dict(user.get("mlm") or {})
+        mlm = dict(user.get("mlm") or default_mlm_stats(user["id"], new_amount))
         mlm["package_amount"] = new_amount
+        from .investment_interest import initialize_accrual_fields
+
+        mlm = initialize_accrual_fields(mlm, new_amount)
         self.db.users.update_one(
             {"id": user["id"]},
             {"$set": {"amount": new_amount, "mlm": mlm}},
@@ -630,6 +636,39 @@ class MongoStore:
         if not field:
             return 0.0
         return float(stats.get(field, 0) or 0)
+
+    def accrue_investment_interest(self, user_id: int) -> Optional[dict]:
+        """Credit daily investment return (10% p.m. gross, 1% TDS on interest)."""
+        user = self.find_user_by_id(user_id)
+        if not user:
+            return None
+
+        stats = self._get_user_mlm_stats(user)
+        stats, summary = self._run_interest_accrual(stats, user)
+        if not summary:
+            if float(stats.get("package_amount", 0) or user.get("amount", 0) or 0) > 0:
+                self._set_user_mlm_stats(user_id, stats)
+            return self.find_user_by_id(user_id)
+
+        self._set_user_mlm_stats(user_id, stats)
+        days = summary["days"]
+        self.add_wallet_entry(
+            user_id,
+            "income",
+            summary["net"],
+            (
+                f"Investment return ({days} day{'s' if days != 1 else ''}): "
+                f"gross Rs {summary['gross']:.2f}, TDS Rs {summary['tds']:.2f}, "
+                f"net Rs {summary['net']:.2f}"
+            ),
+            "credit",
+        )
+        return self.find_user_by_id(user_id)
+
+    def _run_interest_accrual(self, stats: dict, user: dict):
+        from .investment_interest import accrue_through_today
+
+        return accrue_through_today(stats, float(user.get("amount", 0) or 0))
 
     def create_help_ticket(self, user_id: int, subject: str, message: str) -> dict:
         record = {

@@ -40,6 +40,40 @@ export default function DashboardIncomes() {
         ))}
       </div>
 
+      {data.investment?.principal > 0 && (
+        <>
+          <h3 className="mlm-section-label" style={{ marginTop: 28 }}>
+            Investment return (10% monthly, 1% TDS on interest)
+          </h3>
+          <div className="mlm-grid" style={{ marginBottom: 20 }}>
+            <article className="mlm-card">
+              <small>Invested amount</small>
+              <h2>{formatInr(data.investment.principal, 2)}</h2>
+            </article>
+            <article className="mlm-card">
+              <small>Daily net credit</small>
+              <h2>{formatInr(data.investment.daily_net, 2)}</h2>
+            </article>
+            <article className="mlm-card">
+              <small>Monthly net (approx.)</small>
+              <h2>{formatInr(data.investment.monthly_net, 2)}</h2>
+            </article>
+            <article className="mlm-card">
+              <small>Total interest earned</small>
+              <h2>{formatInr(data.investment.total_interest_net, 2)}</h2>
+            </article>
+            <article className="mlm-card">
+              <small>Total TDS deducted</small>
+              <h2>{formatInr(data.investment.total_tds, 2)}</h2>
+            </article>
+          </div>
+          <p className="mlm-hint">
+            Interest is calculated daily (10% ÷ 30 days per month). 1% TDS is deducted from
+            each day&apos;s gross interest before crediting your income wallet.
+          </p>
+        </>
+      )}
+
       <h3 className="mlm-section-label" style={{ marginTop: 28 }}>Today&apos;s income</h3>
       <ul className="mlm-today-list">
         {data.today_incomes?.map((t) => (

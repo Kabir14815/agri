@@ -255,7 +255,10 @@ def _public_user(u: dict) -> dict:
     return data
 
 
-def _user_dashboard_payload(u: dict) -> dict:
+def _user_dashboard_payload(u: dict, store: MongoStore) -> dict:
+    refreshed = store.accrue_investment_interest(u["id"])
+    if refreshed:
+        u = refreshed
     return build_dashboard_payload(u)
 
 
@@ -418,7 +421,9 @@ def register(payload: RegisterPayload, store: MongoStore = Depends(get_store)):
 
 
 @app.post("/api/auth/login")
-def login(payload: LoginPayload, store: MongoStore = Depends(get_store)):
+def login(
+    payload: LoginPayload, store: MongoStore = Depends(get_store)
+):
     from .referral import normalize_member_id
 
     login_id = payload.member_id.strip()
@@ -430,14 +435,16 @@ def login(payload: LoginPayload, store: MongoStore = Depends(get_store)):
         return {
             "success": True,
             "token": f"demo-token-{u['id']}",
-            "user": _user_dashboard_payload(u),
+            "user": _user_dashboard_payload(u, store),
         }
     raise HTTPException(status_code=401, detail="Invalid member ID or password")
 
 
 @app.get("/api/user/dashboard")
-def user_dashboard(user: dict = Depends(require_user)):
-    return _user_dashboard_payload(user)
+def user_dashboard(
+    user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
+):
+    return _user_dashboard_payload(user, store)
 
 
 def _profile_for_user(user: dict) -> dict:
@@ -593,7 +600,10 @@ def user_create_deposit_json(
 
 
 @app.get("/api/user/wallet")
-def user_wallet(user: dict = Depends(require_user)):
+def user_wallet(
+    user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
+):
+    user = store.accrue_investment_interest(user["id"]) or user
     dash = build_dashboard_payload(user)
     return {
         "income_wallet": dash["income_wallet"],
@@ -620,6 +630,7 @@ def user_wallet_statement(
 def user_wallet_transfer_info(
     user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
 ):
+    user = store.accrue_investment_interest(user["id"]) or user
     wallets = store._user_mlm_wallets(user)
     return {
         "available_fund": wallets["income"],
@@ -675,7 +686,7 @@ def user_wallet_transfer(
         ) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="User not found") from exc
-    refreshed = store.find_user_by_id(user["id"])
+    refreshed = store.accrue_investment_interest(user["id"]) or store.find_user_by_id(user["id"])
     wallets = store._user_mlm_wallets(refreshed)
     return {
         "success": True,
@@ -697,7 +708,10 @@ def user_activate_status(user: dict = Depends(require_user)):
 
 
 @app.get("/api/user/incomes")
-def user_incomes(user: dict = Depends(require_user)):
+def user_incomes(
+    user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
+):
+    user = store.accrue_investment_interest(user["id"]) or user
     dash = build_dashboard_payload(user)
     return {
         "incomes": dash["incomes"],
@@ -705,6 +719,7 @@ def user_incomes(user: dict = Depends(require_user)):
         "total_earning": dash["total_earning"],
         "quarterly_earnings": dash["quarterly_earnings"],
         "earning_limits": dash["earning_limits"],
+        "investment": dash.get("investment"),
     }
 
 
