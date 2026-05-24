@@ -53,7 +53,9 @@ export default function App() {
           <Navbar />
         </>
       )}
-      <main className="site-main">
+      <main
+        className={`site-main${isMemberDash ? ' site-main--dash' : ''}${isAdmin ? ' site-main--admin' : ''}`}
+      >
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />

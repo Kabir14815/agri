@@ -1,4 +1,10 @@
 /* MLM member dashboard — dark theme */
+.site-main--dash {
+  padding: 0;
+  min-height: 100vh;
+  background: #0f1114;
+}
+
 .mlm-dash {
   display: flex;
   min-height: 100vh;
@@ -7,14 +13,97 @@
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
+/* Override global site typography (global.css uses dark text on light pages) */
+.mlm-dash h1,
+.mlm-dash h2,
+.mlm-dash h3,
+.mlm-dash h4 {
+  color: #f8fafc;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+.mlm-dash p {
+  color: #cbd5e1;
+}
+
+.mlm-dash strong {
+  color: #f1f5f9;
+}
+
+.mlm-dash label {
+  color: #94a3b8;
+}
+
+.mlm-dash .form-message {
+  border: 1px solid transparent;
+}
+
+.mlm-dash .form-message.success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.mlm-dash .form-message.error {
+  background: rgba(248, 113, 113, 0.12);
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.mlm-dash .btn-outline {
+  color: #4ade80;
+  border-color: #4ade80;
+  background: transparent;
+}
+
+.mlm-dash .btn-outline:hover {
+  background: #22c55e;
+  color: #fff;
+  border-color: #22c55e;
+}
+
+.mlm-dash .btn-primary {
+  background: linear-gradient(135deg, #22c55e, #15803d);
+  color: #fff;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.mlm-dash .btn-primary:hover {
+  background: linear-gradient(135deg, #4ade80, #16a34a);
+  color: #fff;
+}
+
 .mlm-sidebar {
-  width: 220px;
+  width: 240px;
   flex-shrink: 0;
   background: #16181d;
   border-right: 1px solid #252830;
   padding: 20px 12px;
   display: flex;
   flex-direction: column;
+  max-height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+}
+
+.mlm-sidebar .mlm-nav {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.mlm-sidebar .mlm-nav::-webkit-scrollbar,
+.mlm-nav-extra::-webkit-scrollbar {
+  width: 5px;
+}
+
+.mlm-sidebar .mlm-nav::-webkit-scrollbar-thumb,
+.mlm-nav-extra::-webkit-scrollbar-thumb {
+  background: #3f4654;
+  border-radius: 4px;
 }
 
 .mlm-logo {
@@ -24,8 +113,10 @@
   font-weight: 800;
   font-size: 13px;
   letter-spacing: 0.5px;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
   padding: 0 8px;
+  color: #f1f5f9;
+  flex-shrink: 0;
 }
 
 .mlm-logo-badge {
@@ -134,6 +225,7 @@
   gap: 10px;
   font-size: 14px;
   font-weight: 600;
+  color: #f1f5f9;
 }
 
 .mlm-avatar {
@@ -215,6 +307,17 @@
   padding: 12px 18px;
   border-radius: 10px;
   font-size: 14px;
+  color: #e8eaed;
+}
+
+.mlm-summary-pill svg {
+  color: #4ade80;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.mlm-summary-pill span {
+  color: #f1f5f9;
 }
 
 .pill-icon {
@@ -336,14 +439,17 @@
 
 .mlm-card-repurchase {
   grid-column: span 4;
+  background: linear-gradient(160deg, #1e3a5f, #0f172a);
 }
 
 .mlm-card-wallets-side {
   grid-column: span 4;
+  background: linear-gradient(160deg, #1a2e1a, #0f172a);
 }
 
 .mlm-card-limits {
   grid-column: span 4;
+  background: linear-gradient(160deg, #312e81, #1e1b4b);
 }
 
 .mlm-card-today {
@@ -375,13 +481,19 @@
 }
 
 .mlm-card small {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.82);
   font-size: 12px;
+  font-weight: 500;
 }
 
 .mlm-card h2,
 .mlm-card h3 {
   margin: 6px 0;
+  color: #ffffff;
+}
+
+.mlm-card p {
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .mlm-big-num {
@@ -448,6 +560,19 @@
   font-size: 12px;
   display: block;
   margin-bottom: 2px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.mlm-card-incomes li strong,
+.mlm-card-today li strong {
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.mlm-card-incomes h3,
+.mlm-card-today h3,
+.mlm-card-limits h3 {
+  color: #ffffff;
 }
 
 .mlm-progress {
@@ -537,6 +662,7 @@
   z-index: 1;
   font-weight: 700;
   font-size: 14px;
+  color: #ffffff;
 }
 
 .mlm-donut-wrap {
@@ -565,7 +691,8 @@
   list-style: none;
   padding: 0;
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
+  color: #e2e8f0;
 }
 
 .mlm-donut-legend li {
@@ -598,6 +725,8 @@
 .mlm-page-title {
   margin: 0 0 20px;
   font-size: 1.5rem;
+  color: #f8fafc;
+  font-weight: 700;
 }
 
 .mlm-leg-stats {
@@ -612,6 +741,12 @@
   padding: 14px 24px;
   border-radius: 10px;
   font-size: 15px;
+  color: #ecfdf5;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.mlm-leg-box strong {
+  color: #ffffff;
 }
 
 .mlm-table-wrap {
@@ -639,6 +774,11 @@
   padding: 12px 10px;
   border-bottom: 1px solid #2d323c;
   background: #1a1d23;
+  color: #e8eaed;
+}
+
+.mlm-rewards-table tbody tr:hover td {
+  background: #23272f;
 }
 
 .mlm-status {
@@ -750,15 +890,18 @@
 /* Extra nav — circular icon shortcuts */
 .mlm-nav-extra {
   margin-top: auto;
-  padding: 16px 12px 20px;
+  padding: 16px 12px 12px;
   border-top: 1px solid #2d323c;
+  flex-shrink: 0;
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .mlm-nav-extra-label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #6b7280;
+  color: #9ca3af;
   margin: 0 0 10px 8px;
 }
 
@@ -834,6 +977,13 @@
 .mlm-income-row strong {
   display: block;
   margin-bottom: 8px;
+  color: #f8fafc;
+}
+
+.mlm-income-row > span {
+  color: #4ade80;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .mlm-today-list {
@@ -845,9 +995,19 @@
 .mlm-today-list li {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid #2d323c;
   background: #1a1d23;
+  color: #e8eaed;
+}
+
+.mlm-today-list li span {
+  color: #94a3b8;
+}
+
+.mlm-today-list li strong {
+  color: #4ade80;
 }
 
 .mlm-help-ticket-head {
@@ -987,7 +1147,7 @@
 .mlm-nav-sub-item {
   padding: 8px 14px 8px 36px;
   font-size: 13px;
-  color: #6b7280;
+  color: #9ca3af;
   text-decoration: none;
   border-radius: 8px;
 }
@@ -1040,6 +1200,51 @@
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 2rem;
   font-weight: 400;
+  color: #f8fafc;
+}
+
+.mlm-member-id {
+  color: #94a3b8 !important;
+}
+
+.mlm-card-wallets-side small,
+.mlm-card-wallets-side h3,
+.mlm-wallet-block small,
+.mlm-wallet-block h3 {
+  color: #ffffff;
+}
+
+.mlm-wallet-block {
+  padding: 4px 0;
+}
+
+.mlm-activate-status h3 {
+  color: #f8fafc;
+  margin-top: 0;
+}
+
+.mlm-help-ticket-head strong {
+  color: #f8fafc;
+}
+
+.mlm-help-reply p {
+  color: #e2e8f0;
+}
+
+.mlm-faq-item summary {
+  color: #f1f5f9;
+}
+
+.mlm-security-card strong {
+  color: #f8fafc;
+}
+
+.mlm-placeholder {
+  color: #94a3b8;
+}
+
+.mlm-placeholder h2 {
+  color: #f8fafc;
 }
 
 .mlm-tree-search {
@@ -1225,22 +1430,34 @@
 
   .mlm-sidebar {
     width: 100%;
-    flex-direction: row;
-    flex-wrap: wrap;
+    max-height: none;
+    position: relative;
     padding: 12px;
+    overflow: visible;
   }
 
-  .mlm-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    width: 100%;
+  .mlm-sidebar .mlm-nav {
+    overflow: visible;
+    max-height: none;
   }
 
-  .mlm-logo {
-    margin-bottom: 0;
+  .mlm-nav-extra {
+    max-height: none;
+  }
+
+  .mlm-content {
+    padding: 16px;
   }
 
   .mlm-grid > * {
     grid-column: span 12 !important;
+  }
+
+  .mlm-welcome h1 {
+    font-size: 1.15rem;
+  }
+
+  .mlm-big-num {
+    font-size: 2.25rem;
   }
 }
