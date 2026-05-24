@@ -9,8 +9,8 @@ function TreeNode({ node, onView, isRoot }) {
       <div className="mlm-tree-node-logo">KGF</div>
       <p className="mlm-tree-mid">{node.member_id}</p>
       <p className="mlm-tree-name">{node.full_name}</p>
-      <p className="mlm-tree-meta">Referral — {node.referral_count}</p>
-      <p className="mlm-tree-meta">Amount — {formatInrPlain(node.amount)}</p>
+      <p className="mlm-tree-stat">{node.referral_count}</p>
+      <p className="mlm-tree-amount">{formatInrPlain(node.amount)}</p>
       <button type="button" className="mlm-tree-view-btn" onClick={() => onView(node.member_id)}>
         View
       </button>

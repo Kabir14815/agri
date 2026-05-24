@@ -9,6 +9,9 @@ import {
   FiHelpCircle,
   FiUsers,
   FiMail,
+  FiDollarSign,
+  FiLifeBuoy,
+  FiRefreshCw,
 } from 'react-icons/fi'
 import { adminApi } from '../api.js'
 
@@ -21,6 +24,9 @@ const STAT_CARDS = [
   { key: 'faqs', label: 'FAQs', icon: <FiHelpCircle />, link: '/admin/faqs', color: '#475569' },
   { key: 'users', label: 'Users', icon: <FiUsers />, link: '/admin/users', color: '#0e7490' },
   { key: 'contacts', label: 'Contact Messages', icon: <FiMail />, link: '/admin/contacts', color: '#c2410c' },
+  { key: 'deposits_pending', label: 'Pending Deposits', icon: <FiDollarSign />, link: '/admin/deposits', color: '#15803d' },
+  { key: 'help_tickets_open', label: 'Open Tickets', icon: <FiLifeBuoy />, link: '/admin/help-desk', color: '#0d9488' },
+  { key: 'exchange_pending', label: 'Pending Exchange', icon: <FiRefreshCw />, link: '/admin/exchange', color: '#1e40af' },
 ]
 
 export default function AdminDashboard() {

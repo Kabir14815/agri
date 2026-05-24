@@ -10,6 +10,9 @@ import {
   FiAward,
   FiMail,
   FiUsers,
+  FiDollarSign,
+  FiRefreshCw,
+  FiLifeBuoy,
   FiLogOut,
   FiMenu,
   FiExternalLink,
@@ -26,6 +29,9 @@ const NAV = [
   { to: '/admin/faqs', icon: <FiHelpCircle />, label: 'FAQs' },
   { to: '/admin/contacts', icon: <FiMail />, label: 'Contact Inbox' },
   { to: '/admin/users', icon: <FiUsers />, label: 'Users' },
+  { to: '/admin/deposits', icon: <FiDollarSign />, label: 'Deposits' },
+  { to: '/admin/exchange', icon: <FiRefreshCw />, label: 'Exchange Fund' },
+  { to: '/admin/help-desk', icon: <FiLifeBuoy />, label: 'Help Desk' },
 ]
 
 export default function AdminLayout() {

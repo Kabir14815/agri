@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../../api.js'
 import { formatInrPlain } from '../../utils/format.js'
 
@@ -14,6 +15,9 @@ export default function DashboardTeam() {
   return (
     <>
       <h2 className="mlm-page-title">Team</h2>
+      <Link to="/dashboard/team/referral-tree" className="btn btn-primary" style={{ marginBottom: 20 }}>
+        Open referral tree
+      </Link>
       <div className="mlm-leg-stats">
         <div className="mlm-leg-box">
           Main Leg Business: <strong>{formatInrPlain(d.main_leg_business)}</strong>

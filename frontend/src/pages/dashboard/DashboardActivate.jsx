@@ -6,7 +6,7 @@ export default function DashboardActivate() {
   const [d, setD] = useState(null)
 
   useEffect(() => {
-    api.userDashboard().then(setD).catch(() => {})
+    api.getActivateStatus().then(setD).catch(() => {})
   }, [])
 
   if (!d) return <div className="mlm-loading">Loading…</div>

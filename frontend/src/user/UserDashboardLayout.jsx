@@ -12,6 +12,12 @@ import {
   FiChevronRight,
   FiChevronDown,
   FiAward,
+  FiZap,
+  FiRefreshCw,
+  FiPieChart,
+  FiHelpCircle,
+  FiUserPlus,
+  FiLock,
 } from 'react-icons/fi'
 import { useUserAuth } from './UserAuth.jsx'
 
@@ -31,7 +37,17 @@ const NAV = [
       { to: '/dashboard/profile/password', label: 'Change Password' },
     ],
   },
-  { to: '/dashboard/deposit', icon: FiPlusCircle, label: 'Deposit', color: '#22c55e' },
+  {
+    key: 'deposit',
+    to: '/dashboard/deposit',
+    icon: FiPlusCircle,
+    label: 'Deposit',
+    color: '#22c55e',
+    submenu: [
+      { to: '/dashboard/deposit', end: true, label: 'Request Deposit' },
+      { to: '/dashboard/deposit/history', label: 'Deposit History' },
+    ],
+  },
   {
     key: 'team',
     to: '/dashboard/team',
@@ -43,8 +59,30 @@ const NAV = [
       { to: '/dashboard/team/referral-tree', label: 'Referral Tree' },
     ],
   },
-  { to: '/dashboard/wallet', icon: FiCreditCard, label: 'Wallet', color: '#a855f7' },
+  {
+    key: 'wallet',
+    to: '/dashboard/wallet',
+    icon: FiCreditCard,
+    label: 'Wallet',
+    color: '#a855f7',
+    submenu: [
+      { to: '/dashboard/wallet', end: true, label: 'Income Wallet' },
+      { to: '/dashboard/wallet/repurchase', label: 'Repurchase Wallet' },
+      { to: '/dashboard/wallet/topup', label: 'Topup Wallet' },
+      { to: '/dashboard/wallet/statement', label: 'Wallet Statement' },
+    ],
+  },
   { to: '/dashboard/activate', icon: FiPower, label: 'Activate', color: '#84cc16' },
+]
+
+/** Extra menu — circular icon style (mobile-style shortcuts) */
+const EXTRA_NAV = [
+  { to: '/dashboard/incomes', icon: FiZap, label: 'Incomes', color: '#ec4899' },
+  { to: '/dashboard/exchange', icon: FiRefreshCw, label: 'Exchange Fund', color: '#1e40af' },
+  { to: '/dashboard/transactions', icon: FiPieChart, label: 'Transactions', color: '#4ade80' },
+  { to: '/dashboard/help-desk', icon: FiHelpCircle, label: 'Help Desk', color: '#15803d' },
+  { to: '/dashboard/register-member', icon: FiUserPlus, label: 'Register', color: '#1e3a8a' },
+  { to: '/dashboard/security', icon: FiLock, label: 'Security', color: '#1e40af', isLogout: false },
 ]
 
 const TITLES = {
@@ -55,10 +93,20 @@ const TITLES = {
   '/dashboard/profile/bank': 'Bank Detail',
   '/dashboard/profile/password': 'Change Password',
   '/dashboard/deposit': 'Deposit',
+  '/dashboard/deposit/history': 'Deposit History',
   '/dashboard/team': 'Team',
   '/dashboard/team/referral-tree': 'Referral Tree',
   '/dashboard/wallet': 'Wallet',
+  '/dashboard/wallet/repurchase': 'Repurchase Wallet',
+  '/dashboard/wallet/topup': 'Topup Wallet',
+  '/dashboard/wallet/statement': 'Wallet Statement',
   '/dashboard/activate': 'Activate',
+  '/dashboard/incomes': 'Incomes',
+  '/dashboard/exchange': 'Exchange Fund',
+  '/dashboard/transactions': 'Transactions',
+  '/dashboard/help-desk': 'Help Desk',
+  '/dashboard/register-member': 'Register',
+  '/dashboard/security': 'Security',
 }
 
 export default function UserDashboardLayout() {
@@ -67,19 +115,19 @@ export default function UserDashboardLayout() {
   const { pathname } = useLocation()
   const [openMenus, setOpenMenus] = useState({
     profile: pathname.startsWith('/dashboard/profile'),
+    deposit: pathname.startsWith('/dashboard/deposit'),
     team: pathname.startsWith('/dashboard/team'),
+    wallet: pathname.startsWith('/dashboard/wallet'),
   })
 
   useEffect(() => {
-    if (pathname.startsWith('/dashboard/profile')) {
-      setOpenMenus((o) => ({ ...o, profile: true }))
-    }
-    if (pathname.startsWith('/dashboard/team')) {
-      setOpenMenus((o) => ({ ...o, team: true }))
-    }
+    const keys = ['profile', 'deposit', 'team', 'wallet']
+    keys.forEach((key) => {
+      if (pathname.startsWith(`/dashboard/${key}`)) {
+        setOpenMenus((o) => ({ ...o, [key]: true }))
+      }
+    })
   }, [pathname])
-
-  const toggleMenu = (key) => setOpenMenus((o) => ({ ...o, [key]: !o[key] }))
 
   useEffect(() => {
     reloadUser?.().catch(() => {})
@@ -110,7 +158,10 @@ export default function UserDashboardLayout() {
                   <button
                     type="button"
                     className={`mlm-nav-item mlm-nav-toggle${active ? ' active' : ''}`}
-                    onClick={() => toggleMenu(item.key)}
+                    onClick={() => {
+                      navigate(item.to)
+                      setOpenMenus((o) => ({ ...o, [item.key]: true }))
+                    }}
                   >
                     <span className="mlm-nav-icon" style={{ color: item.color }}>
                       <Icon />
@@ -157,6 +208,28 @@ export default function UserDashboardLayout() {
             )
           })}
         </nav>
+
+        <div className="mlm-nav-extra">
+          <p className="mlm-nav-extra-label">More</p>
+          {EXTRA_NAV.map((item) => {
+            const Icon = item.icon
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `mlm-nav-extra-item${isActive ? ' active' : ''}`
+                }
+              >
+                <span className="mlm-nav-extra-icon" style={{ background: item.color }}>
+                  <Icon />
+                </span>
+                <span className="mlm-nav-extra-text">{item.label}</span>
+                <FiChevronRight className="mlm-nav-extra-chevron" />
+              </NavLink>
+            )
+          })}
+        </div>
       </aside>
 
       <div className="mlm-main">

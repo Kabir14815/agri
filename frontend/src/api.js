@@ -71,6 +71,37 @@ export const api = {
       `/user/referral-tree${memberId ? `?member_id=${encodeURIComponent(memberId)}` : ''}`,
       { auth: 'user' },
     ),
+  listDeposits: () => request('/user/deposits', { auth: 'user' }),
+  createDeposit: (data) =>
+    request('/user/deposits', {
+      method: 'POST',
+      auth: 'user',
+      body: JSON.stringify(data),
+    }),
+  getWallet: () => request('/user/wallet', { auth: 'user' }),
+  getWalletStatement: (wallet) =>
+    request(
+      `/user/wallet/statement${wallet ? `?wallet=${encodeURIComponent(wallet)}` : ''}`,
+      { auth: 'user' },
+    ),
+  getActivateStatus: () => request('/user/activate', { auth: 'user' }),
+  getIncomes: () => request('/user/incomes', { auth: 'user' }),
+  getTransactions: () => request('/user/transactions', { auth: 'user' }),
+  getExchange: () => request('/user/exchange', { auth: 'user' }),
+  createExchange: (data) =>
+    request('/user/exchange', {
+      method: 'POST',
+      auth: 'user',
+      body: JSON.stringify(data),
+    }),
+  getHelpDesk: () => request('/user/help-desk', { auth: 'user' }),
+  createHelpTicket: (data) =>
+    request('/user/help-desk', {
+      method: 'POST',
+      auth: 'user',
+      body: JSON.stringify(data),
+    }),
+  getReferralInfo: () => request('/user/referral-info', { auth: 'user' }),
 }
 
 // ---------- Admin API ----------
@@ -90,6 +121,35 @@ export const adminApi = {
   users: () => request('/admin/users', { auth: true }),
   deleteUser: (id) =>
     request(`/admin/users/${id}`, { method: 'DELETE', auth: true }),
+  deposits: () => request('/admin/deposits', { auth: true }),
+  updateDeposit: (id, status) =>
+    request(`/admin/deposits/${id}`, {
+      method: 'PATCH',
+      auth: true,
+      body: JSON.stringify({ status }),
+    }),
+  getUserReferrals: (userId) =>
+    request(`/admin/users/${userId}/referrals`, { auth: true }),
+  updateUserMlm: (userId, data) =>
+    request(`/admin/users/${userId}/mlm`, {
+      method: 'PATCH',
+      auth: true,
+      body: JSON.stringify(data),
+    }),
+  helpDesk: () => request('/admin/help-desk', { auth: true }),
+  replyHelpTicket: (id, data) =>
+    request(`/admin/help-desk/${id}`, {
+      method: 'PATCH',
+      auth: true,
+      body: JSON.stringify(data),
+    }),
+  exchanges: () => request('/admin/exchange', { auth: true }),
+  updateExchange: (id, status) =>
+    request(`/admin/exchange/${id}`, {
+      method: 'PATCH',
+      auth: true,
+      body: JSON.stringify({ status }),
+    }),
 
   // Generic CRUD
   list: (resource) => request(`/${resource}`),

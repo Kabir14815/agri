@@ -1902,6 +1902,67 @@ textarea.form-control {
   margin: 0;
 }
 
+.admin-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-referral-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 13px;
+}
+
+.admin-referral-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.status-pending {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+.status-approved {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+}
+
+.status-rejected {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+.status-open {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+.status-answered {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+}
+
+.status-closed {
+  background: #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+.admin-reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.admin-help-reply-box {
+  padding: 12px;
+  background: #f0fdf4;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

@@ -12,7 +12,7 @@ DEMO_DOWNLINE: Dict[str, List[Dict[str, Any]]] = {
             "member_id": "KGF246305",
             "full_name": "AMARJIT SINGH",
             "referral_count": 0,
-            "amount": 0,
+            "amount": 250_000,
             "has_downline": False,
         },
         {

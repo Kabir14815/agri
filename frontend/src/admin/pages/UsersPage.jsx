@@ -8,6 +8,7 @@ import {
   FiCalendar,
   FiX,
   FiDollarSign,
+  FiUsers,
 } from 'react-icons/fi'
 import { adminApi } from '../../api.js'
 import { useAdminAuth } from '../AdminAuth.jsx'
@@ -42,19 +43,32 @@ function formatInr(n) {
 
 function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved }) {
   const [amount, setAmount] = useState('')
+  const [sponsorId, setSponsorId] = useState('')
+  const [referrals, setReferrals] = useState(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (user) setAmount(String(user.amount ?? 0))
+    if (user) {
+      setAmount(String(user.amount ?? 0))
+      setSponsorId(user.sponsor_member_id || user.mlm?.sponsor_member_id || '')
+      setReferrals(null)
+      adminApi
+        .getUserReferrals(user.id)
+        .then((r) => setReferrals(r))
+        .catch(() => setReferrals({ direct_count: 0, referrals: [] }))
+    }
   }, [user])
 
   if (!user) return null
 
-  const saveAmount = async () => {
+  const saveMlm = async () => {
     setSaving(true)
     try {
       const value = Number(amount)
-      await adminApi.updateUserAmount(user.id, value)
+      await adminApi.updateUserMlm(user.id, {
+        amount: value,
+        sponsor_member_id: sponsorId.trim() || null,
+      })
       onAmountSaved?.(value)
     } catch (e) {
       alert(e.message)
@@ -135,9 +149,9 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved }) {
                       type="button"
                       className="btn btn-primary btn-sm"
                       disabled={saving}
-                      onClick={saveAmount}
+                      onClick={saveMlm}
                     >
-                      {saving ? 'Saving…' : 'Update amount'}
+                      {saving ? 'Saving…' : 'Save MLM'}
                     </button>
                   </div>
                 ) : (
@@ -145,6 +159,40 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved }) {
                 )}
               </div>
             </div>
+            {user.role !== 'admin' && (
+              <div className="profile-detail-row">
+                <FiUser />
+                <div>
+                  <small>Sponsor member ID</small>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={sponsorId}
+                    onChange={(e) => setSponsorId(e.target.value.toUpperCase())}
+                    placeholder="KGF870365"
+                  />
+                </div>
+              </div>
+            )}
+            {referrals && (
+              <div className="profile-detail-row" style={{ gridColumn: '1 / -1' }}>
+                <FiUsers />
+                <div style={{ flex: 1 }}>
+                  <small>Direct referrals ({referrals.direct_count})</small>
+                  {referrals.referrals?.length ? (
+                    <ul className="admin-referral-list">
+                      {referrals.referrals.map((r) => (
+                        <li key={r.member_id || r.id}>
+                          <strong>{r.full_name}</strong> — {r.member_id} — {formatInr(r.amount)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p style={{ margin: '8px 0 0' }}>No direct referrals yet.</p>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="profile-detail-row">
               <FiCalendar />
               <div>

@@ -80,6 +80,40 @@ class UserAmountUpdate(BaseModel):
     amount: float = Field(..., ge=0)
 
 
+class DepositRequest(BaseModel):
+    amount: float = Field(..., gt=0)
+    note: Optional[str] = Field(default="", max_length=200)
+
+
+class DepositStatusUpdate(BaseModel):
+    status: str = Field(..., pattern="^(approved|rejected)$")
+
+
+class AdminUserMlmUpdate(BaseModel):
+    sponsor_member_id: Optional[str] = Field(default=None, max_length=20)
+    amount: Optional[float] = Field(default=None, ge=0)
+
+
+class HelpTicketIn(BaseModel):
+    subject: str = Field(..., min_length=3, max_length=120)
+    message: str = Field(..., min_length=10, max_length=2000)
+
+
+class HelpTicketReply(BaseModel):
+    admin_reply: str = Field(..., min_length=1, max_length=2000)
+    status: str = Field(default="answered", pattern="^(answered|closed)$")
+
+
+class ExchangeRequestIn(BaseModel):
+    from_wallet: str = Field(..., pattern="^(income|repurchase|topup)$")
+    to_wallet: str = Field(..., pattern="^(income|repurchase|topup)$")
+    amount: float = Field(..., gt=0)
+
+
+class ExchangeStatusUpdate(BaseModel):
+    status: str = Field(..., pattern="^(approved|rejected)$")
+
+
 class ProductIn(BaseModel):
     name: str
     category: str
@@ -413,6 +447,132 @@ def user_referral_tree(
     return tree
 
 
+@app.get("/api/user/deposits")
+def user_deposits(user: dict = Depends(require_user), store: MongoStore = Depends(get_store)):
+    return store.list_deposits_for_user(user["id"])
+
+
+@app.post("/api/user/deposits", status_code=201)
+def user_create_deposit(
+    payload: DepositRequest,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    dep = store.create_deposit_request(user["id"], payload.amount, payload.note or "")
+    return {"success": True, "deposit": dep}
+
+
+@app.get("/api/user/wallet")
+def user_wallet(user: dict = Depends(require_user)):
+    dash = build_dashboard_payload(user)
+    return {
+        "income_wallet": dash["income_wallet"],
+        "repurchase_wallet": dash["repurchase_wallet"],
+        "topup_wallet": dash["topup_wallet"],
+        "amount": dash["amount"],
+        "income_wallet_progress": dash["income_wallet_progress"],
+        "today_incomes": dash["today_incomes"],
+        "incomes": dash["incomes"],
+    }
+
+
+@app.get("/api/user/wallet/statement")
+def user_wallet_statement(
+    wallet: Optional[str] = None,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    entries = store.list_wallet_ledger(user["id"], wallet)
+    return {"entries": entries}
+
+
+@app.get("/api/user/activate")
+def user_activate_status(user: dict = Depends(require_user)):
+    dash = build_dashboard_payload(user)
+    active = float(dash.get("package_amount", 0) or 0) > 0
+    return {
+        "active": active,
+        "package_amount": dash["package_amount"],
+        "rank": dash["rank"],
+        "member_id": dash["member_id"],
+    }
+
+
+@app.get("/api/user/incomes")
+def user_incomes(user: dict = Depends(require_user)):
+    dash = build_dashboard_payload(user)
+    return {
+        "incomes": dash["incomes"],
+        "today_incomes": dash["today_incomes"],
+        "total_earning": dash["total_earning"],
+        "quarterly_earnings": dash["quarterly_earnings"],
+        "earning_limits": dash["earning_limits"],
+    }
+
+
+@app.get("/api/user/transactions")
+def user_transactions(user: dict = Depends(require_user), store: MongoStore = Depends(get_store)):
+    return {"transactions": store.list_user_transactions(user["id"])}
+
+
+@app.get("/api/user/exchange")
+def user_list_exchange(user: dict = Depends(require_user), store: MongoStore = Depends(get_store)):
+    wallets = store._user_mlm_wallets(user)
+    return {
+        "wallets": {
+            "income": wallets["income"],
+            "repurchase": wallets["repurchase"],
+            "topup": wallets["topup"],
+        },
+        "requests": store.list_exchanges_for_user(user["id"]),
+    }
+
+
+@app.post("/api/user/exchange", status_code=201)
+def user_create_exchange(
+    payload: ExchangeRequestIn,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    if payload.from_wallet == payload.to_wallet:
+        raise HTTPException(status_code=400, detail="Source and destination must differ")
+    wallets = store._user_mlm_wallets(user)
+    if wallets[payload.from_wallet] < payload.amount:
+        raise HTTPException(status_code=400, detail="Insufficient balance in source wallet")
+    ex = store.create_exchange_request(
+        user["id"], payload.from_wallet, payload.to_wallet, payload.amount
+    )
+    return {"success": True, "exchange": ex}
+
+
+@app.get("/api/user/help-desk")
+def user_help_desk(user: dict = Depends(require_user), store: MongoStore = Depends(get_store)):
+    return {
+        "tickets": store.list_help_tickets_for_user(user["id"]),
+        "faqs": store.list_all("faqs"),
+    }
+
+
+@app.post("/api/user/help-desk", status_code=201)
+def user_create_help_ticket(
+    payload: HelpTicketIn,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    ticket = store.create_help_ticket(user["id"], payload.subject, payload.message)
+    return {"success": True, "ticket": ticket}
+
+
+@app.get("/api/user/referral-info")
+def user_referral_info(user: dict = Depends(require_user)):
+    dash = build_dashboard_payload(user)
+    return {
+        "member_id": dash["member_id"],
+        "referral_link": dash["referral_link"],
+        "full_name": user["full_name"],
+    }
+
+
 # ------------------------------ Admin API --------------------------------
 
 
@@ -437,6 +597,12 @@ def admin_stats(admin: dict = Depends(require_admin), store: MongoStore = Depend
         "faqs": store.count("faqs"),
         "users": store.count("users"),
         "contacts": store.count("contacts"),
+        "deposits": store.db.deposits.count_documents({}),
+        "deposits_pending": store.db.deposits.count_documents({"status": "pending"}),
+        "help_tickets": store.db.help_tickets.count_documents({}),
+        "help_tickets_open": store.db.help_tickets.count_documents({"status": "open"}),
+        "exchange_requests": store.db.exchange_requests.count_documents({}),
+        "exchange_pending": store.db.exchange_requests.count_documents({"status": "pending"}),
     }
 
 
@@ -501,6 +667,160 @@ def admin_update_user_amount(
     except KeyError:
         raise _not_found() from None
     return _public_user(updated)
+
+
+@app.get("/api/admin/deposits")
+def admin_list_deposits(admin: dict = Depends(require_admin), store: MongoStore = Depends(get_store)):
+    items = store.list_all_deposits()
+    out = []
+    for d in items:
+        u = store.find_user_by_id(d["user_id"])
+        out.append(
+            {
+                **d,
+                "user_name": u.get("full_name") if u else "Unknown",
+                "user_email": u.get("email") if u else "",
+            }
+        )
+    return out
+
+
+@app.patch("/api/admin/deposits/{deposit_id}")
+def admin_update_deposit(
+    deposit_id: int,
+    payload: DepositStatusUpdate,
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    try:
+        if payload.status == "approved":
+            dep = store.approve_deposit(deposit_id)
+        else:
+            dep = store.set_deposit_status(deposit_id, "rejected")
+    except KeyError:
+        raise _not_found() from None
+    return {"success": True, "deposit": dep}
+
+
+@app.get("/api/admin/users/{user_id}/referrals")
+def admin_user_referrals(
+    user_id: int,
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    try:
+        return store.get_user_referral_summary(user_id)
+    except KeyError:
+        raise _not_found() from None
+
+
+@app.get("/api/admin/users/{user_id}/referral-tree")
+def admin_user_referral_tree(
+    user_id: int,
+    member_id: Optional[str] = None,
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    u = store.find_user_by_id(user_id)
+    if not u:
+        raise _not_found()
+    from .referral import build_referral_tree
+
+    target = member_id or member_id_from_user(u)
+    return build_referral_tree(store, u, target)
+
+
+@app.patch("/api/admin/users/{user_id}/mlm")
+def admin_update_user_mlm(
+    user_id: int,
+    payload: AdminUserMlmUpdate,
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    u = store.find_user_by_id(user_id)
+    if not u:
+        raise _not_found()
+    updates = {}
+    if payload.sponsor_member_id is not None:
+        updates["sponsor_member_id"] = payload.sponsor_member_id
+    if payload.amount is not None:
+        updates["amount"] = float(payload.amount)
+        mlm = dict(u.get("mlm") or {})
+        mlm["package_amount"] = float(payload.amount)
+        updates["mlm"] = mlm
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    updated = store.update_user(user_id, updates)
+    return _public_user(updated)
+
+
+@app.get("/api/admin/help-desk")
+def admin_list_help_tickets(
+    admin: dict = Depends(require_admin), store: MongoStore = Depends(get_store)
+):
+    items = store.list_all_help_tickets()
+    out = []
+    for t in items:
+        u = store.find_user_by_id(t["user_id"])
+        out.append(
+            {
+                **t,
+                "user_name": u.get("full_name") if u else "Unknown",
+                "user_email": u.get("email") if u else "",
+            }
+        )
+    return out
+
+
+@app.patch("/api/admin/help-desk/{ticket_id}")
+def admin_reply_help_ticket(
+    ticket_id: int,
+    payload: HelpTicketReply,
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    try:
+        ticket = store.reply_help_ticket(ticket_id, payload.admin_reply, payload.status)
+    except KeyError:
+        raise _not_found() from None
+    return {"success": True, "ticket": ticket}
+
+
+@app.get("/api/admin/exchange")
+def admin_list_exchanges(
+    admin: dict = Depends(require_admin), store: MongoStore = Depends(get_store)
+):
+    items = store.list_all_exchanges()
+    out = []
+    for ex in items:
+        u = store.find_user_by_id(ex["user_id"])
+        out.append(
+            {
+                **ex,
+                "user_name": u.get("full_name") if u else "Unknown",
+                "user_email": u.get("email") if u else "",
+            }
+        )
+    return out
+
+
+@app.patch("/api/admin/exchange/{exchange_id}")
+def admin_update_exchange(
+    exchange_id: int,
+    payload: ExchangeStatusUpdate,
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    try:
+        if payload.status == "approved":
+            ex = store.approve_exchange(exchange_id)
+        else:
+            ex = store.set_exchange_status(exchange_id, "rejected")
+    except KeyError:
+        raise _not_found() from None
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return {"success": True, "exchange": ex}
 
 
 # ---------- Generic CRUD endpoints ----------

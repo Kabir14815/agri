@@ -136,8 +136,17 @@ class MongoStore:
 
         self.db.users.create_index([("email", ASCENDING)], unique=True)
         self.db.users.create_index([("id", ASCENDING)], unique=True)
-        for name in list(COLLECTIONS.values()) + ["projects", "contacts"]:
+        for name in list(COLLECTIONS.values()) + [
+            "projects",
+            "contacts",
+            "deposits",
+            "wallet_ledger",
+            "help_tickets",
+            "exchange_requests",
+        ]:
             self.db[name].create_index([("id", ASCENDING)], unique=True)
+        self.db.users.create_index([("sponsor_member_id", ASCENDING)])
+        self.db.users.create_index([("mlm.member_id", ASCENDING)])
 
     # ----------------------------- Public reads ----------------------------
 
@@ -305,6 +314,332 @@ class MongoStore:
         result = self.db.contacts.delete_one({"id": item_id})
         if result.deleted_count == 0:
             raise KeyError("not_found")
+
+    # ----------------------------- Deposits & wallet ledger ----------------
+
+    def create_deposit_request(self, user_id: int, amount: float, note: str = "") -> dict:
+        record = {
+            "id": self._next_id(self.db.deposits),
+            "user_id": user_id,
+            "amount": float(amount),
+            "status": "pending",
+            "note": note or "",
+            "created_at": datetime.utcnow().isoformat() + "Z",
+            "reviewed_at": None,
+        }
+        self.db.deposits.insert_one(record)
+        return self._serialize(record)
+
+    def list_deposits_for_user(self, user_id: int) -> List[dict]:
+        return self._serialize_many(
+            self.db.deposits.find({"user_id": user_id}).sort("id", DESCENDING)
+        )
+
+    def list_all_deposits(self) -> List[dict]:
+        return self._serialize_many(self.db.deposits.find().sort("id", DESCENDING))
+
+    def find_deposit(self, deposit_id: int) -> Optional[dict]:
+        return self._serialize(self.db.deposits.find_one({"id": deposit_id}))
+
+    def set_deposit_status(self, deposit_id: int, status: str) -> dict:
+        result = self.db.deposits.find_one_and_update(
+            {"id": deposit_id},
+            {
+                "$set": {
+                    "status": status,
+                    "reviewed_at": datetime.utcnow().isoformat() + "Z",
+                }
+            },
+            return_document=True,
+        )
+        if not result:
+            raise KeyError("not_found")
+        return self._serialize(result)
+
+    def approve_deposit(self, deposit_id: int) -> dict:
+        dep = self.find_deposit(deposit_id)
+        if not dep:
+            raise KeyError("not_found")
+        if dep["status"] != "pending":
+            return dep
+        user = self.find_user_by_id(dep["user_id"])
+        if not user:
+            raise KeyError("not_found")
+        new_amount = float(user.get("amount", 0) or 0) + float(dep["amount"])
+        mlm = dict(user.get("mlm") or {})
+        mlm["package_amount"] = new_amount
+        self.db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {"amount": new_amount, "mlm": mlm}},
+        )
+        self.add_wallet_entry(
+            user["id"],
+            "topup",
+            float(dep["amount"]),
+            f"Deposit approved #{deposit_id}",
+            "credit",
+        )
+        return self.set_deposit_status(deposit_id, "approved")
+
+    def add_wallet_entry(
+        self,
+        user_id: int,
+        wallet: str,
+        amount: float,
+        description: str,
+        direction: str = "credit",
+    ) -> dict:
+        record = {
+            "id": self._next_id(self.db.wallet_ledger),
+            "user_id": user_id,
+            "wallet": wallet,
+            "amount": float(amount),
+            "direction": direction,
+            "description": description,
+            "created_at": datetime.utcnow().isoformat() + "Z",
+        }
+        self.db.wallet_ledger.insert_one(record)
+        return self._serialize(record)
+
+    def list_wallet_ledger(self, user_id: int, wallet: Optional[str] = None) -> List[dict]:
+        query: Dict[str, Any] = {"user_id": user_id}
+        if wallet:
+            query["wallet"] = wallet
+        return self._serialize_many(
+            self.db.wallet_ledger.find(query).sort("id", DESCENDING)
+        )
+
+    def get_user_referral_summary(self, user_id: int) -> dict:
+        user = self.find_user_by_id(user_id)
+        if not user:
+            raise KeyError("not_found")
+        from .referral import get_direct_children, member_id_from_user
+
+        member_id = member_id_from_user(user)
+        db_direct = self.list_direct_referrals(member_id)
+        if db_direct:
+            referrals = [
+                {
+                    "id": r["id"],
+                    "full_name": r.get("full_name"),
+                    "email": r.get("email"),
+                    "member_id": (r.get("mlm") or {}).get("member_id")
+                    or member_id_from_user(r),
+                    "amount": float(r.get("amount", 0) or 0),
+                    "registered_at": r.get("registered_at"),
+                }
+                for r in db_direct
+            ]
+        else:
+            nodes = get_direct_children(self, member_id)
+            referrals = [
+                {
+                    "id": None,
+                    "full_name": n["full_name"],
+                    "email": "",
+                    "member_id": n["member_id"],
+                    "amount": float(n.get("amount", 0) or 0),
+                    "registered_at": None,
+                }
+                for n in nodes
+            ]
+        return {
+            "member_id": member_id,
+            "direct_count": len(referrals),
+            "referrals": referrals,
+        }
+
+    # ----------------------------- Help desk & exchange --------------------
+
+    WALLET_FIELDS = {
+        "income": "income_wallet",
+        "repurchase": "repurchase_wallet",
+        "topup": "topup_wallet",
+    }
+
+    def create_help_ticket(self, user_id: int, subject: str, message: str) -> dict:
+        record = {
+            "id": self._next_id(self.db.help_tickets),
+            "user_id": user_id,
+            "subject": subject.strip(),
+            "message": message.strip(),
+            "status": "open",
+            "admin_reply": "",
+            "created_at": datetime.utcnow().isoformat() + "Z",
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }
+        self.db.help_tickets.insert_one(record)
+        return self._serialize(record)
+
+    def list_help_tickets_for_user(self, user_id: int) -> List[dict]:
+        return self._serialize_many(
+            self.db.help_tickets.find({"user_id": user_id}).sort("id", DESCENDING)
+        )
+
+    def list_all_help_tickets(self) -> List[dict]:
+        return self._serialize_many(
+            self.db.help_tickets.find().sort("id", DESCENDING)
+        )
+
+    def find_help_ticket(self, ticket_id: int) -> Optional[dict]:
+        return self._serialize(self.db.help_tickets.find_one({"id": ticket_id}))
+
+    def reply_help_ticket(self, ticket_id: int, admin_reply: str, status: str = "answered") -> dict:
+        result = self.db.help_tickets.find_one_and_update(
+            {"id": ticket_id},
+            {
+                "$set": {
+                    "admin_reply": admin_reply.strip(),
+                    "status": status,
+                    "updated_at": datetime.utcnow().isoformat() + "Z",
+                }
+            },
+            return_document=True,
+        )
+        if not result:
+            raise KeyError("not_found")
+        return self._serialize(result)
+
+    def create_exchange_request(
+        self, user_id: int, from_wallet: str, to_wallet: str, amount: float
+    ) -> dict:
+        record = {
+            "id": self._next_id(self.db.exchange_requests),
+            "user_id": user_id,
+            "from_wallet": from_wallet,
+            "to_wallet": to_wallet,
+            "amount": float(amount),
+            "status": "pending",
+            "created_at": datetime.utcnow().isoformat() + "Z",
+            "reviewed_at": None,
+        }
+        self.db.exchange_requests.insert_one(record)
+        return self._serialize(record)
+
+    def list_exchanges_for_user(self, user_id: int) -> List[dict]:
+        return self._serialize_many(
+            self.db.exchange_requests.find({"user_id": user_id}).sort("id", DESCENDING)
+        )
+
+    def list_all_exchanges(self) -> List[dict]:
+        return self._serialize_many(
+            self.db.exchange_requests.find().sort("id", DESCENDING)
+        )
+
+    def find_exchange(self, exchange_id: int) -> Optional[dict]:
+        return self._serialize(self.db.exchange_requests.find_one({"id": exchange_id}))
+
+    def set_exchange_status(self, exchange_id: int, status: str) -> dict:
+        result = self.db.exchange_requests.find_one_and_update(
+            {"id": exchange_id},
+            {
+                "$set": {
+                    "status": status,
+                    "reviewed_at": datetime.utcnow().isoformat() + "Z",
+                }
+            },
+            return_document=True,
+        )
+        if not result:
+            raise KeyError("not_found")
+        return self._serialize(result)
+
+    def _user_mlm_wallets(self, user: dict) -> Dict[str, float]:
+        email = user.get("email", "")
+        if email in DEMO_MLM_BY_EMAIL:
+            stats = dict(DEMO_MLM_BY_EMAIL[email])
+        elif user.get("mlm"):
+            stats = dict(user["mlm"])
+        else:
+            stats = default_mlm_stats(user["id"], user.get("amount", 0))
+        return {
+            "income": float(stats.get("income_wallet", 0) or 0),
+            "repurchase": float(stats.get("repurchase_wallet", 0) or 0),
+            "topup": float(stats.get("topup_wallet", 0) or 0),
+            "_stats": stats,
+        }
+
+    def approve_exchange(self, exchange_id: int) -> dict:
+        ex = self.find_exchange(exchange_id)
+        if not ex:
+            raise KeyError("not_found")
+        if ex["status"] != "pending":
+            return ex
+        user = self.find_user_by_id(ex["user_id"])
+        if not user:
+            raise KeyError("not_found")
+        from_w = ex["from_wallet"]
+        to_w = ex["to_wallet"]
+        amount = float(ex["amount"])
+        wallets = self._user_mlm_wallets(user)
+        if wallets[from_w] < amount:
+            raise ValueError("insufficient_balance")
+        stats = wallets["_stats"]
+        from_field = self.WALLET_FIELDS[from_w]
+        to_field = self.WALLET_FIELDS[to_w]
+        stats[from_field] = round(wallets[from_w] - amount, 2)
+        stats[to_field] = round(wallets[to_w] + amount, 2)
+        self.db.users.update_one({"id": user["id"]}, {"$set": {"mlm": stats}})
+        self.add_wallet_entry(
+            user["id"],
+            from_w,
+            amount,
+            f"Exchange to {to_w} #{exchange_id}",
+            "debit",
+        )
+        self.add_wallet_entry(
+            user["id"],
+            to_w,
+            amount,
+            f"Exchange from {from_w} #{exchange_id}",
+            "credit",
+        )
+        return self.set_exchange_status(exchange_id, "approved")
+
+    def list_user_transactions(self, user_id: int) -> List[dict]:
+        rows: List[dict] = []
+        for dep in self.list_deposits_for_user(user_id):
+            rows.append(
+                {
+                    "id": f"dep-{dep['id']}",
+                    "ref_id": dep["id"],
+                    "category": "deposit",
+                    "amount": float(dep["amount"]),
+                    "direction": "credit",
+                    "status": dep["status"],
+                    "description": f"Deposit request #{dep['id']}",
+                    "created_at": dep["created_at"],
+                }
+            )
+        for entry in self.list_wallet_ledger(user_id):
+            rows.append(
+                {
+                    "id": f"led-{entry['id']}",
+                    "ref_id": entry["id"],
+                    "category": "wallet",
+                    "amount": float(entry["amount"]),
+                    "direction": entry.get("direction", "credit"),
+                    "status": "completed",
+                    "description": entry.get("description", ""),
+                    "wallet": entry.get("wallet"),
+                    "created_at": entry["created_at"],
+                }
+            )
+        for ex in self.list_exchanges_for_user(user_id):
+            rows.append(
+                {
+                    "id": f"ex-{ex['id']}",
+                    "ref_id": ex["id"],
+                    "category": "exchange",
+                    "amount": float(ex["amount"]),
+                    "direction": "transfer",
+                    "status": ex["status"],
+                    "description": f"Exchange {ex['from_wallet']} → {ex['to_wallet']}",
+                    "created_at": ex["created_at"],
+                }
+            )
+        rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+        return rows
 
     # ----------------------------- Admin CRUD ------------------------------
 

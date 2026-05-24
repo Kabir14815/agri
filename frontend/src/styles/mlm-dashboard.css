@@ -747,6 +747,220 @@
   margin-top: 8px;
 }
 
+/* Extra nav — circular icon shortcuts */
+.mlm-nav-extra {
+  margin-top: auto;
+  padding: 16px 12px 20px;
+  border-top: 1px solid #2d323c;
+}
+
+.mlm-nav-extra-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  margin: 0 0 10px 8px;
+}
+
+.mlm-nav-extra-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  text-decoration: none;
+  color: #e8eaed;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
+.mlm-nav-extra-item:hover,
+.mlm-nav-extra-item.active {
+  background: #1f2329;
+}
+
+.mlm-nav-extra-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.mlm-nav-extra-text {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.mlm-nav-extra-chevron {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.mlm-section-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #9ca3af;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mlm-income-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mlm-income-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 14px 16px;
+  background: #1a1d23;
+  border: 1px solid #2d323c;
+  border-radius: 10px;
+}
+
+.mlm-income-row > div {
+  flex: 1;
+}
+
+.mlm-income-row strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.mlm-today-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mlm-today-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #2d323c;
+  background: #1a1d23;
+}
+
+.mlm-help-ticket-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.mlm-help-reply {
+  margin-top: 12px;
+  padding: 12px;
+  background: #0f1114;
+  border-radius: 8px;
+  border-left: 3px solid #22c55e;
+}
+
+.mlm-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mlm-faq-item {
+  background: #1a1d23;
+  border: 1px solid #2d323c;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.mlm-faq-item summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.mlm-faq-item p {
+  margin: 10px 0 0;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.mlm-register-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.mlm-security-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.mlm-security-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: #1a1d23;
+  border: 1px solid #2d323c;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  width: 100%;
+}
+
+.mlm-security-card:hover {
+  border-color: #22c55e;
+}
+
+.mlm-security-card.muted {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.mlm-security-card.muted:hover {
+  border-color: #2d323c;
+}
+
+.mlm-security-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.mlm-security-card p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.mlm-profile-field select,
+.mlm-profile-field textarea {
+  background: #0f1114;
+  border: 1px solid #2d323c;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #e8eaed;
+  font-size: 14px;
+  width: 100%;
+}
+
 .mlm-nav-group {
   display: flex;
   flex-direction: column;
@@ -846,7 +1060,7 @@
 }
 
 .mlm-tree-search button {
-  background: #2563eb;
+  background: linear-gradient(180deg, #4ade80, #16a34a);
   border: none;
   color: #fff;
   padding: 0 20px;
@@ -950,10 +1164,18 @@
   color: #f1f5f9;
 }
 
-.mlm-tree-meta {
-  font-size: 12px;
-  color: #cbd5e1;
-  margin: 2px 0;
+.mlm-tree-stat {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 4px 0 2px;
+}
+
+.mlm-tree-amount {
+  font-size: 13px;
+  color: #86efac;
+  margin: 0 0 4px;
+  font-weight: 600;
 }
 
 .mlm-tree-view-btn {
