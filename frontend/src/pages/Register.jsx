@@ -93,11 +93,19 @@ export default function Register() {
       }
       const res = await api.register(payload)
       clearStoredReferralCode()
+      const mid = res.user?.member_id || ''
+      try {
+        if (mid) sessionStorage.setItem('kgf_login_member_id', mid)
+      } catch {
+        /* ignore */
+      }
       setStatus({
         type: 'success',
-        text: `${res.message}! Your profile is saved — redirecting to login…`,
+        text: mid
+          ? `${res.message}! Your Member ID is ${mid}. Save it — you will use it to log in.`
+          : `${res.message}! Redirecting to login…`,
       })
-      setTimeout(() => navigate(buildLoginPath(sponsor)), 1400)
+      setTimeout(() => navigate(buildLoginPath(sponsor)), 2200)
     } catch (err) {
       setStatus({ type: 'error', text: err.message })
     } finally {

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
-import { useAdminAuth } from '../admin/AdminAuth.jsx'
 import { useUserAuth } from '../user/UserAuth.jsx'
 import {
   resolveReferralCodeFromUrl,
@@ -10,17 +9,30 @@ import {
   normalizeReferralCode,
 } from '../utils/referral.js'
 
+const LOGIN_MEMBER_ID_KEY = 'kgf_login_member_id'
+
 export default function Login() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [searchParams] = useSearchParams()
-  const { applySession: applyAdminSession } = useAdminAuth()
   const { applySession: applyUserSession } = useUserAuth()
-  const [form, setForm] = useState({ email: '', password: '' })
+  const [form, setForm] = useState({ member_id: '', password: '' })
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
   const [referralCode, setReferralCode] = useState('')
   const [sponsorName, setSponsorName] = useState(null)
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(LOGIN_MEMBER_ID_KEY)
+      if (saved) {
+        setForm((f) => ({ ...f, member_id: saved }))
+        sessionStorage.removeItem(LOGIN_MEMBER_ID_KEY)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   useEffect(() => {
     const code = resolveReferralCodeFromUrl(searchParams, '', pathname)
@@ -42,22 +54,29 @@ export default function Login() {
     navigate('/login', { replace: true })
   }
 
-  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
+  const onChange = (e) => {
+    const { name, value } = e.target
+    setForm({
+      ...form,
+      [name]: name === 'member_id' ? value.toUpperCase() : value,
+    })
+  }
 
   const onSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setStatus(null)
     try {
-      const res = await api.login(form)
+      const res = await api.login({
+        member_id: form.member_id.trim(),
+        password: form.password,
+      })
 
       if (res.user.role === 'admin') {
-        applyAdminSession(res.token, res.user)
         setStatus({
-          type: 'success',
-          text: `Welcome, ${res.user.full_name}. Taking you to the admin panel…`,
+          type: 'error',
+          text: 'Admin accounts must sign in at /admin/login',
         })
-        setTimeout(() => navigate('/admin', { replace: true }), 700)
         return
       }
 
@@ -79,9 +98,10 @@ export default function Login() {
   return (
     <div className="auth-wrap auth-premium">
       <div className="auth-card auth-card-premium" style={{ maxWidth: 480 }}>
-        <h2>Login</h2>
+        <h2>Member Login</h2>
         <p className="sub">
-          Sign in to your KGF Farming account. Admins are taken straight to the admin panel.
+          Sign in with your <strong>Member ID</strong> (e.g. KGF870365) and password from
+          registration.
         </p>
 
         {ref && (
@@ -104,46 +124,31 @@ export default function Login() {
         )}
 
         <div className="demo-creds">
-          <strong>Demo accounts</strong>
+          <strong>Demo member</strong>
           <div>
-            Customer: <code>demo@kgffarming.com</code> / <code>demo1234</code>
+            Member ID: <code>KGF870365</code> / Password: <code>demo1234</code>
           </div>
-          <div>
-            Admin: <code>admin@kgffarming.com</code> / <code>admin1234</code>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-            <button
-              type="button"
-              className="demo-fill"
-              onClick={() =>
-                setForm({ email: 'demo@kgffarming.com', password: 'demo1234' })
-              }
-            >
-              Fill customer demo
-            </button>
-            <button
-              type="button"
-              className="demo-fill"
-              onClick={() =>
-                setForm({ email: 'admin@kgffarming.com', password: 'admin1234' })
-              }
-            >
-              Fill admin demo
-            </button>
-          </div>
+          <button
+            type="button"
+            className="demo-fill"
+            onClick={() => setForm({ member_id: 'KGF870365', password: 'demo1234' })}
+          >
+            Fill demo credentials
+          </button>
         </div>
 
         {status && <div className={`form-message ${status.type}`}>{status.text}</div>}
 
         <form onSubmit={onSubmit}>
           <div className="form-group">
-            <label>Email</label>
+            <label>Member ID</label>
             <input
-              type="email"
               className="form-control"
-              name="email"
-              value={form.email}
+              name="member_id"
+              value={form.member_id}
               onChange={onChange}
+              placeholder="e.g. KGF870365"
+              autoComplete="username"
               required
             />
           </div>
@@ -157,6 +162,7 @@ export default function Login() {
               onChange={onChange}
               required
               minLength={6}
+              autoComplete="current-password"
             />
           </div>
           <button className="btn btn-accent" style={{ width: '100%' }} disabled={loading}>
@@ -166,6 +172,9 @@ export default function Login() {
 
         <p className="alt-link">
           New here? <Link to={ref ? buildRegisterPath(ref) : '/register'}>Create an account</Link>
+        </p>
+        <p className="alt-link" style={{ marginTop: 8 }}>
+          Admin? <Link to="/admin/login">Admin login</Link>
         </p>
       </div>
     </div>

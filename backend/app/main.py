@@ -77,7 +77,7 @@ class PasswordChange(BaseModel):
 
 
 class LoginPayload(BaseModel):
-    email: EmailStr
+    member_id: str = Field(..., min_length=3, max_length=80)
     password: str = Field(..., min_length=6, max_length=80)
 
 
@@ -419,14 +419,20 @@ def register(payload: RegisterPayload, store: MongoStore = Depends(get_store)):
 
 @app.post("/api/auth/login")
 def login(payload: LoginPayload, store: MongoStore = Depends(get_store)):
-    u = store.find_user_by_email(payload.email)
+    from .referral import normalize_member_id
+
+    login_id = payload.member_id.strip()
+    if "@" in login_id:
+        u = store.find_user_by_email(login_id)
+    else:
+        u = store.find_user_by_member_id(normalize_member_id(login_id))
     if u and u.get("password") == payload.password:
         return {
             "success": True,
             "token": f"demo-token-{u['id']}",
             "user": _user_dashboard_payload(u),
         }
-    raise HTTPException(status_code=401, detail="Invalid email or password")
+    raise HTTPException(status_code=401, detail="Invalid member ID or password")
 
 
 @app.get("/api/user/dashboard")

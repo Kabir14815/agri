@@ -41,7 +41,7 @@ export function AdminAuthProvider({ children }) {
   }
 
   const login = async (email, password) => {
-    const res = await api.login({ email, password })
+    const res = await api.login({ member_id: email, password })
     if (res.user.role !== 'admin') {
       throw new Error('This account does not have admin access')
     }

@@ -92,10 +92,10 @@ def run() -> None:
     )
     ok(f"Registered user A ({USER_A_EMAIL})")
 
-    login_a = req("POST", "/auth/login", {"email": USER_A_EMAIL, "password": PASSWORD})
+    member_a = reg_a["user"]["member_id"]
+    login_a = req("POST", "/auth/login", {"member_id": member_a, "password": PASSWORD})
     token_a = login_a["token"]
-    member_a = login_a["user"]["member_id"]
-    ok(f"Login user A -> member_id {member_a}")
+    ok(f"Login user A with member_id {member_a}")
 
     dash_a = req("GET", "/user/dashboard", token=token_a)
     ref_info = req("GET", "/user/referral-info", token=token_a)
@@ -117,12 +117,12 @@ def run() -> None:
     )
     ok(f"Registered user B under sponsor {member_a}")
 
-    login_b = req("POST", "/auth/login", {"email": USER_B_EMAIL, "password": PASSWORD})
+    member_b = reg_b["user"]["member_id"]
+    login_b = req("POST", "/auth/login", {"member_id": member_b, "password": PASSWORD})
     token_b = login_b["token"]
-    member_b = login_b["user"]["member_id"]
-    ok(f"Login user B -> member_id {member_b}")
+    ok(f"Login user B with member_id {member_b}")
 
-    demo = req("POST", "/auth/login", {"email": DEMO_EMAIL, "password": DEMO_PASSWORD})
+    demo = req("POST", "/auth/login", {"member_id": SPONSOR_CODE, "password": DEMO_PASSWORD})
     token_demo = demo["token"]
     ok("Login demo sponsor")
 
