@@ -10,6 +10,7 @@ import {
   FiDollarSign,
   FiUsers,
   FiGitBranch,
+  FiCheck,
 } from 'react-icons/fi'
 import { adminApi } from '../../api.js'
 import { useAdminAuth } from '../AdminAuth.jsx'
@@ -47,26 +48,51 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
   const [amount, setAmount] = useState('')
   const [sponsorId, setSponsorId] = useState('')
   const [referrals, setReferrals] = useState(null)
+  const [deposits, setDeposits] = useState([])
   const [saving, setSaving] = useState(false)
+  const [depositBusy, setDepositBusy] = useState(null)
+
+  const loadDeposits = (userId) => {
+    adminApi
+      .deposits()
+      .then((all) => setDeposits(all.filter((d) => d.user_id === userId)))
+      .catch(() => setDeposits([]))
+  }
 
   useEffect(() => {
     if (user) {
       setAmount(String(user.amount ?? 0))
       setSponsorId(user.sponsor_member_id || user.mlm?.sponsor_member_id || '')
       setReferrals(null)
+      setDeposits([])
       adminApi
         .getUserReferrals(user.id)
         .then((r) => setReferrals(r))
         .catch(() => setReferrals({ direct_count: 0, referrals: [] }))
+      loadDeposits(user.id)
     }
   }, [user])
 
   if (!user) return null
 
-  const saveMlm = async () => {
+  const pendingDeposits = deposits.filter((d) => d.status === 'pending')
+  const isActive = Number(amount) > 0
+
+  const approveActivate = async () => {
+    const value = Number(amount)
+    if (!value || value <= 0) {
+      alert('Enter the approved investment amount (₹) first.')
+      return
+    }
+    if (
+      !confirm(
+        `Approve & activate ${user.full_name} with investment ₹${value.toLocaleString('en-IN')}?`,
+      )
+    ) {
+      return
+    }
     setSaving(true)
     try {
-      const value = Number(amount)
       await adminApi.updateUserMlm(user.id, {
         amount: value,
         sponsor_member_id: sponsorId.trim().toUpperCase() || null,
@@ -74,10 +100,39 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
       const refreshed = await adminApi.getUserReferrals(user.id)
       setReferrals(refreshed)
       onAmountSaved?.(value)
+      alert('Member approved and activated. Daily interest will accrue on this amount.')
     } catch (e) {
       alert(e.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const reviewDeposit = async (depositId, newStatus) => {
+    if (
+      !confirm(
+        `${newStatus === 'approved' ? 'Approve' : 'Reject'} deposit #${depositId} for ${user.full_name}?`,
+      )
+    ) {
+      return
+    }
+    setDepositBusy(depositId)
+    try {
+      await adminApi.updateDeposit(depositId, newStatus)
+      loadDeposits(user.id)
+      if (newStatus === 'approved') {
+        const all = await adminApi.deposits()
+        const approved = all.find((d) => d.id === depositId)
+        if (approved) {
+          setAmount(String(approved.amount))
+          onAmountSaved?.(approved.amount)
+        }
+      }
+      alert(`Deposit #${depositId} ${newStatus}.`)
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setDepositBusy(null)
     }
   }
 
@@ -91,6 +146,71 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
           </button>
         </div>
         <div className="admin-profile-modal-body">
+          {user.role !== 'admin' && (
+            <div className="admin-activate-box">
+              <span className={`admin-activate-status ${isActive ? 'active' : 'inactive'}`}>
+                {isActive ? 'Active member' : 'Not activated — pending approval'}
+              </span>
+              <h4>Approve member</h4>
+              <p>
+                Set the investment amount below and click <strong>Approve &amp; Activate</strong>,
+                or approve a pending deposit request from this member.
+              </p>
+              <div className="admin-amount-edit">
+                <input
+                  type="number"
+                  className="form-control"
+                  min="0"
+                  step="1"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="Investment amount"
+                  style={{ flex: '1 1 140px' }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={saving}
+                  onClick={approveActivate}
+                >
+                  <FiCheck /> {saving ? 'Saving…' : 'Approve & Activate'}
+                </button>
+              </div>
+              {pendingDeposits.length > 0 && (
+                <div className="admin-pending-deposits">
+                  <small style={{ fontWeight: 700, color: '#14532d' }}>
+                    Pending deposit requests
+                  </small>
+                  {pendingDeposits.map((d) => (
+                    <div key={d.id} className="admin-pending-deposit-row">
+                      <span>
+                        #{d.id} — {formatInr(d.amount)} — {formatDate(d.created_at)}
+                      </span>
+                      <div className="admin-pending-deposit-actions">
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          disabled={depositBusy === d.id}
+                          onClick={() => reviewDeposit(d.id, 'approved')}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm"
+                          disabled={depositBusy === d.id}
+                          onClick={() => reviewDeposit(d.id, 'rejected')}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="admin-profile-hero">
             <div
               className="user-avatar xl"
@@ -138,29 +258,8 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
             <div className="profile-detail-row">
               <FiDollarSign />
               <div>
-                <small>Amount (₹)</small>
-                {user.role !== 'admin' ? (
-                  <div className="admin-amount-edit">
-                    <input
-                      type="number"
-                      className="form-control"
-                      min="0"
-                      step="1"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm"
-                      disabled={saving}
-                      onClick={saveMlm}
-                    >
-                      {saving ? 'Saving…' : 'Save MLM'}
-                    </button>
-                  </div>
-                ) : (
-                  <p>{formatInr(user.amount)}</p>
-                )}
+                <small>Investment / package amount (₹)</small>
+                <p>{formatInr(Number(amount) || 0)}</p>
               </div>
             </div>
             {referrals?.sponsor_member_id && (
