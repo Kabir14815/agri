@@ -25,7 +25,16 @@ export default function ReferralLanding() {
     persistReferralCode(code)
     api
       .lookupReferral(code)
-      .then(setSponsor)
+      .then((data) => {
+        setSponsor(data)
+        const trackedKey = `kgf_ref_tracked_${code}`
+        if (!sessionStorage.getItem(trackedKey)) {
+          api
+            .trackReferralVisit({ code, path: `/ref/${code}` })
+            .then(() => sessionStorage.setItem(trackedKey, '1'))
+            .catch(() => {})
+        }
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
   }, [code])

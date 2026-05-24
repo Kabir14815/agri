@@ -15,6 +15,7 @@ import WalletIncome from './dashboard/WalletIncome.jsx'
 import WalletRepurchase from './dashboard/WalletRepurchase.jsx'
 import WalletTopup from './dashboard/WalletTopup.jsx'
 import WalletStatement from './dashboard/WalletStatement.jsx'
+import WalletTransfer from './dashboard/WalletTransfer.jsx'
 import TeamLayout from './dashboard/TeamLayout.jsx'
 import DashboardTeam from './dashboard/DashboardTeam.jsx'
 import DashboardReferralTree from './dashboard/DashboardReferralTree.jsx'
@@ -48,6 +49,7 @@ export default function Dashboard() {
         </Route>
         <Route path="wallet" element={<WalletLayout />}>
           <Route index element={<WalletIncome />} />
+          <Route path="transfer" element={<WalletTransfer />} />
           <Route path="repurchase" element={<WalletRepurchase />} />
           <Route path="topup" element={<WalletTopup />} />
           <Route path="statement" element={<WalletStatement />} />

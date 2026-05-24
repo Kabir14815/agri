@@ -35,6 +35,7 @@ import UsersPage from './admin/pages/UsersPage.jsx'
 import DepositsPage from './admin/pages/DepositsPage.jsx'
 import HelpDeskPage from './admin/pages/HelpDeskPage.jsx'
 import ExchangePage from './admin/pages/ExchangePage.jsx'
+import WalletTransfersPage from './admin/pages/WalletTransfersPage.jsx'
 import ReferralsPage from './admin/pages/ReferralsPage.jsx'
 import ReferralLanding from './pages/ReferralLanding.jsx'
 import ReferralTracker from './components/ReferralTracker.jsx'
@@ -72,8 +73,8 @@ export default function App() {
           <Route path="/ref/:code" element={<ReferralLanding />} />
           <Route path="/join/:code" element={<ReferralLanding />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
           <Route path="/register/ref/:code" element={<Register />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/franchisee-login" element={<FranchiseeLogin />} />
           <Route
             path="/dashboard/*"
@@ -107,6 +108,7 @@ export default function App() {
             <Route path="deposits" element={<DepositsPage />} />
             <Route path="help-desk" element={<HelpDeskPage />} />
             <Route path="exchange" element={<ExchangePage />} />
+            <Route path="wallet-transfers" element={<WalletTransfersPage />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

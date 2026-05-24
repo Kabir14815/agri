@@ -127,12 +127,20 @@ class MongoStore:
         )
 
         for demo in DEMO_USERS:
-            if self.db.users.find_one({"email": demo["email"]}) is None:
+            existing = self.db.users.find_one({"email": demo["email"]})
+            demo_mlm = DEMO_MLM_BY_EMAIL.get(demo["email"])
+            if existing is None:
                 user = {**demo, "registered_at": now}
                 user["id"] = self._next_id(self.db.users)
-                if demo["email"] in DEMO_MLM_BY_EMAIL:
-                    user["mlm"] = DEMO_MLM_BY_EMAIL[demo["email"]]
+                if demo_mlm:
+                    user["mlm"] = dict(demo_mlm)
                 self.db.users.insert_one(user)
+            elif demo_mlm:
+                # Keep demo referral codes stable (e.g. KGF870365) after deploys
+                self.db.users.update_one(
+                    {"email": demo["email"]},
+                    {"$set": {"mlm": dict(demo_mlm)}},
+                )
 
         self.db.users.create_index([("email", ASCENDING)], unique=True)
         self.db.users.create_index([("id", ASCENDING)], unique=True)
@@ -143,6 +151,7 @@ class MongoStore:
             "wallet_ledger",
             "help_tickets",
             "exchange_requests",
+            "wallet_transfers",
             "referral_visits",
         ]:
             self.db[name].create_index([("id", ASCENDING)], unique=True)
@@ -150,6 +159,9 @@ class MongoStore:
         self.db.referral_visits.create_index([("visited_at", DESCENDING)])
         self.db.users.create_index([("sponsor_member_id", ASCENDING)])
         self.db.users.create_index([("mlm.member_id", ASCENDING)])
+        self.db.wallet_transfers.create_index([("from_user_id", ASCENDING)])
+        self.db.wallet_transfers.create_index([("to_user_id", ASCENDING)])
+        self.db.wallet_transfers.create_index([("created_at", DESCENDING)])
 
     # ----------------------------- Referral tracking -----------------------
 
@@ -600,6 +612,24 @@ class MongoStore:
         "repurchase": "repurchase_wallet",
         "topup": "topup_wallet",
     }
+    MIN_WALLET_TRANSFER = 100.0
+
+    def _get_user_mlm_stats(self, user: dict) -> dict:
+        if user.get("mlm") and isinstance(user["mlm"], dict):
+            return dict(user["mlm"])
+        email = user.get("email", "")
+        if email in DEMO_MLM_BY_EMAIL:
+            return dict(DEMO_MLM_BY_EMAIL[email])
+        return default_mlm_stats(user["id"], user.get("amount", 0))
+
+    def _set_user_mlm_stats(self, user_id: int, stats: dict) -> None:
+        self.db.users.update_one({"id": user_id}, {"$set": {"mlm": stats}})
+
+    def _wallet_balance(self, stats: dict, wallet: str) -> float:
+        field = self.WALLET_FIELDS.get(wallet)
+        if not field:
+            return 0.0
+        return float(stats.get(field, 0) or 0)
 
     def create_help_ticket(self, user_id: int, subject: str, message: str) -> dict:
         record = {
@@ -689,19 +719,109 @@ class MongoStore:
         return self._serialize(result)
 
     def _user_mlm_wallets(self, user: dict) -> Dict[str, float]:
-        email = user.get("email", "")
-        if email in DEMO_MLM_BY_EMAIL:
-            stats = dict(DEMO_MLM_BY_EMAIL[email])
-        elif user.get("mlm"):
-            stats = dict(user["mlm"])
-        else:
-            stats = default_mlm_stats(user["id"], user.get("amount", 0))
+        stats = self._get_user_mlm_stats(user)
         return {
-            "income": float(stats.get("income_wallet", 0) or 0),
-            "repurchase": float(stats.get("repurchase_wallet", 0) or 0),
-            "topup": float(stats.get("topup_wallet", 0) or 0),
+            "income": self._wallet_balance(stats, "income"),
+            "repurchase": self._wallet_balance(stats, "repurchase"),
+            "topup": self._wallet_balance(stats, "topup"),
             "_stats": stats,
         }
+
+    def lookup_member_for_transfer(self, member_id: str) -> Optional[dict]:
+        from .referral import member_id_from_user, normalize_member_id
+
+        mid = normalize_member_id(member_id)
+        user = self.find_user_by_member_id(mid)
+        if not user:
+            return None
+        return {
+            "member_id": member_id_from_user(user),
+            "full_name": user.get("full_name"),
+            "user_id": user["id"],
+        }
+
+    def transfer_wallet_funds(
+        self,
+        from_user_id: int,
+        to_member_id: str,
+        amount: float,
+        wallet: str = "income",
+    ) -> dict:
+        from .referral import member_id_from_user, normalize_member_id
+
+        amount = round(float(amount), 2)
+        if amount < self.MIN_WALLET_TRANSFER:
+            raise ValueError("min_amount")
+        if wallet not in self.WALLET_FIELDS:
+            raise ValueError("invalid_wallet")
+
+        sender = self.find_user_by_id(from_user_id)
+        if not sender:
+            raise KeyError("not_found")
+
+        to_mid = normalize_member_id(to_member_id)
+        recipient = self.find_user_by_member_id(to_mid)
+        if not recipient:
+            raise ValueError("recipient_not_found")
+        if recipient["id"] == from_user_id:
+            raise ValueError("cannot_transfer_self")
+
+        sender_mid = member_id_from_user(sender)
+        sender_stats = self._get_user_mlm_stats(sender)
+        field = self.WALLET_FIELDS[wallet]
+        balance = self._wallet_balance(sender_stats, wallet)
+        if balance < amount:
+            raise ValueError("insufficient_balance")
+
+        recipient_stats = self._get_user_mlm_stats(recipient)
+        sender_stats[field] = round(balance - amount, 2)
+        recipient_stats[field] = round(self._wallet_balance(recipient_stats, wallet) + amount, 2)
+
+        self._set_user_mlm_stats(from_user_id, sender_stats)
+        self._set_user_mlm_stats(recipient["id"], recipient_stats)
+
+        record = {
+            "id": self._next_id(self.db.wallet_transfers),
+            "from_user_id": from_user_id,
+            "to_user_id": recipient["id"],
+            "from_member_id": sender_mid,
+            "to_member_id": to_mid,
+            "to_name": recipient.get("full_name") or "",
+            "from_name": sender.get("full_name") or "",
+            "amount": amount,
+            "wallet": wallet,
+            "status": "completed",
+            "created_at": datetime.utcnow().isoformat() + "Z",
+        }
+        self.db.wallet_transfers.insert_one(record)
+
+        self.add_wallet_entry(
+            from_user_id,
+            wallet,
+            amount,
+            f"Transfer to {to_mid} ({recipient.get('full_name', '')})",
+            "debit",
+        )
+        self.add_wallet_entry(
+            recipient["id"],
+            wallet,
+            amount,
+            f"Transfer from {sender_mid} ({sender.get('full_name', '')})",
+            "credit",
+        )
+        return self._serialize(record)
+
+    def list_wallet_transfers_for_user(self, user_id: int) -> List[dict]:
+        return self._serialize_many(
+            self.db.wallet_transfers.find(
+                {"$or": [{"from_user_id": user_id}, {"to_user_id": user_id}]}
+            ).sort("id", DESCENDING)
+        )
+
+    def list_all_wallet_transfers(self) -> List[dict]:
+        return self._serialize_many(
+            self.db.wallet_transfers.find().sort("id", DESCENDING)
+        )
 
     def approve_exchange(self, exchange_id: int) -> dict:
         ex = self.find_exchange(exchange_id)
@@ -723,7 +843,7 @@ class MongoStore:
         to_field = self.WALLET_FIELDS[to_w]
         stats[from_field] = round(wallets[from_w] - amount, 2)
         stats[to_field] = round(wallets[to_w] + amount, 2)
-        self.db.users.update_one({"id": user["id"]}, {"$set": {"mlm": stats}})
+        self._set_user_mlm_stats(user["id"], stats)
         self.add_wallet_entry(
             user["id"],
             from_w,
@@ -780,6 +900,27 @@ class MongoStore:
                     "status": ex["status"],
                     "description": f"Exchange {ex['from_wallet']} → {ex['to_wallet']}",
                     "created_at": ex["created_at"],
+                }
+            )
+        for tr in self.list_wallet_transfers_for_user(user_id):
+            outgoing = tr["from_user_id"] == user_id
+            peer = tr["to_member_id"] if outgoing else tr["from_member_id"]
+            peer_name = tr["to_name"] if outgoing else tr.get("from_name", "")
+            rows.append(
+                {
+                    "id": f"wtr-{tr['id']}",
+                    "ref_id": tr["id"],
+                    "category": "wallet_transfer",
+                    "amount": float(tr["amount"]),
+                    "direction": "debit" if outgoing else "credit",
+                    "status": tr.get("status", "completed"),
+                    "description": (
+                        f"Sent to {peer} ({peer_name})"
+                        if outgoing
+                        else f"Received from {peer} ({peer_name})"
+                    ),
+                    "wallet": tr.get("wallet"),
+                    "created_at": tr["created_at"],
                 }
             )
         rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)

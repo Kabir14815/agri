@@ -128,6 +128,12 @@ class ExchangeRequestIn(BaseModel):
     amount: float = Field(..., gt=0)
 
 
+class WalletTransferIn(BaseModel):
+    to_member_id: str = Field(..., min_length=3, max_length=24)
+    amount: float = Field(..., ge=100)
+    wallet: str = Field(default="income", pattern="^(income|repurchase|topup)$")
+
+
 class ExchangeStatusUpdate(BaseModel):
     status: str = Field(..., pattern="^(approved|rejected)$")
 
@@ -604,6 +610,74 @@ def user_wallet_statement(
     return {"entries": entries}
 
 
+@app.get("/api/user/wallet/transfer")
+def user_wallet_transfer_info(
+    user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
+):
+    wallets = store._user_mlm_wallets(user)
+    return {
+        "available_fund": wallets["income"],
+        "min_amount": store.MIN_WALLET_TRANSFER,
+        "wallet": "income",
+        "transfers": store.list_wallet_transfers_for_user(user["id"]),
+    }
+
+
+@app.get("/api/user/wallet/transfer/lookup")
+def user_wallet_transfer_lookup(
+    member_id: str,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    from .referral import normalize_member_id
+
+    mid = normalize_member_id(member_id)
+    if not mid:
+        raise HTTPException(status_code=400, detail="Enter a valid member ID")
+    lookup = store.lookup_member_for_transfer(mid)
+    if not lookup:
+        raise HTTPException(status_code=404, detail="Member ID not found")
+    if lookup["user_id"] == user["id"]:
+        raise HTTPException(status_code=400, detail="You cannot transfer to yourself")
+    return lookup
+
+
+@app.post("/api/user/wallet/transfer", status_code=201)
+def user_wallet_transfer(
+    payload: WalletTransferIn,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    try:
+        transfer = store.transfer_wallet_funds(
+            user["id"],
+            payload.to_member_id,
+            payload.amount,
+            wallet=payload.wallet,
+        )
+    except ValueError as exc:
+        code = str(exc)
+        messages = {
+            "min_amount": f"Minimum transfer amount is ₹{store.MIN_WALLET_TRANSFER:.0f}",
+            "invalid_wallet": "Invalid wallet type",
+            "recipient_not_found": "Recipient member ID not found",
+            "cannot_transfer_self": "You cannot transfer to yourself",
+            "insufficient_balance": "Insufficient available fund",
+        }
+        raise HTTPException(
+            status_code=400, detail=messages.get(code, "Transfer failed")
+        ) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="User not found") from exc
+    refreshed = store.find_user_by_id(user["id"])
+    wallets = store._user_mlm_wallets(refreshed)
+    return {
+        "success": True,
+        "transfer": transfer,
+        "available_fund": wallets["income"],
+    }
+
+
 @app.get("/api/user/activate")
 def user_activate_status(user: dict = Depends(require_user)):
     dash = build_dashboard_payload(user)
@@ -721,6 +795,7 @@ def admin_stats(admin: dict = Depends(require_admin), store: MongoStore = Depend
         "help_tickets_open": store.db.help_tickets.count_documents({"status": "open"}),
         "exchange_requests": store.db.exchange_requests.count_documents({}),
         "exchange_pending": store.db.exchange_requests.count_documents({"status": "pending"}),
+        "wallet_transfers": store.db.wallet_transfers.count_documents({}),
         "referral_visits": store.db.referral_visits.count_documents({}),
     }
 
@@ -995,6 +1070,13 @@ def admin_update_exchange(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return {"success": True, "exchange": ex}
+
+
+@app.get("/api/admin/wallet-transfers")
+def admin_list_wallet_transfers(
+    admin: dict = Depends(require_admin), store: MongoStore = Depends(get_store)
+):
+    return store.list_all_wallet_transfers()
 
 
 # ---------- Generic CRUD endpoints ----------

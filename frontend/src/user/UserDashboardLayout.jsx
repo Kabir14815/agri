@@ -57,6 +57,7 @@ const NAV = [
     color: '#a855f7',
     submenu: [
       { to: '/dashboard/wallet', end: true, label: 'Income Wallet' },
+      { to: '/dashboard/wallet/transfer', label: 'Wallet Transfer' },
       { to: '/dashboard/wallet/repurchase', label: 'Repurchase Wallet' },
       { to: '/dashboard/wallet/topup', label: 'Topup Wallet' },
       { to: '/dashboard/wallet/statement', label: 'Wallet Statement' },
@@ -87,6 +88,7 @@ const TITLES = {
   '/dashboard/team': 'Team',
   '/dashboard/team/referral-tree': 'Referral Tree',
   '/dashboard/wallet': 'Wallet',
+  '/dashboard/wallet/transfer': 'Wallet Transfer',
   '/dashboard/wallet/repurchase': 'Repurchase Wallet',
   '/dashboard/wallet/topup': 'Topup Wallet',
   '/dashboard/wallet/statement': 'Wallet Statement',

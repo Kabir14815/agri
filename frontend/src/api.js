@@ -12,6 +12,16 @@ function userAuthHeader() {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+function formatApiError(detail) {
+  if (Array.isArray(detail)) {
+    return detail.map((d) => d.msg || d.message || JSON.stringify(d)).join(', ')
+  }
+  if (detail && typeof detail === 'object') {
+    return detail.msg || detail.message || JSON.stringify(detail)
+  }
+  return detail || 'Request failed'
+}
+
 async function request(path, options = {}) {
   let headers = { 'Content-Type': 'application/json' }
   if (options.auth === true) headers = { ...headers, ...authHeader() }
@@ -22,7 +32,7 @@ async function request(path, options = {}) {
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: 'Request failed' }))
-    throw new Error(err.detail || 'Request failed')
+    throw new Error(formatApiError(err.detail))
   }
   if (res.status === 204) return null
   return res.json()
@@ -100,6 +110,18 @@ export const api = {
       `/user/wallet/statement${wallet ? `?wallet=${encodeURIComponent(wallet)}` : ''}`,
       { auth: 'user' },
     ),
+  getWalletTransfer: () => request('/user/wallet/transfer', { auth: 'user' }),
+  lookupWalletTransferMember: (memberId) =>
+    request(
+      `/user/wallet/transfer/lookup?member_id=${encodeURIComponent(memberId)}`,
+      { auth: 'user' },
+    ),
+  createWalletTransfer: (data) =>
+    request('/user/wallet/transfer', {
+      method: 'POST',
+      auth: 'user',
+      body: JSON.stringify(data),
+    }),
   getActivateStatus: () => request('/user/activate', { auth: 'user' }),
   getIncomes: () => request('/user/incomes', { auth: 'user' }),
   getTransactions: () => request('/user/transactions', { auth: 'user' }),
@@ -174,6 +196,7 @@ export const adminApi = {
       auth: true,
       body: JSON.stringify({ status }),
     }),
+  walletTransfers: () => request('/admin/wallet-transfers', { auth: true }),
 
   // Generic CRUD
   list: (resource) => request(`/${resource}`),

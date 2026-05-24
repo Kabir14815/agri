@@ -881,6 +881,12 @@
   cursor: default;
 }
 
+.mlm-wallet-transfer-form .form-control[readonly] {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  cursor: default;
+}
+
 .mlm-profile-form .btn {
   grid-column: 1 / -1;
   justify-self: start;

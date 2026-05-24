@@ -1,20 +1,25 @@
 import { useEffect } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { api } from '../api.js'
-import { persistReferralCode, resolveReferralCode } from '../utils/referral.js'
+import {
+  persistReferralCode,
+  referralCodeFromPathname,
+  resolveReferralCode,
+} from '../utils/referral.js'
 
-/** Captures ?ref= from any public page and records visit once per session */
+/** Captures ?ref= and /ref/CODE from any public page; records visit once per session */
 export default function ReferralTracker() {
   const { pathname, search } = useLocation()
-  const params = useParams()
 
   useEffect(() => {
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) return
 
     const searchParams = new URLSearchParams(search)
-    const routeCode = params.code || params.memberId || ''
-    const code = resolveReferralCode(searchParams, routeCode)
+    const pathCode = referralCodeFromPathname(pathname)
+    const code = resolveReferralCode(searchParams, pathCode)
     if (!code) return
+
+    persistReferralCode(code)
 
     const trackedKey = `kgf_ref_tracked_${code}`
     if (sessionStorage.getItem(trackedKey)) return
@@ -23,7 +28,7 @@ export default function ReferralTracker() {
       .trackReferralVisit({ code, path: pathname + search })
       .then(() => sessionStorage.setItem(trackedKey, '1'))
       .catch(() => {})
-  }, [pathname, search, params.code, params.memberId])
+  }, [pathname, search])
 
   return null
 }

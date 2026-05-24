@@ -7,6 +7,7 @@ import {
   normalizeReferralCode,
   clearStoredReferralCode,
   buildLoginPath,
+  buildReferralShareUrl,
 } from '../utils/referral.js'
 
 export default function Register() {
@@ -23,9 +24,9 @@ export default function Register() {
     role: 'customer',
     address: '',
     city: '',
-    state: 'Haryana',
+    state: '',
     pincode: '',
-    country: 'India',
+    country: '',
     sponsor_member_id: initialCode,
   })
   const [sponsorName, setSponsorName] = useState(null)
@@ -71,8 +72,18 @@ export default function Register() {
     })
   }
 
+  const referralInvalid =
+    Boolean(activeCode) && (codeStatus?.type === 'error' || !sponsorName)
+
   const onSubmit = async (e) => {
     e.preventDefault()
+    if (referralInvalid) {
+      setStatus({
+        type: 'error',
+        text: 'Enter a valid sponsor referral code, or leave the field empty.',
+      })
+      return
+    }
     setLoading(true)
     setStatus(null)
     try {
@@ -102,14 +113,30 @@ export default function Register() {
           <span className="auth-visual-badge">Join KGF Farming</span>
           <h2>Create your member profile</h2>
           <p>
-            Use your sponsor&apos;s referral code so they appear in your team tree and admin
-            can track the referral.
+            {activeCode && sponsorName
+              ? `You are joining under ${sponsorName}. Their code is applied automatically.`
+              : activeCode && codeStatus?.type === 'error'
+                ? 'This referral code is not valid. Check the link or enter a different sponsor code.'
+                : 'Optional: enter your sponsor’s referral code so they appear in your team tree.'}
           </p>
-          <ul className="auth-visual-list">
-            <li>Referral link: /ref/KGF123456</li>
-            <li>Or enter code manually below</li>
-            <li>Tracked in admin → Referrals</li>
-          </ul>
+          {activeCode && sponsorName ? (
+            <ul className="auth-visual-list">
+              <li>
+                Sponsor: <strong>{sponsorName}</strong>
+              </li>
+              <li>
+                Code: <strong className="referral-code-pill">{activeCode}</strong>
+              </li>
+              <li>
+                Link:{' '}
+                <code style={{ fontSize: '0.85em', wordBreak: 'break-all' }}>
+                  {buildReferralShareUrl(window.location.origin, activeCode)}
+                </code>
+              </li>
+            </ul>
+          ) : activeCode ? (
+            <p className="auth-visual-note">Checking referral code…</p>
+          ) : null}
         </aside>
 
         <div className="auth-card auth-card-premium">
@@ -258,7 +285,11 @@ export default function Register() {
               </div>
             </div>
 
-            <button className="btn btn-accent" style={{ width: '100%' }} disabled={loading}>
+            <button
+              className="btn btn-accent"
+              style={{ width: '100%' }}
+              disabled={loading || referralInvalid}
+            >
               {loading ? 'Creating profile…' : 'Create account'}
             </button>
           </form>

@@ -6,6 +6,12 @@ export function normalizeReferralCode(raw) {
   return String(raw).trim().toUpperCase().replace(/\s+/g, '')
 }
 
+/** Member id from /ref/CODE, /join/CODE, or /register/ref/CODE */
+export function referralCodeFromPathname(pathname) {
+  const m = String(pathname || '').match(/^\/(?:ref|join|register\/ref)\/([^/?#]+)/i)
+  return m ? normalizeReferralCode(m[1]) : ''
+}
+
 /** Read ref from current URL search params */
 export function getRefFromSearchParams(searchParams) {
   const keys = ['ref', 'referral', 'sponsor', 'code']

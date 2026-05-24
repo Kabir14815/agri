@@ -13,6 +13,7 @@ import {
   FiGitBranch,
   FiDollarSign,
   FiRefreshCw,
+  FiSend,
   FiLifeBuoy,
   FiLogOut,
   FiMenu,
@@ -33,6 +34,7 @@ const NAV = [
   { to: '/admin/referrals', icon: <FiGitBranch />, label: 'Referrals' },
   { to: '/admin/deposits', icon: <FiDollarSign />, label: 'Deposits' },
   { to: '/admin/exchange', icon: <FiRefreshCw />, label: 'Exchange Fund' },
+  { to: '/admin/wallet-transfers', icon: <FiSend />, label: 'Wallet Transfers' },
   { to: '/admin/help-desk', icon: <FiLifeBuoy />, label: 'Help Desk' },
 ]
 
