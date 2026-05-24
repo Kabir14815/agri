@@ -191,6 +191,11 @@ class MongoStore:
         return self._serialize(self.db.users.find_one({"id": user_id}))
 
     def find_user_by_member_id(self, member_id: str) -> Optional[dict]:
+        from .referral import normalize_member_id
+
+        member_id = normalize_member_id(member_id)
+        if not member_id:
+            return None
         u = self.db.users.find_one({"mlm.member_id": member_id})
         if u:
             return self._serialize(u)
@@ -203,7 +208,14 @@ class MongoStore:
         return None
 
     def list_direct_referrals(self, sponsor_member_id: str) -> List[dict]:
-        cursor = self.db.users.find({"sponsor_member_id": sponsor_member_id}).sort("id", ASCENDING)
+        from .referral import normalize_member_id
+
+        sponsor_member_id = normalize_member_id(sponsor_member_id)
+        if not sponsor_member_id:
+            return []
+        cursor = self.db.users.find({"sponsor_member_id": sponsor_member_id}).sort(
+            "id", ASCENDING
+        )
         return self._serialize_many(cursor)
 
     def is_descendant(self, ancestor_member_id: str, target_member_id: str) -> bool:
@@ -243,11 +255,66 @@ class MongoStore:
             "ifsc": "",
         })
         user["mlm"] = default_mlm_stats(user["id"], user["amount"])
-        sponsor = data.get("sponsor_member_id")
+        from .referral import member_id_from_user, normalize_member_id
+
+        sponsor = normalize_member_id(data.get("sponsor_member_id"))
         if sponsor:
+            sponsor_user = self.find_user_by_member_id(sponsor)
+            if not sponsor_user:
+                raise ValueError("invalid_sponsor")
+            new_mid = user["mlm"]["member_id"]
+            if sponsor == new_mid:
+                raise ValueError("invalid_sponsor")
             user["sponsor_member_id"] = sponsor
         coll.insert_one(user)
-        return self._serialize(user)
+        created = self._serialize(user)
+        if sponsor:
+            self._increment_sponsor_stats(sponsor)
+        return created
+
+    def _increment_sponsor_stats(self, sponsor_member_id: str) -> None:
+        sponsor = self.find_user_by_member_id(sponsor_member_id)
+        if not sponsor:
+            return
+        mlm = dict(sponsor.get("mlm") or default_mlm_stats(sponsor["id"], sponsor.get("amount", 0)))
+        mlm["subscribers_count"] = int(mlm.get("subscribers_count", 0) or 0) + 1
+        mlm["direct_active_users"] = int(mlm.get("direct_active_users", 0) or 0) + 1
+        self.db.users.update_one({"id": sponsor["id"]}, {"$set": {"mlm": mlm}})
+
+    def update_user_mlm(
+        self,
+        user_id: int,
+        sponsor_member_id: Optional[str] = None,
+        amount: Optional[float] = None,
+    ) -> dict:
+        from .referral import member_id_from_user, normalize_member_id
+
+        user = self.find_user_by_id(user_id)
+        if not user:
+            raise KeyError("not_found")
+        payload: Dict[str, Any] = {}
+        if sponsor_member_id is not None:
+            sponsor = normalize_member_id(sponsor_member_id)
+            if sponsor:
+                if sponsor == member_id_from_user(user):
+                    raise ValueError("cannot_sponsor_self")
+                if not self.find_user_by_member_id(sponsor):
+                    raise ValueError("invalid_sponsor")
+            payload["sponsor_member_id"] = sponsor or None
+        if amount is not None:
+            amt = float(amount)
+            payload["amount"] = amt
+            mlm = dict(user.get("mlm") or default_mlm_stats(user_id, amt))
+            mlm["package_amount"] = amt
+            payload["mlm"] = mlm
+        if not payload:
+            raise ValueError("no_fields")
+        result = self.db.users.find_one_and_update(
+            {"id": user_id},
+            {"$set": payload},
+            return_document=True,
+        )
+        return self._serialize(result)
 
     def update_user(self, user_id: int, updates: dict) -> dict:
         allowed = {
@@ -277,9 +344,20 @@ class MongoStore:
         return self._serialize(result)
 
     def list_users_public(self) -> List[dict]:
+        from .referral import member_id_from_user
+
         users = self._serialize_many(self.db.users.find())
         for u in users:
             u.pop("password", None)
+            mid = member_id_from_user(u)
+            u["member_id"] = mid
+            u["direct_referral_count"] = len(self.list_direct_referrals(mid))
+            sponsor_mid = (u.get("sponsor_member_id") or "").strip().upper()
+            if sponsor_mid:
+                sponsor = self.find_user_by_member_id(sponsor_mid)
+                u["sponsor_name"] = sponsor.get("full_name") if sponsor else None
+            else:
+                u["sponsor_name"] = None
         users.sort(key=lambda x: x.get("registered_at") or "", reverse=True)
         return users
 
@@ -413,38 +491,27 @@ class MongoStore:
         user = self.find_user_by_id(user_id)
         if not user:
             raise KeyError("not_found")
-        from .referral import get_direct_children, member_id_from_user
+        from .referral import member_id_from_user, normalize_member_id
 
         member_id = member_id_from_user(user)
+        sponsor_mid = normalize_member_id(user.get("sponsor_member_id"))
+        sponsor_user = self.find_user_by_member_id(sponsor_mid) if sponsor_mid else None
         db_direct = self.list_direct_referrals(member_id)
-        if db_direct:
-            referrals = [
-                {
-                    "id": r["id"],
-                    "full_name": r.get("full_name"),
-                    "email": r.get("email"),
-                    "member_id": (r.get("mlm") or {}).get("member_id")
-                    or member_id_from_user(r),
-                    "amount": float(r.get("amount", 0) or 0),
-                    "registered_at": r.get("registered_at"),
-                }
-                for r in db_direct
-            ]
-        else:
-            nodes = get_direct_children(self, member_id)
-            referrals = [
-                {
-                    "id": None,
-                    "full_name": n["full_name"],
-                    "email": "",
-                    "member_id": n["member_id"],
-                    "amount": float(n.get("amount", 0) or 0),
-                    "registered_at": None,
-                }
-                for n in nodes
-            ]
+        referrals = [
+            {
+                "id": r["id"],
+                "full_name": r.get("full_name"),
+                "email": r.get("email"),
+                "member_id": member_id_from_user(r),
+                "amount": float(r.get("amount", 0) or 0),
+                "registered_at": r.get("registered_at"),
+            }
+            for r in db_direct
+        ]
         return {
             "member_id": member_id,
+            "sponsor_member_id": sponsor_mid or None,
+            "sponsor_name": sponsor_user.get("full_name") if sponsor_user else None,
             "direct_count": len(referrals),
             "referrals": referrals,
         }

@@ -1,11 +1,14 @@
-"""Referral tree — sponsor links and demo downline data."""
+"""Referral tree — sponsor links and optional demo downline for showcase account."""
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
 from .mlm import member_id_for, resolve_mlm_stats
 
-# Demo downline matching reference UI (used when DB has no referrals yet)
+DEMO_ROOT_MEMBER_ID = "KGF870365"
+DEMO_ROOT_EMAIL = "demo@kgffarming.com"
+
+# Demo downline for showcase account only (when no real referrals in DB)
 DEMO_DOWNLINE: Dict[str, List[Dict[str, Any]]] = {
     "KGF870365": [
         {
@@ -93,6 +96,10 @@ DEMO_DOWNLINE: Dict[str, List[Dict[str, Any]]] = {
 }
 
 
+def normalize_member_id(member_id: Optional[str]) -> str:
+    return (member_id or "").strip().upper()
+
+
 def member_id_from_user(user: dict) -> str:
     stats = resolve_mlm_stats(user)
     return stats.get("member_id") or member_id_for(user["id"])
@@ -106,11 +113,17 @@ def user_to_tree_node(user: dict, child_count: int, has_downline: bool) -> dict:
         "referral_count": child_count,
         "amount": float(stats.get("package_amount", user.get("amount", 0)) or 0),
         "has_downline": has_downline,
+        "user_id": user.get("id"),
     }
 
 
+def is_demo_showcase_user(user: dict) -> bool:
+    return user.get("email") == DEMO_ROOT_EMAIL
+
+
 def get_direct_children(store, member_id: str) -> List[dict]:
-    """Load direct referrals from DB or demo data."""
+    """Direct referrals from DB; demo sample only for showcase nodes with no DB rows."""
+    member_id = normalize_member_id(member_id)
     db_children = store.list_direct_referrals(member_id)
     if db_children:
         nodes = []
@@ -120,8 +133,9 @@ def get_direct_children(store, member_id: str) -> List[dict]:
             nodes.append(user_to_tree_node(u, len(subs), len(subs) > 0))
         return nodes
 
-    demo = DEMO_DOWNLINE.get(member_id, [])
-    return [dict(c) for c in demo]
+    if member_id in DEMO_DOWNLINE:
+        return [dict(c) for c in DEMO_DOWNLINE[member_id]]
+    return []
 
 
 def build_referral_tree(
@@ -129,23 +143,23 @@ def build_referral_tree(
     viewer: dict,
     target_member_id: Optional[str] = None,
 ) -> dict:
-    viewer_mid = member_id_from_user(viewer)
+    target_member_id = normalize_member_id(target_member_id) or member_id_from_user(viewer)
 
-    if not target_member_id:
-        target_member_id = viewer_mid
-
-    # Resolve root user
     root_user = store.find_user_by_member_id(target_member_id)
-    if not root_user and target_member_id == viewer_mid:
+    if not root_user and target_member_id == member_id_from_user(viewer):
         root_user = viewer
     if not root_user:
-        # Demo-only node (not in users collection)
         root_user = _demo_root_stub(target_member_id)
 
     children = get_direct_children(store, target_member_id)
     root_node = user_to_tree_node(root_user, len(children), len(children) > 0)
-    # Override count for demo root to match reference
-    if target_member_id == "KGF870365":
+
+    # Showcase UI for demo account when no real referrals exist yet
+    if (
+        target_member_id == DEMO_ROOT_MEMBER_ID
+        and is_demo_showcase_user(viewer)
+        and not store.list_direct_referrals(DEMO_ROOT_MEMBER_ID)
+    ):
         root_node["referral_count"] = 11
         root_node["amount"] = 100_000
         root_node["full_name"] = root_user.get("full_name") or "SUBHASH JANGRA"
@@ -157,6 +171,7 @@ def build_referral_tree(
 
 
 def _demo_root_stub(member_id: str) -> dict:
+    member_id = normalize_member_id(member_id)
     for children in DEMO_DOWNLINE.values():
         for c in children:
             if c["member_id"] == member_id:
@@ -169,6 +184,8 @@ def _demo_root_stub(member_id: str) -> dict:
 
 
 def _is_in_demo_downline(viewer_mid: str, target_mid: str) -> bool:
+    viewer_mid = normalize_member_id(viewer_mid)
+    target_mid = normalize_member_id(target_mid)
     if viewer_mid == target_mid:
         return True
     queue = [viewer_mid]
@@ -189,9 +206,9 @@ def _is_in_demo_downline(viewer_mid: str, target_mid: str) -> bool:
 
 def can_view_tree(viewer: dict, target_member_id: str, store) -> bool:
     viewer_mid = member_id_from_user(viewer)
+    target_member_id = normalize_member_id(target_member_id)
     if target_member_id == viewer_mid:
         return True
-    if _is_in_demo_downline(viewer_mid, target_member_id):
+    if is_demo_showcase_user(viewer) and _is_in_demo_downline(viewer_mid, target_member_id):
         return True
-    # DB: target must be descendant
     return store.is_descendant(viewer_mid, target_member_id)

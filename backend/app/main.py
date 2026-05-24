@@ -225,6 +225,9 @@ def _public_user(u: dict) -> dict:
     data = {k: v for k, v in u.items() if k != "password"}
     if "amount" not in data:
         data["amount"] = 0.0
+    data["member_id"] = member_id_from_user(u)
+    if u.get("sponsor_member_id"):
+        data["sponsor_member_id"] = u["sponsor_member_id"]
     return data
 
 
@@ -343,7 +346,21 @@ def submit_contact(payload: ContactMessage, store: MongoStore = Depends(get_stor
 def register(payload: RegisterPayload, store: MongoStore = Depends(get_store)):
     if store.find_user_by_email(payload.email):
         raise HTTPException(status_code=400, detail="Email already registered")
-    user = store.create_user(payload.model_dump())
+    data = payload.model_dump()
+    if data.get("sponsor_member_id"):
+        from .referral import normalize_member_id
+
+        data["sponsor_member_id"] = normalize_member_id(data["sponsor_member_id"])
+    try:
+        user = store.create_user(data)
+    except ValueError as exc:
+        code = str(exc)
+        if code == "invalid_sponsor":
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid sponsor member ID. Check the referral link.",
+            ) from exc
+        raise HTTPException(status_code=400, detail="Registration failed") from exc
     return {
         "success": True,
         "message": "Registration successful",
@@ -737,21 +754,49 @@ def admin_update_user_mlm(
     admin: dict = Depends(require_admin),
     store: MongoStore = Depends(get_store),
 ):
-    u = store.find_user_by_id(user_id)
-    if not u:
+    if not store.find_user_by_id(user_id):
         raise _not_found()
-    updates = {}
-    if payload.sponsor_member_id is not None:
-        updates["sponsor_member_id"] = payload.sponsor_member_id
-    if payload.amount is not None:
-        updates["amount"] = float(payload.amount)
-        mlm = dict(u.get("mlm") or {})
-        mlm["package_amount"] = float(payload.amount)
-        updates["mlm"] = mlm
-    if not updates:
-        raise HTTPException(status_code=400, detail="No fields to update")
-    updated = store.update_user(user_id, updates)
+    try:
+        updated = store.update_user_mlm(
+            user_id,
+            sponsor_member_id=payload.sponsor_member_id,
+            amount=payload.amount,
+        )
+    except KeyError:
+        raise _not_found() from None
+    except ValueError as exc:
+        code = str(exc)
+        if code == "invalid_sponsor":
+            raise HTTPException(status_code=400, detail="Invalid sponsor member ID") from exc
+        if code == "cannot_sponsor_self":
+            raise HTTPException(status_code=400, detail="Member cannot sponsor themselves") from exc
+        raise HTTPException(status_code=400, detail="No fields to update") from exc
     return _public_user(updated)
+
+
+@app.get("/api/admin/referrals")
+def admin_referrals_overview(
+    admin: dict = Depends(require_admin), store: MongoStore = Depends(get_store)
+):
+    users = store.list_users_public()
+    rows = []
+    for u in users:
+        if u.get("role") == "admin":
+            continue
+        rows.append(
+            {
+                "user_id": u["id"],
+                "member_id": u.get("member_id"),
+                "full_name": u.get("full_name"),
+                "email": u.get("email"),
+                "sponsor_member_id": u.get("sponsor_member_id"),
+                "sponsor_name": u.get("sponsor_name"),
+                "direct_referral_count": u.get("direct_referral_count", 0),
+                "amount": u.get("amount", 0),
+                "registered_at": u.get("registered_at"),
+            }
+        )
+    return rows
 
 
 @app.get("/api/admin/help-desk")

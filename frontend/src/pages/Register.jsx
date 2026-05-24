@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { FiUser, FiMail, FiPhone, FiMapPin, FiLock } from 'react-icons/fi'
 import { api } from '../api.js'
@@ -23,14 +23,30 @@ export default function Register() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
+  useEffect(() => {
+    if (refCode) {
+      setForm((f) => ({ ...f, sponsor_member_id: refCode.toUpperCase() }))
+    }
+  }, [refCode])
+
+  const onChange = (e) => {
+    const { name, value } = e.target
+    setForm({
+      ...form,
+      [name]: name === 'sponsor_member_id' ? value.toUpperCase() : value,
+    })
+  }
 
   const onSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setStatus(null)
     try {
-      const res = await api.register(form)
+      const payload = {
+        ...form,
+        sponsor_member_id: form.sponsor_member_id?.trim().toUpperCase() || undefined,
+      }
+      const res = await api.register(payload)
       setStatus({
         type: 'success',
         text: `${res.message}! Your profile is saved — redirecting to login…`,
@@ -161,6 +177,19 @@ export default function Register() {
                 />
               </div>
             </div>
+
+            {refCode && (
+              <div className="form-group">
+                <label>Sponsor member ID</label>
+                <input
+                  className="form-control"
+                  name="sponsor_member_id"
+                  value={form.sponsor_member_id}
+                  onChange={onChange}
+                  readOnly
+                />
+              </div>
+            )}
 
             <div className="form-row">
               <div className="form-group">

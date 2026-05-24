@@ -1963,6 +1963,19 @@ textarea.form-control {
   margin-bottom: 12px;
 }
 
+.admin-referral-tree-modal {
+  max-width: 960px;
+  width: 95vw;
+}
+
+.admin-referral-tree-body {
+  padding: 16px 20px 24px;
+  max-height: 70vh;
+  overflow: auto;
+  background: #0f1114;
+  border-radius: 8px;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

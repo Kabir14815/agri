@@ -130,6 +130,12 @@ export const adminApi = {
     }),
   getUserReferrals: (userId) =>
     request(`/admin/users/${userId}/referrals`, { auth: true }),
+  getUserReferralTree: (userId, memberId) =>
+    request(
+      `/admin/users/${userId}/referral-tree${memberId ? `?member_id=${encodeURIComponent(memberId)}` : ''}`,
+      { auth: true },
+    ),
+  referrals: () => request('/admin/referrals', { auth: true }),
   updateUserMlm: (userId, data) =>
     request(`/admin/users/${userId}/mlm`, {
       method: 'PATCH',

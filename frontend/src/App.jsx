@@ -35,6 +35,7 @@ import UsersPage from './admin/pages/UsersPage.jsx'
 import DepositsPage from './admin/pages/DepositsPage.jsx'
 import HelpDeskPage from './admin/pages/HelpDeskPage.jsx'
 import ExchangePage from './admin/pages/ExchangePage.jsx'
+import ReferralsPage from './admin/pages/ReferralsPage.jsx'
 
 export default function App() {
   const { pathname } = useLocation()
@@ -94,6 +95,7 @@ export default function App() {
             <Route path="faqs" element={<FaqsPage />} />
             <Route path="contacts" element={<ContactsPage />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="referrals" element={<ReferralsPage />} />
             <Route path="deposits" element={<DepositsPage />} />
             <Route path="help-desk" element={<HelpDeskPage />} />
             <Route path="exchange" element={<ExchangePage />} />

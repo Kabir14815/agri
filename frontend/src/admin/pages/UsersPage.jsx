@@ -9,9 +9,11 @@ import {
   FiX,
   FiDollarSign,
   FiUsers,
+  FiGitBranch,
 } from 'react-icons/fi'
 import { adminApi } from '../../api.js'
 import { useAdminAuth } from '../AdminAuth.jsx'
+import AdminReferralTreeModal from '../components/AdminReferralTreeModal.jsx'
 
 const ROLE_COLORS = {
   admin: '#c2410c',
@@ -41,7 +43,7 @@ function formatInr(n) {
   }).format(n ?? 0)
 }
 
-function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved }) {
+function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onViewTree }) {
   const [amount, setAmount] = useState('')
   const [sponsorId, setSponsorId] = useState('')
   const [referrals, setReferrals] = useState(null)
@@ -67,8 +69,10 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved }) {
       const value = Number(amount)
       await adminApi.updateUserMlm(user.id, {
         amount: value,
-        sponsor_member_id: sponsorId.trim() || null,
+        sponsor_member_id: sponsorId.trim().toUpperCase() || null,
       })
+      const refreshed = await adminApi.getUserReferrals(user.id)
+      setReferrals(refreshed)
       onAmountSaved?.(value)
     } catch (e) {
       alert(e.message)
@@ -102,7 +106,7 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved }) {
               >
                 {user.role}
               </span>
-              <p className="user-id">Member ID #{user.id}</p>
+              <p className="user-id">{user.member_id || `KGF${870000 + user.id}`}</p>
             </div>
           </div>
           <div className="admin-profile-details">
@@ -159,11 +163,23 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved }) {
                 )}
               </div>
             </div>
+            {referrals?.sponsor_member_id && (
+              <div className="profile-detail-row">
+                <FiUser />
+                <div>
+                  <small>Sponsor</small>
+                  <p>
+                    {referrals.sponsor_member_id}
+                    {referrals.sponsor_name ? ` — ${referrals.sponsor_name}` : ''}
+                  </p>
+                </div>
+              </div>
+            )}
             {user.role !== 'admin' && (
               <div className="profile-detail-row">
                 <FiUser />
                 <div>
-                  <small>Sponsor member ID</small>
+                  <small>Sponsor member ID (edit)</small>
                   <input
                     type="text"
                     className="form-control"
@@ -203,6 +219,15 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved }) {
           </div>
         </div>
         <div className="admin-modal-foot">
+          {user.role !== 'admin' && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => onViewTree?.(user)}
+            >
+              <FiGitBranch /> Referral tree
+            </button>
+          )}
           <button type="button" className="btn btn-outline" onClick={onClose}>
             Close
           </button>
@@ -228,6 +253,7 @@ export default function UsersPage() {
   const [status, setStatus] = useState(null)
   const [filter, setFilter] = useState('all')
   const [selected, setSelected] = useState(null)
+  const [treeUser, setTreeUser] = useState(null)
 
   const load = () => {
     setLoading(true)
@@ -329,6 +355,15 @@ export default function UsersPage() {
                     : 'Location not set'}
                 </li>
                 <li>
+                  <FiUser /> {u.member_id || `KGF${870000 + u.id}`}
+                </li>
+                <li>
+                  Sponsor: {u.sponsor_member_id ? `${u.sponsor_member_id}${u.sponsor_name ? ` (${u.sponsor_name})` : ''}` : 'None'}
+                </li>
+                <li>
+                  <FiUsers /> {u.direct_referral_count ?? 0} direct referral(s)
+                </li>
+                <li>
                   <FiDollarSign /> {formatInr(u.amount)}
                 </li>
                 <li>
@@ -364,12 +399,23 @@ export default function UsersPage() {
         onClose={() => setSelected(null)}
         onDelete={remove}
         canDelete={selected && selected.id !== me?.id}
+        onViewTree={(u) => {
+          setSelected(null)
+          setTreeUser(u)
+        }}
         onAmountSaved={(newAmount) => {
           load()
           setSelected((prev) =>
             prev ? { ...prev, amount: newAmount } : null,
           )
         }}
+      />
+
+      <AdminReferralTreeModal
+        userId={treeUser?.id}
+        memberId={treeUser?.member_id}
+        memberName={treeUser?.full_name}
+        onClose={() => setTreeUser(null)}
       />
     </>
   )
