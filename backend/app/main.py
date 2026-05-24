@@ -18,6 +18,7 @@ except ImportError:
 from .database import close_database, get_database
 from .mlm import build_dashboard_payload, default_mlm_stats
 from .profile_utils import DEMO_PROFILE_OVERRIDES, user_profile_payload
+from .referral import build_referral_tree, can_view_tree, member_id_from_user
 from .store import MongoStore
 
 # ----------------------------- Schemas -----------------------------------
@@ -42,6 +43,7 @@ class RegisterPayload(BaseModel):
     state: Optional[str] = Field(default=None, max_length=60)
     pincode: Optional[str] = Field(default=None, max_length=10)
     country: Optional[str] = Field(default="India", max_length=60)
+    sponsor_member_id: Optional[str] = Field(default=None, max_length=20)
 
 
 class ProfileUpdate(BaseModel):
@@ -395,6 +397,20 @@ def user_password_change(
     except KeyError:
         raise _not_found() from None
     return {"success": True, "message": "Password updated successfully"}
+
+
+@app.get("/api/user/referral-tree")
+def user_referral_tree(
+    member_id: Optional[str] = None,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    target = (member_id or "").strip().upper() or None
+    if target and not can_view_tree(user, target, store):
+        raise HTTPException(status_code=403, detail="You cannot view this member's tree")
+    tree = build_referral_tree(store, user, target)
+    tree["viewer_member_id"] = member_id_from_user(user)
+    return tree
 
 
 # ------------------------------ Admin API --------------------------------

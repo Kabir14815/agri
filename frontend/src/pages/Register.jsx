@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { FiUser, FiMail, FiPhone, FiMapPin, FiLock } from 'react-icons/fi'
 import { api } from '../api.js'
 
 export default function Register() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const refCode = searchParams.get('ref') || ''
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -16,6 +18,7 @@ export default function Register() {
     state: 'Haryana',
     pincode: '',
     country: 'India',
+    sponsor_member_id: refCode,
   })
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -60,6 +63,11 @@ export default function Register() {
         <div className="auth-card auth-card-premium">
           <h2>Register</h2>
           <p className="sub">Fill in your profile to get started.</p>
+          {refCode && (
+            <p className="sub" style={{ color: 'var(--color-primary)' }}>
+              Referred by: <strong>{refCode}</strong>
+            </p>
+          )}
 
           {status && <div className={`form-message ${status.type}`}>{status.text}</div>}
 

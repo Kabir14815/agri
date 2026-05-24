@@ -181,6 +181,42 @@ class MongoStore:
     def find_user_by_id(self, user_id: int) -> Optional[dict]:
         return self._serialize(self.db.users.find_one({"id": user_id}))
 
+    def find_user_by_member_id(self, member_id: str) -> Optional[dict]:
+        u = self.db.users.find_one({"mlm.member_id": member_id})
+        if u:
+            return self._serialize(u)
+        try:
+            num = int(str(member_id).replace("KGF", "").strip())
+            if num >= 870_000:
+                return self.find_user_by_id(num - 870_000)
+        except (ValueError, TypeError):
+            pass
+        return None
+
+    def list_direct_referrals(self, sponsor_member_id: str) -> List[dict]:
+        cursor = self.db.users.find({"sponsor_member_id": sponsor_member_id}).sort("id", ASCENDING)
+        return self._serialize_many(cursor)
+
+    def is_descendant(self, ancestor_member_id: str, target_member_id: str) -> bool:
+        if ancestor_member_id == target_member_id:
+            return True
+        queue = [ancestor_member_id]
+        seen = set()
+        while queue:
+            mid = queue.pop(0)
+            if mid in seen:
+                continue
+            seen.add(mid)
+            for child in self.list_direct_referrals(mid):
+                cid = (child.get("mlm") or {}).get("member_id")
+                if not cid:
+                    from .mlm import member_id_for
+                    cid = member_id_for(child["id"])
+                if cid == target_member_id:
+                    return True
+                queue.append(cid)
+        return False
+
     def create_user(self, data: dict) -> dict:
         coll = self.db.users
         user = dict(data)
@@ -198,6 +234,9 @@ class MongoStore:
             "ifsc": "",
         })
         user["mlm"] = default_mlm_stats(user["id"], user["amount"])
+        sponsor = data.get("sponsor_member_id")
+        if sponsor:
+            user["sponsor_member_id"] = sponsor
         coll.insert_one(user)
         return self._serialize(user)
 

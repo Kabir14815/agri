@@ -32,7 +32,17 @@ const NAV = [
     ],
   },
   { to: '/dashboard/deposit', icon: FiPlusCircle, label: 'Deposit', color: '#22c55e' },
-  { to: '/dashboard/team', icon: FiUsers, label: 'Team', color: '#ec4899' },
+  {
+    key: 'team',
+    to: '/dashboard/team',
+    icon: FiUsers,
+    label: 'Team',
+    color: '#ec4899',
+    submenu: [
+      { to: '/dashboard/team', end: true, label: 'Team Overview' },
+      { to: '/dashboard/team/referral-tree', label: 'Referral Tree' },
+    ],
+  },
   { to: '/dashboard/wallet', icon: FiCreditCard, label: 'Wallet', color: '#a855f7' },
   { to: '/dashboard/activate', icon: FiPower, label: 'Activate', color: '#84cc16' },
 ]
@@ -46,6 +56,7 @@ const TITLES = {
   '/dashboard/profile/password': 'Change Password',
   '/dashboard/deposit': 'Deposit',
   '/dashboard/team': 'Team',
+  '/dashboard/team/referral-tree': 'Referral Tree',
   '/dashboard/wallet': 'Wallet',
   '/dashboard/activate': 'Activate',
 }
@@ -54,11 +65,21 @@ export default function UserDashboardLayout() {
   const { user, logout, reloadUser } = useUserAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const [profileOpen, setProfileOpen] = useState(pathname.startsWith('/dashboard/profile'))
+  const [openMenus, setOpenMenus] = useState({
+    profile: pathname.startsWith('/dashboard/profile'),
+    team: pathname.startsWith('/dashboard/team'),
+  })
 
   useEffect(() => {
-    if (pathname.startsWith('/dashboard/profile')) setProfileOpen(true)
+    if (pathname.startsWith('/dashboard/profile')) {
+      setOpenMenus((o) => ({ ...o, profile: true }))
+    }
+    if (pathname.startsWith('/dashboard/team')) {
+      setOpenMenus((o) => ({ ...o, team: true }))
+    }
   }, [pathname])
+
+  const toggleMenu = (key) => setOpenMenus((o) => ({ ...o, [key]: !o[key] }))
 
   useEffect(() => {
     reloadUser?.().catch(() => {})
@@ -89,19 +110,19 @@ export default function UserDashboardLayout() {
                   <button
                     type="button"
                     className={`mlm-nav-item mlm-nav-toggle${active ? ' active' : ''}`}
-                    onClick={() => setProfileOpen((o) => !o)}
+                    onClick={() => toggleMenu(item.key)}
                   >
                     <span className="mlm-nav-icon" style={{ color: item.color }}>
                       <Icon />
                     </span>
                     <span>{item.label}</span>
-                    {profileOpen ? (
+                    {openMenus[item.key] ? (
                       <FiChevronDown className="mlm-nav-chevron" />
                     ) : (
                       <FiChevronRight className="mlm-nav-chevron" />
                     )}
                   </button>
-                  {profileOpen && (
+                  {openMenus[item.key] && (
                     <div className="mlm-nav-sub">
                       {item.submenu.map((sub) => (
                         <NavLink

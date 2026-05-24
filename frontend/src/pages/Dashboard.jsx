@@ -8,7 +8,9 @@ import ProfileEdit from './dashboard/ProfileEdit.jsx'
 import ProfileBank from './dashboard/ProfileBank.jsx'
 import ProfilePassword from './dashboard/ProfilePassword.jsx'
 import DashboardWallet from './dashboard/DashboardWallet.jsx'
+import TeamLayout from './dashboard/TeamLayout.jsx'
 import DashboardTeam from './dashboard/DashboardTeam.jsx'
+import DashboardReferralTree from './dashboard/DashboardReferralTree.jsx'
 import DashboardDeposit from './dashboard/DashboardDeposit.jsx'
 import DashboardActivate from './dashboard/DashboardActivate.jsx'
 
@@ -25,7 +27,10 @@ export default function Dashboard() {
           <Route path="password" element={<ProfilePassword />} />
         </Route>
         <Route path="deposit" element={<DashboardDeposit />} />
-        <Route path="team" element={<DashboardTeam />} />
+        <Route path="team" element={<TeamLayout />}>
+          <Route index element={<DashboardTeam />} />
+          <Route path="referral-tree" element={<DashboardReferralTree />} />
+        </Route>
         <Route path="wallet" element={<DashboardWallet />} />
         <Route path="activate" element={<DashboardActivate />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

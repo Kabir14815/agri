@@ -66,6 +66,11 @@ export const api = {
       auth: 'user',
       body: JSON.stringify(data),
     }),
+  getReferralTree: (memberId) =>
+    request(
+      `/user/referral-tree${memberId ? `?member_id=${encodeURIComponent(memberId)}` : ''}`,
+      { auth: 'user' },
+    ),
 }
 
 // ---------- Admin API ----------

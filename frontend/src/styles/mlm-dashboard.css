@@ -821,6 +821,165 @@
   }
 }
 
+/* Referral tree */
+.mlm-tree-title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 2rem;
+  font-weight: 400;
+}
+
+.mlm-tree-search {
+  display: flex;
+  gap: 0;
+  max-width: 320px;
+  margin-bottom: 32px;
+}
+
+.mlm-tree-search input {
+  flex: 1;
+  background: #1a1d23;
+  border: 1px solid #2d323c;
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  padding: 10px 14px;
+  color: #e8eaed;
+}
+
+.mlm-tree-search button {
+  background: #2563eb;
+  border: none;
+  color: #fff;
+  padding: 0 20px;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.mlm-tree-canvas {
+  overflow-x: auto;
+  padding-bottom: 40px;
+}
+
+.mlm-tree-level {
+  display: flex;
+  justify-content: center;
+}
+
+.mlm-tree-level.children-level {
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  max-width: 100%;
+}
+
+.mlm-tree-connector {
+  width: 2px;
+  height: 28px;
+  background: #fff;
+  margin: 0 auto;
+  position: relative;
+}
+
+.mlm-tree-connector::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(90%, 900px);
+  height: 2px;
+  background: #fff;
+}
+
+.mlm-tree-child-wrap {
+  position: relative;
+  padding-top: 20px;
+}
+
+.mlm-tree-child-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 20px;
+  background: #fff;
+  transform: translateX(-50%);
+}
+
+.mlm-tree-node {
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 16px 20px;
+  min-width: 160px;
+  text-align: center;
+  position: relative;
+}
+
+.mlm-tree-node.root {
+  min-width: 200px;
+  border-color: #475569;
+}
+
+.mlm-tree-node-logo {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #22c55e, #15803d);
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.mlm-tree-mid {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 0 4px;
+}
+
+.mlm-tree-name {
+  font-weight: 700;
+  font-size: 14px;
+  margin: 0 0 8px;
+  color: #f1f5f9;
+}
+
+.mlm-tree-meta {
+  font-size: 12px;
+  color: #cbd5e1;
+  margin: 2px 0;
+}
+
+.mlm-tree-view-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #4ade80, #16a34a);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.mlm-tree-view-btn:hover {
+  filter: brightness(1.1);
+}
+
+.mlm-tree-arrow {
+  display: block;
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
 @media (max-width: 1200px) {
   .mlm-card-green,
   .mlm-card-dark,
