@@ -45,18 +45,31 @@ def json_req(method: str, path: str, body: dict | None = None, token: str | None
         fail(f"{method} {path} -> {e.code}: {msg}")
 
 
+def _tiny_jpeg() -> bytes:
+    try:
+        import io
+
+        from PIL import Image
+
+        img = Image.new("RGB", (32, 32), color=(34, 120, 66))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85)
+        return buf.getvalue()
+    except ImportError:
+        import base64
+
+        return base64.b64decode(
+            "/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxISEhUQEhIVFhUVFRUVFRUVFRUWFhUV"
+            "FRUYHSggGBolGxUVITEhJSkrLi4uFx8zODMsNygtLisBCgoKDg0OGxAQGy0lICUtLS0t"
+            "LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAAEAAQMBIgACEQED"
+            "EQH/xAAUAAEAAAAAAAAAAAAAAAAAAAAH/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEB"
+            "AQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCf"
+            "AAH/2Q=="
+        )
+
+
 def multipart_log(token: str, watered: bool) -> dict:
-  # minimal 1x1 JPEG
-    jpeg = bytes.fromhex(
-        "ffd8ffe000104a46494600010100000100010000ffdb004300080606070605080707"
-        "070909080a0c141d0c0c0b0b0c1912130f141d1a1f1e1d1a1c1c20242e2720222c"
-        "231c1c2837292c30313434341f27393d38323c2e333432ffdb0043010909090c0b"
-        "0c180d0d1832211c1c213221213232323232323232323232323232323232323232"
-        "323232323232323232323232323232323232323232323232323232ffc000110800"
-        "01000103011100021100031101ffc4001500010100000000000000000000000000"
-        "0008ffc40014100100000000000000000000000000000000ffda000c0301000211"
-        "03001100003f80ffd9"
-    )
+    jpeg = _tiny_jpeg()
     boundary = "----FarmerSmokeTest"
     body = []
     body.append(f"--{boundary}\r\n".encode())
