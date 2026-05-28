@@ -658,8 +658,6 @@ class MongoStore:
             raise KeyError("not_found")
         dep_amount = float(dep["amount"])
         new_amount = float(user.get("amount", 0) or 0) + dep_amount
-        if new_amount > 0 and new_amount < 250_000:
-            raise ValueError("min_investment")
         mlm = dict(user.get("mlm") or default_mlm_stats(user["id"], new_amount))
         mlm["package_amount"] = new_amount
         from .investment_interest import initialize_accrual_fields
@@ -680,11 +678,12 @@ class MongoStore:
         )
         updated = self.find_user_by_id(user["id"])
         if updated:
-            from .referral_bonus import distribute_investment_bonus
+            from .referral_bonus import distribute_investment_bonus, is_active_investor
 
-            distribute_investment_bonus(
-                self, updated, dep_amount, f"deposit_{deposit_id}"
-            )
+            if is_active_investor(new_amount):
+                distribute_investment_bonus(
+                    self, updated, dep_amount, f"deposit_{deposit_id}"
+                )
         return self.set_deposit_status(deposit_id, "approved")
 
     def add_wallet_entry(

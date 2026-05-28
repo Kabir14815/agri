@@ -19,10 +19,6 @@ export default function FarmerDashboard() {
   const logDate = dashboard?.log_date || new Date().toISOString().slice(0, 10)
 
   useEffect(() => {
-    refresh().catch(() => {})
-  }, [])
-
-  useEffect(() => {
     if (today) {
       setWatered(!!today.watered)
       setNote(today.note || '')

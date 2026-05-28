@@ -1171,13 +1171,6 @@ def admin_update_deposit(
             dep = store.set_deposit_status(deposit_id, "rejected")
     except KeyError:
         raise _not_found() from None
-    except ValueError as exc:
-        if str(exc) == "min_investment":
-            raise HTTPException(
-                status_code=400,
-                detail="Approved total package must be at least ₹2,50,000",
-            ) from exc
-        raise
     return {"success": True, "deposit": dep}
 
 

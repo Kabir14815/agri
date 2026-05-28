@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { api } from '../api.js'
 
@@ -24,6 +24,13 @@ export function UserAuthProvider({ children }) {
   const [user, setUser] = useState(() => getStoredSession().user)
   const [bootstrapped, setBootstrapped] = useState(false)
 
+  const persistUser = useCallback((userData) => {
+    const key = localStorage.getItem('kgf_franchisee_token')
+      ? 'kgf_franchisee_user'
+      : 'kgf_user'
+    localStorage.setItem(key, JSON.stringify(userData))
+  }, [])
+
   useEffect(() => {
     const { token } = getStoredSession()
     if (!token) {
@@ -34,10 +41,7 @@ export function UserAuthProvider({ children }) {
       .userDashboard()
       .then((data) => {
         setUser(data)
-        const key = localStorage.getItem('kgf_franchisee_token')
-          ? 'kgf_franchisee_user'
-          : 'kgf_user'
-        localStorage.setItem(key, JSON.stringify(data))
+        persistUser(data)
       })
       .catch(() => {
         localStorage.removeItem('kgf_token')
@@ -47,9 +51,9 @@ export function UserAuthProvider({ children }) {
         setUser(null)
       })
       .finally(() => setBootstrapped(true))
-  }, [])
+  }, [persistUser])
 
-  const applySession = (token, userData, storage = 'customer') => {
+  const applySession = useCallback((token, userData, storage = 'customer') => {
     if (storage === 'franchisee') {
       localStorage.setItem('kgf_franchisee_token', token)
       localStorage.setItem('kgf_franchisee_user', JSON.stringify(userData))
@@ -62,37 +66,39 @@ export function UserAuthProvider({ children }) {
       localStorage.removeItem('kgf_franchisee_user')
     }
     setUser(userData)
-  }
+  }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('kgf_token')
     localStorage.removeItem('kgf_user')
     localStorage.removeItem('kgf_franchisee_token')
     localStorage.removeItem('kgf_franchisee_user')
     setUser(null)
-  }
+  }, [])
 
-  const refreshUser = (userData) => {
-    setUser(userData)
-    const key = localStorage.getItem('kgf_franchisee_token')
-      ? 'kgf_franchisee_user'
-      : 'kgf_user'
-    localStorage.setItem(key, JSON.stringify(userData))
-  }
-
-  const reloadUser = () =>
-    api.userDashboard().then((data) => {
-      refreshUser(data)
-      return data
-    })
-
-  return (
-    <UserAuthContext.Provider
-      value={{ user, applySession, logout, refreshUser, reloadUser, bootstrapped }}
-    >
-      {children}
-    </UserAuthContext.Provider>
+  const refreshUser = useCallback(
+    (userData) => {
+      setUser(userData)
+      persistUser(userData)
+    },
+    [persistUser],
   )
+
+  const reloadUser = useCallback(
+    () =>
+      api.userDashboard().then((data) => {
+        refreshUser(data)
+        return data
+      }),
+    [refreshUser],
+  )
+
+  const value = useMemo(
+    () => ({ user, applySession, logout, refreshUser, reloadUser, bootstrapped }),
+    [user, applySession, logout, refreshUser, reloadUser, bootstrapped],
+  )
+
+  return <UserAuthContext.Provider value={value}>{children}</UserAuthContext.Provider>
 }
 
 export function useUserAuth() {

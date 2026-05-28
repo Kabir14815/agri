@@ -102,7 +102,7 @@ const TITLES = {
 }
 
 export default function UserDashboardLayout() {
-  const { user, logout, reloadUser } = useUserAuth()
+  const { user, logout } = useUserAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [openMenus, setOpenMenus] = useState({
@@ -119,11 +119,6 @@ export default function UserDashboardLayout() {
       }
     })
   }, [pathname])
-
-  useEffect(() => {
-    reloadUser?.().catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const onLogout = () => {
     logout()
