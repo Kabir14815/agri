@@ -722,7 +722,13 @@ async def _read_receipt_upload(receipt: Optional[UploadFile]) -> tuple[Optional[
 
 @app.get("/api/user/deposit-modes")
 def user_deposit_modes():
-    return {"modes": list(DEPOSIT_PAYMENT_MODES)}
+    from .referral_bonus import MIN_INVESTMENT
+
+    return {
+        "modes": list(DEPOSIT_PAYMENT_MODES),
+        "min_investment": MIN_INVESTMENT,
+        "min_investment_label": "₹2,50,000",
+    }
 
 
 @app.post("/api/user/deposits", status_code=status.HTTP_201_CREATED)
@@ -742,8 +748,20 @@ async def user_create_deposit(
         raise HTTPException(status_code=400, detail="Transaction number is required")
     if float(amount) <= 0:
         raise HTTPException(status_code=400, detail="Amount must be greater than zero")
+    try:
+        from .referral_bonus import validate_first_deposit_amount
+
+        validate_first_deposit_amount(user, float(amount))
+    except ValueError as exc:
+        if str(exc) == "min_investment":
+            raise HTTPException(
+                status_code=400,
+                detail="Minimum investment is ₹2,50,000 for your first package",
+            ) from exc
+        raise
     filename, data = await _read_receipt_upload(receipt)
-    dep = store.create_deposit_request(
+    try:
+        dep = store.create_deposit_request(
         user["id"],
         float(amount),
         payment_mode=mode,
@@ -751,7 +769,14 @@ async def user_create_deposit(
         note=txn,
         receipt_filename=filename,
         receipt_data=data,
-    )
+        )
+    except ValueError as exc:
+        if str(exc) == "min_investment":
+            raise HTTPException(
+                status_code=400,
+                detail="Minimum investment is ₹2,50,000 for your first package",
+            ) from exc
+        raise
     return {"success": True, "deposit": dep}
 
 
@@ -763,13 +788,32 @@ def user_create_deposit_json(
 ):
     if payload.payment_mode not in DEPOSIT_PAYMENT_MODES:
         raise HTTPException(status_code=400, detail="Invalid payment mode")
-    dep = store.create_deposit_request(
-        user["id"],
-        payload.amount,
-        payment_mode=payload.payment_mode,
-        transaction_number=payload.transaction_number.strip(),
-        note=payload.note or payload.transaction_number,
-    )
+    try:
+        from .referral_bonus import validate_first_deposit_amount
+
+        validate_first_deposit_amount(user, float(payload.amount))
+    except ValueError as exc:
+        if str(exc) == "min_investment":
+            raise HTTPException(
+                status_code=400,
+                detail="Minimum investment is ₹2,50,000 for your first package",
+            ) from exc
+        raise
+    try:
+        dep = store.create_deposit_request(
+            user["id"],
+            payload.amount,
+            payment_mode=payload.payment_mode,
+            transaction_number=payload.transaction_number.strip(),
+            note=payload.note or payload.transaction_number,
+        )
+    except ValueError as exc:
+        if str(exc) == "min_investment":
+            raise HTTPException(
+                status_code=400,
+                detail="Minimum investment is ₹2,50,000 for your first package",
+            ) from exc
+        raise
     return {"success": True, "deposit": dep}
 
 
@@ -1131,6 +1175,13 @@ def admin_update_deposit(
             dep = store.set_deposit_status(deposit_id, "rejected")
     except KeyError:
         raise _not_found() from None
+    except ValueError as exc:
+        if str(exc) == "min_investment":
+            raise HTTPException(
+                status_code=400,
+                detail="Approved total package must be at least ₹2,50,000",
+            ) from exc
+        raise
     return {"success": True, "deposit": dep}
 
 
@@ -1185,6 +1236,11 @@ def admin_update_user_mlm(
             raise HTTPException(status_code=400, detail="Invalid sponsor member ID") from exc
         if code == "cannot_sponsor_self":
             raise HTTPException(status_code=400, detail="Member cannot sponsor themselves") from exc
+        if code == "min_investment":
+            raise HTTPException(
+                status_code=400,
+                detail="Minimum investment package is ₹2,50,000",
+            ) from exc
         raise HTTPException(status_code=400, detail="No fields to update") from exc
     return _public_user(updated)
 

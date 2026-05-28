@@ -1439,6 +1439,31 @@
   text-transform: lowercase;
 }
 
+.mlm-tree-canvas-nested {
+  overflow-x: auto;
+  padding-bottom: 24px;
+}
+
+.mlm-tree-plan-hint {
+  font-size: 13px;
+  color: var(--color-muted, #64748b);
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  background: #f0f7f2;
+  border-radius: 8px;
+  border-left: 3px solid var(--color-primary, #2d7a42);
+}
+
+.mlm-tree-depth-2,
+.mlm-tree-depth-3,
+.mlm-tree-depth-4 {
+  margin-left: 12px;
+}
+
+.mlm-tree-child-wrap .mlm-tree-child-wrap {
+  margin-top: 8px;
+}
+
 .mlm-tree-canvas {
   overflow-x: auto;
   padding-bottom: 40px;

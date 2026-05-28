@@ -86,6 +86,10 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
       await dialog.error('Enter the approved investment amount (₹) first.', 'Amount required')
       return
     }
+    if (value < 250000) {
+      await dialog.error('Minimum investment package is ₹2,50,000.', 'Amount too low')
+      return
+    }
     const ok = await dialog.confirm({
       title: 'Approve & activate member?',
       message: `Activate ${user.full_name} with this investment package.`,

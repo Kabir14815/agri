@@ -40,8 +40,11 @@ export default function DashboardTeam() {
           <h2 className="mlm-big-num">{d.direct_active_users}</h2>
         </article>
         <article className="mlm-card mlm-card-level">
-          <small>Level Open</small>
-          <h2 className="mlm-big-num">{d.level_open}</h2>
+          <small>Referral tree depth</small>
+          <h2 className="mlm-big-num">{d.level_open || d.referral_plan?.tree_levels || 24}</h2>
+          <p>
+            {d.referral_plan?.bonus_levels || 5} bonus levels @ {d.referral_plan?.bonus_rate_percent || 2}%
+          </p>
           <p>{d.subscribers_count} total subscribers</p>
         </article>
       </div>

@@ -119,7 +119,7 @@ RANK_TIERS: List[Dict[str, Any]] = [
 DEMO_MLM_BY_EMAIL: Dict[str, Dict[str, Any]] = {
     "demo@kgffarming.com": {
         "member_id": "KGF870365",
-        "package_amount": 100_000,
+        "package_amount": 250_000,
         "main_leg_business": 410_000,
         "rest_leg_business": 620_000,
         "self_unit_profit": 25_666.41,
@@ -128,7 +128,7 @@ DEMO_MLM_BY_EMAIL: Dict[str, Dict[str, Any]] = {
         "reward_bonus": 5_000,
         "salary_bonus": 0,
         "total_earning": 60_216.286,
-        "level_open": 5,
+        "level_open": 24,
         "subscribers_count": 5,
         "income_wallet": 7_896.59,
         "repurchase_wallet": 1_082.67,
@@ -159,7 +159,7 @@ DEMO_MLM_BY_EMAIL: Dict[str, Dict[str, Any]] = {
         "reward_bonus": 1_000,
         "salary_bonus": 0,
         "total_earning": 16_800,
-        "level_open": 3,
+        "level_open": 24,
         "subscribers_count": 3,
         "income_wallet": 2_450,
         "repurchase_wallet": 320,
@@ -187,6 +187,8 @@ def member_id_for(user_id: int) -> str:
 
 
 def default_mlm_stats(user_id: int, package_amount: float = 0) -> Dict[str, Any]:
+    from .referral_bonus import level_open_for_package
+
     pkg = float(package_amount or 0)
     base = pkg * 0.6 if pkg else 0
     return {
@@ -200,7 +202,7 @@ def default_mlm_stats(user_id: int, package_amount: float = 0) -> Dict[str, Any]
         "reward_bonus": 0,
         "salary_bonus": 0,
         "total_earning": round(pkg * 0.25, 2) if pkg else 0,
-        "level_open": 1 if pkg >= 10_000 else 0,
+        "level_open": level_open_for_package(pkg),
         "subscribers_count": 1 if pkg else 0,
         "income_wallet": float(package_amount or 0),
         "repurchase_wallet": 0,
@@ -244,6 +246,22 @@ def resolve_mlm_stats(user: dict) -> Dict[str, Any]:
     if not stats.get("location"):
         parts = [user.get("city"), user.get("state")]
         stats["location"] = ", ".join(p for p in parts if p) or "India"
+    from .referral_bonus import (
+        DIRECT_BONUS_LEVELS,
+        DIRECT_BONUS_RATE,
+        MIN_INVESTMENT,
+        REFERRAL_TREE_MAX_LEVELS,
+        level_open_for_package,
+    )
+
+    pkg_amt = float(stats.get("package_amount", 0) or 0)
+    stats["level_open"] = level_open_for_package(pkg_amt)
+    stats["referral_plan"] = {
+        "tree_levels": REFERRAL_TREE_MAX_LEVELS,
+        "bonus_levels": DIRECT_BONUS_LEVELS,
+        "bonus_rate_percent": DIRECT_BONUS_RATE * 100,
+        "min_investment": MIN_INVESTMENT,
+    }
     return stats
 
 
@@ -353,6 +371,7 @@ def build_dashboard_payload(user: dict, site_base: str = "https://kgffarmingindi
         "referral_link": referral_link,
         "total_earning": float(stats["total_earning"]),
         "level_open": int(stats["level_open"]),
+        "referral_plan": stats.get("referral_plan", {}),
         "subscribers_count": int(stats["subscribers_count"]),
         "incomes": incomes,
         "today_incomes": today_incomes,

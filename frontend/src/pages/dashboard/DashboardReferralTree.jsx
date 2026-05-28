@@ -1,23 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '../../api.js'
-import { formatInrPlain } from '../../utils/format.js'
-
-function TreeNode({ node, onView, isRoot }) {
-  return (
-    <div className={`mlm-tree-node${isRoot ? ' root' : ''}`}>
-      <div className="mlm-tree-node-logo">KGF</div>
-      <p className="mlm-tree-mid">{node.member_id}</p>
-      <p className="mlm-tree-name">{node.full_name}</p>
-      <p className="mlm-tree-stat">{node.referral_count}</p>
-      <p className="mlm-tree-amount">{formatInrPlain(node.amount)}</p>
-      <button type="button" className="mlm-tree-view-btn" onClick={() => onView(node.member_id)}>
-        View
-      </button>
-      {node.has_downline && !isRoot && <span className="mlm-tree-arrow">▼</span>}
-    </div>
-  )
-}
+import ReferralTreeView from '../../components/ReferralTreeView.jsx'
 
 export default function DashboardReferralTree() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -71,11 +55,9 @@ export default function DashboardReferralTree() {
     )
   }
 
-  if (!tree?.root) return null
-
   return (
     <>
-      <h2 className="mlm-page-title mlm-tree-title">Referral Tree</h2>
+      <h2 className="mlm-page-title mlm-tree-title">Referral Tree (24 levels)</h2>
 
       <form className="mlm-tree-search" onSubmit={onSearch}>
         <input
@@ -87,24 +69,7 @@ export default function DashboardReferralTree() {
         <button type="submit">go</button>
       </form>
 
-      <div className="mlm-tree-canvas">
-        <div className="mlm-tree-level root-level">
-          <TreeNode node={tree.root} onView={onView} isRoot />
-        </div>
-
-        {tree.children?.length > 0 && (
-          <>
-            <div className="mlm-tree-connector" />
-            <div className="mlm-tree-level children-level">
-              {tree.children.map((child) => (
-                <div key={child.member_id} className="mlm-tree-child-wrap">
-                  <TreeNode node={child} onView={onView} />
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+      <ReferralTreeView tree={tree} onView={onView} />
     </>
   )
 }

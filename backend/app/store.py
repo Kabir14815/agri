@@ -303,16 +303,23 @@ class MongoStore:
         )
         return self._serialize_many(cursor)
 
-    def is_descendant(self, ancestor_member_id: str, target_member_id: str) -> bool:
+    def is_descendant(
+        self,
+        ancestor_member_id: str,
+        target_member_id: str,
+        max_depth: int = 24,
+    ) -> bool:
         if ancestor_member_id == target_member_id:
             return True
-        queue = [ancestor_member_id]
+        queue = [(ancestor_member_id, 0)]
         seen = set()
         while queue:
-            mid = queue.pop(0)
+            mid, depth = queue.pop(0)
             if mid in seen:
                 continue
             seen.add(mid)
+            if depth >= max_depth:
+                continue
             for child in self.list_direct_referrals(mid):
                 cid = (child.get("mlm") or {}).get("member_id")
                 if not cid:
@@ -320,8 +327,42 @@ class MongoStore:
                     cid = member_id_for(child["id"])
                 if cid == target_member_id:
                     return True
-                queue.append(cid)
+                queue.append((cid, depth + 1))
         return False
+
+    def credit_referral_bonus(
+        self,
+        sponsor: dict,
+        bonus: float,
+        *,
+        level: int,
+        from_member_id: str,
+        from_amount: float,
+        source: str,
+    ) -> None:
+        from .mlm import default_mlm_stats
+
+        mlm = dict(sponsor.get("mlm") or default_mlm_stats(sponsor["id"], sponsor.get("amount", 0)))
+        bonus = round(float(bonus), 2)
+        mlm["income_wallet"] = round(float(mlm.get("income_wallet", 0)) + bonus, 2)
+        mlm["total_earning"] = round(float(mlm.get("total_earning", 0)) + bonus, 2)
+        if level == 1:
+            mlm["direct_income"] = round(float(mlm.get("direct_income", 0)) + bonus, 2)
+            mlm["direct_income_today"] = round(float(mlm.get("direct_income_today", 0)) + bonus, 2)
+            mlm["direct_business"] = round(float(mlm.get("direct_business", 0)) + float(from_amount), 2)
+        else:
+            mlm["level_income"] = round(float(mlm.get("level_income", 0)) + bonus, 2)
+            mlm["level_income_today"] = round(float(mlm.get("level_income_today", 0)) + bonus, 2)
+        mlm["team_business"] = round(float(mlm.get("team_business", 0)) + float(from_amount), 2)
+        self.db.users.update_one({"id": sponsor["id"]}, {"$set": {"mlm": mlm}})
+        label = "Direct" if level == 1 else f"Level {level}"
+        self.add_wallet_entry(
+            sponsor["id"],
+            "income",
+            bonus,
+            f"{label} bonus 2% from {from_member_id} ({source})",
+            "credit",
+        )
 
     def create_user(self, data: dict) -> dict:
         coll = self.db.users
@@ -355,6 +396,12 @@ class MongoStore:
         created = self._serialize(user)
         if sponsor:
             self._increment_sponsor_stats(sponsor)
+        if float(user.get("amount", 0) or 0) >= 250_000:
+            from .referral_bonus import distribute_investment_bonus
+
+            fresh = self.find_user_by_id(user["id"])
+            if fresh:
+                distribute_investment_bonus(self, fresh, float(user["amount"]), "registration")
         return created
 
     def _increment_sponsor_stats(self, sponsor_member_id: str) -> None:
@@ -386,14 +433,21 @@ class MongoStore:
                 if not self.find_user_by_member_id(sponsor):
                     raise ValueError("invalid_sponsor")
             payload["sponsor_member_id"] = sponsor or None
+        old_amount = float(user.get("amount", 0) or 0)
+        delta = 0.0
         if amount is not None:
             amt = float(amount)
+            if amt > 0 and amt < 250_000:
+                raise ValueError("min_investment")
+            delta = max(0.0, amt - old_amount)
             payload["amount"] = amt
             mlm = dict(user.get("mlm") or default_mlm_stats(user_id, amt))
             mlm["package_amount"] = amt
             from .investment_interest import initialize_accrual_fields
+            from .referral_bonus import level_open_for_package
 
             mlm = initialize_accrual_fields(mlm, amt)
+            mlm["level_open"] = level_open_for_package(amt)
             payload["mlm"] = mlm
         if not payload:
             raise ValueError("no_fields")
@@ -402,7 +456,12 @@ class MongoStore:
             {"$set": payload},
             return_document=True,
         )
-        return self._serialize(result)
+        serialized = self._serialize(result)
+        if delta > 0 and serialized:
+            from .referral_bonus import distribute_investment_bonus
+
+            distribute_investment_bonus(self, serialized, delta, "package_update")
+        return serialized
 
     def update_user(self, user_id: int, updates: dict) -> dict:
         allowed = {
@@ -493,6 +552,11 @@ class MongoStore:
         receipt_filename: Optional[str] = None,
         receipt_data: Optional[str] = None,
     ) -> dict:
+        user = self.find_user_by_id(user_id)
+        if user:
+            from .referral_bonus import validate_first_deposit_amount
+
+            validate_first_deposit_amount(user, amount)
         record = {
             "id": self._next_id(self.db.deposits),
             "user_id": user_id,
@@ -582,12 +646,17 @@ class MongoStore:
         user = self.find_user_by_id(dep["user_id"])
         if not user:
             raise KeyError("not_found")
-        new_amount = float(user.get("amount", 0) or 0) + float(dep["amount"])
+        dep_amount = float(dep["amount"])
+        new_amount = float(user.get("amount", 0) or 0) + dep_amount
+        if new_amount > 0 and new_amount < 250_000:
+            raise ValueError("min_investment")
         mlm = dict(user.get("mlm") or default_mlm_stats(user["id"], new_amount))
         mlm["package_amount"] = new_amount
         from .investment_interest import initialize_accrual_fields
+        from .referral_bonus import level_open_for_package
 
         mlm = initialize_accrual_fields(mlm, new_amount)
+        mlm["level_open"] = level_open_for_package(new_amount)
         self.db.users.update_one(
             {"id": user["id"]},
             {"$set": {"amount": new_amount, "mlm": mlm}},
@@ -595,10 +664,17 @@ class MongoStore:
         self.add_wallet_entry(
             user["id"],
             "topup",
-            float(dep["amount"]),
+            dep_amount,
             f"Deposit approved #{deposit_id}",
             "credit",
         )
+        updated = self.find_user_by_id(user["id"])
+        if updated:
+            from .referral_bonus import distribute_investment_bonus
+
+            distribute_investment_bonus(
+                self, updated, dep_amount, f"deposit_{deposit_id}"
+            )
         return self.set_deposit_status(deposit_id, "approved")
 
     def add_wallet_entry(

@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from .mlm import member_id_for, resolve_mlm_stats
+from .referral_bonus import REFERRAL_TREE_MAX_LEVELS
 
 DEMO_ROOT_MEMBER_ID = "KGF870365"
 DEMO_ROOT_EMAIL = "demo@kgffarming.com"
@@ -138,12 +139,33 @@ def get_direct_children(store, member_id: str) -> List[dict]:
     return []
 
 
+def _attach_nested_children(
+    store,
+    nodes: List[dict],
+    depth: int,
+    max_depth: int,
+) -> None:
+    if depth >= max_depth:
+        for node in nodes:
+            node["children"] = []
+        return
+    for node in nodes:
+        mid = normalize_member_id(node.get("member_id"))
+        kids = get_direct_children(store, mid)
+        node["children"] = kids
+        node["has_downline"] = len(kids) > 0
+        if kids:
+            _attach_nested_children(store, kids, depth + 1, max_depth)
+
+
 def build_referral_tree(
     store,
     viewer: dict,
     target_member_id: Optional[str] = None,
+    max_depth: int = REFERRAL_TREE_MAX_LEVELS,
 ) -> dict:
     target_member_id = normalize_member_id(target_member_id) or member_id_from_user(viewer)
+    max_depth = max(1, min(int(max_depth), REFERRAL_TREE_MAX_LEVELS))
 
     root_user = store.find_user_by_member_id(target_member_id)
     if not root_user and target_member_id == member_id_from_user(viewer):
@@ -152,7 +174,10 @@ def build_referral_tree(
         root_user = _demo_root_stub(target_member_id)
 
     children = get_direct_children(store, target_member_id)
+    _attach_nested_children(store, children, 1, max_depth)
     root_node = user_to_tree_node(root_user, len(children), len(children) > 0)
+    root_node["level"] = 0
+    root_node["children"] = children
 
     # Showcase UI for demo account when no real referrals exist yet
     if (
@@ -161,12 +186,15 @@ def build_referral_tree(
         and not store.list_direct_referrals(DEMO_ROOT_MEMBER_ID)
     ):
         root_node["referral_count"] = 11
-        root_node["amount"] = 100_000
+        root_node["amount"] = 250_000
         root_node["full_name"] = root_user.get("full_name") or "SUBHASH JANGRA"
 
     return {
         "root": root_node,
         "children": children,
+        "max_depth": REFERRAL_TREE_MAX_LEVELS,
+        "bonus_levels": 5,
+        "bonus_rate_percent": 2,
     }
 
 

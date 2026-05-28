@@ -6,6 +6,8 @@ const DEFAULT_MODES = ['UPI', 'Bank Transfer', 'NEFT', 'RTGS', 'IMPS', 'Cash', '
 
 export default function DepositRequest() {
   const [modes, setModes] = useState(DEFAULT_MODES)
+  const [minInvestment, setMinInvestment] = useState(250000)
+  const [minLabel, setMinLabel] = useState('₹2,50,000')
   const [paymentMode, setPaymentMode] = useState('')
   const [amount, setAmount] = useState('')
   const [transactionNumber, setTransactionNumber] = useState('')
@@ -16,7 +18,14 @@ export default function DepositRequest() {
   const fileRef = useRef(null)
 
   useEffect(() => {
-    api.getDepositModes?.().then((r) => setModes(r.modes || DEFAULT_MODES)).catch(() => {})
+    api
+      .getDepositModes?.()
+      .then((r) => {
+        setModes(r.modes || DEFAULT_MODES)
+        if (r.min_investment) setMinInvestment(r.min_investment)
+        if (r.min_investment_label) setMinLabel(r.min_investment_label)
+      })
+      .catch(() => {})
   }, [])
 
   const onFileChange = (e) => {
@@ -92,13 +101,17 @@ export default function DepositRequest() {
               </label>
               <input
                 type="number"
-                min="1"
-                step="1"
+                min={minInvestment}
+                step="1000"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="Amount in ₹"
+                placeholder={`Minimum ${minLabel} for first package`}
                 required
               />
+              <small className="mlm-hint">
+                Minimum investment: <strong>{minLabel}</strong> for your first package. Upline
+                earns 2% direct bonus for 5 levels on each qualifying branch investment.
+              </small>
             </div>
 
             <div className="mlm-deposit-field">
