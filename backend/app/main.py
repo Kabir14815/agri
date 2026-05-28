@@ -17,7 +17,7 @@ except ImportError:
 
 from .database import close_database, get_database
 from .mlm import build_dashboard_payload, default_mlm_stats
-from .profile_utils import DEMO_PROFILE_OVERRIDES, user_profile_payload
+from .profile_utils import enrich_user_defaults, user_profile_payload
 from .referral import build_referral_tree, can_view_tree, member_id_from_user
 from .store import MongoStore
 
@@ -618,18 +618,14 @@ def admin_purge_farmer_images(
 def user_dashboard(
     user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
 ):
+    refreshed = store.find_user_by_id(user["id"])
+    if refreshed:
+        user = refreshed
     return _user_dashboard_payload(user, store)
 
 
 def _profile_for_user(user: dict) -> dict:
-    merged = dict(user)
-    overrides = DEMO_PROFILE_OVERRIDES.get(user.get("email", ""))
-    if overrides:
-        for key, val in overrides.items():
-            if key == "bank":
-                merged["bank"] = {**(merged.get("bank") or {}), **val}
-            else:
-                merged[key] = val
+    merged = enrich_user_defaults(dict(user))
     profile = user_profile_payload(merged)
     dash = build_dashboard_payload(merged)
     profile["member_id"] = dash["member_id"]

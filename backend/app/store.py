@@ -138,6 +138,8 @@ class MongoStore:
             upsert=True,
         )
 
+        from .mlm import member_id_for
+
         for demo in DEMO_USERS:
             existing = self.db.users.find_one({"email": demo["email"]})
             demo_mlm = DEMO_MLM_BY_EMAIL.get(demo["email"])
@@ -146,14 +148,22 @@ class MongoStore:
                 user["id"] = self._next_id(self.db.users)
                 if demo_mlm:
                     user["mlm"] = dict(demo_mlm)
+                    user["mlm"].setdefault(
+                        "member_id",
+                        user["mlm"].get("member_id") or member_id_for(user["id"]),
+                    )
+                    if demo_mlm.get("package_amount"):
+                        user["amount"] = float(demo_mlm["package_amount"])
                 elif demo.get("role") != "admin":
                     user["mlm"] = default_mlm_stats(user["id"], user.get("amount", 0))
                 self.db.users.insert_one(user)
-            elif demo_mlm:
-                # Keep demo referral codes stable (e.g. KGF870365) after deploys
+            elif demo_mlm and not existing.get("mlm"):
+                # Seed demo MLM once; do not overwrite live balances on every deploy
+                seeded = dict(demo_mlm)
+                seeded.setdefault("member_id", seeded.get("member_id") or member_id_for(existing["id"]))
                 self.db.users.update_one(
                     {"email": demo["email"]},
-                    {"$set": {"mlm": dict(demo_mlm)}},
+                    {"$set": {"mlm": seeded, "amount": float(existing.get("amount") or seeded.get("package_amount", 0))}},
                 )
 
         self.db.users.create_index([("email", ASCENDING)], unique=True)
@@ -744,12 +754,9 @@ class MongoStore:
     MIN_WALLET_TRANSFER = 100.0
 
     def _get_user_mlm_stats(self, user: dict) -> dict:
-        if user.get("mlm") and isinstance(user["mlm"], dict):
-            return dict(user["mlm"])
-        email = user.get("email", "")
-        if email in DEMO_MLM_BY_EMAIL:
-            return dict(DEMO_MLM_BY_EMAIL[email])
-        return default_mlm_stats(user["id"], user.get("amount", 0))
+        from .mlm import resolve_mlm_stats
+
+        return resolve_mlm_stats(user)
 
     def _set_user_mlm_stats(self, user_id: int, stats: dict) -> None:
         self.db.users.update_one({"id": user_id}, {"$set": {"mlm": stats}})

@@ -232,17 +232,18 @@ def default_mlm_stats(user_id: int, package_amount: float = 0) -> Dict[str, Any]
 
 
 def resolve_mlm_stats(user: dict) -> Dict[str, Any]:
-    email = user.get("email", "")
-    if email in DEMO_MLM_BY_EMAIL:
-        stats = deepcopy(DEMO_MLM_BY_EMAIL[email])
-    elif user.get("mlm"):
+    """Always prefer live MongoDB mlm stats; never replace with hardcoded demo snapshots."""
+    pkg_amount = float(user.get("amount", 0) or 0)
+    if user.get("mlm") and isinstance(user["mlm"], dict):
         stats = deepcopy(user["mlm"])
     else:
-        stats = default_mlm_stats(user["id"], user.get("amount", 0))
+        stats = default_mlm_stats(user["id"], pkg_amount)
 
     stats.setdefault("member_id", member_id_for(user["id"]))
-    stats.setdefault("package_amount", float(user.get("amount", 0) or 0))
-    stats.setdefault("income_wallet", float(user.get("amount", 0) or 0))
+    db_pkg = float(stats.get("package_amount", 0) or 0)
+    stats["package_amount"] = max(db_pkg, pkg_amount)
+    if not stats.get("income_wallet") and pkg_amount:
+        stats.setdefault("income_wallet", pkg_amount)
     if not stats.get("location"):
         parts = [user.get("city"), user.get("state")]
         stats["location"] = ", ".join(p for p in parts if p) or "India"

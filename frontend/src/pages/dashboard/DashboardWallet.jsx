@@ -1,15 +1,10 @@
-import { useEffect, useState } from 'react'
-import { api } from '../../api.js'
+import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 import { formatInr } from '../../utils/format.js'
 
 export default function DashboardWallet() {
-  const [d, setD] = useState(null)
+  const { data: d, loading } = useLiveDashboard()
 
-  useEffect(() => {
-    api.userDashboard().then(setD).catch(() => {})
-  }, [])
-
-  if (!d) return <div className="mlm-loading">Loading wallet…</div>
+  if (loading || !d) return <div className="mlm-loading">Loading wallet…</div>
 
   const wallets = [
     { title: 'Income Wallet', amount: d.income_wallet, progress: d.income_wallet_progress },

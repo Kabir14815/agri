@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   FiCopy,
@@ -8,7 +8,7 @@ import {
   FiPhone,
   FiMapPin,
 } from 'react-icons/fi'
-import { api } from '../../api.js'
+import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 import { formatInr, formatInrPlain } from '../../utils/format.js'
 
 function ProgressBar({ percent, color = '#22c55e' }) {
@@ -57,12 +57,8 @@ function DonutChart({ total, pending, cross }) {
 }
 
 export default function DashboardHome() {
-  const [d, setD] = useState(null)
+  const { data: d, loading } = useLiveDashboard()
   const [copyMsg, setCopyMsg] = useState('')
-
-  useEffect(() => {
-    api.userDashboard().then(setD).catch(() => {})
-  }, [])
 
   const copyReferral = async () => {
     if (!d?.referral_link) return
@@ -75,7 +71,7 @@ export default function DashboardHome() {
     }
   }
 
-  if (!d) {
+  if (loading || !d) {
     return <div className="mlm-loading">Loading dashboard…</div>
   }
 

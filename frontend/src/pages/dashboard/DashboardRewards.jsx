@@ -1,15 +1,10 @@
-import { useEffect, useState } from 'react'
-import { api } from '../../api.js'
+import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 import { formatInrPlain } from '../../utils/format.js'
 
 export default function DashboardRewards() {
-  const [d, setD] = useState(null)
+  const { data: d, loading } = useLiveDashboard()
 
-  useEffect(() => {
-    api.userDashboard().then(setD).catch(() => {})
-  }, [])
-
-  if (!d) return <div className="mlm-loading">Loading rewards…</div>
+  if (loading || !d) return <div className="mlm-loading">Loading rewards…</div>
 
   return (
     <>
