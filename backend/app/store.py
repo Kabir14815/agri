@@ -64,6 +64,18 @@ DEMO_USERS = [
         "pincode": "126102",
         "amount": 0.0,
     },
+    {
+        "full_name": "Demo Farmer",
+        "email": "farmer@kgffarming.com",
+        "phone": "9876543210",
+        "password": "farmer1234",
+        "role": "farmer",
+        "address": "Village plot, Jind",
+        "city": "Jind",
+        "state": "Haryana",
+        "pincode": "126102",
+        "amount": 0.0,
+    },
 ]
 
 
@@ -134,6 +146,8 @@ class MongoStore:
                 user["id"] = self._next_id(self.db.users)
                 if demo_mlm:
                     user["mlm"] = dict(demo_mlm)
+                elif demo.get("role") != "admin":
+                    user["mlm"] = default_mlm_stats(user["id"], user.get("amount", 0))
                 self.db.users.insert_one(user)
             elif demo_mlm:
                 # Keep demo referral codes stable (e.g. KGF870365) after deploys
@@ -153,8 +167,14 @@ class MongoStore:
             "exchange_requests",
             "wallet_transfers",
             "referral_visits",
+            "farm_daily_logs",
         ]:
             self.db[name].create_index([("id", ASCENDING)], unique=True)
+        self.db.farm_daily_logs.create_index(
+            [("user_id", ASCENDING), ("log_date", ASCENDING)], unique=True
+        )
+        self.db.farm_daily_logs.create_index([("log_date", DESCENDING)])
+        self.db.farm_daily_logs.create_index([("created_at", ASCENDING)])
         self.db.referral_visits.create_index([("code", ASCENDING)])
         self.db.referral_visits.create_index([("visited_at", DESCENDING)])
         self.db.users.create_index([("sponsor_member_id", ASCENDING)])
@@ -925,6 +945,86 @@ class MongoStore:
             "credit",
         )
         return self.set_exchange_status(exchange_id, "approved")
+
+    # ----------------------------- Farmer daily logs -----------------------
+
+    def upsert_farm_daily_log(
+        self,
+        user: dict,
+        watered: bool,
+        image_b64: Optional[str] = None,
+        image_mime: Optional[str] = None,
+        image_size: Optional[int] = None,
+        note: str = "",
+        log_date: Optional[str] = None,
+    ) -> dict:
+        from .farmer_logs import today_utc
+        from .referral import member_id_from_user
+
+        log_date = log_date or today_utc()
+        now = datetime.utcnow().isoformat() + "Z"
+        existing = self.db.farm_daily_logs.find_one(
+            {"user_id": user["id"], "log_date": log_date}
+        )
+        base = {
+            "user_id": user["id"],
+            "member_id": member_id_from_user(user),
+            "farmer_name": user.get("full_name", ""),
+            "log_date": log_date,
+            "watered": bool(watered),
+            "note": (note or "").strip(),
+            "updated_at": now,
+        }
+        if image_b64 is not None:
+            base.update(
+                {
+                    "image_data": image_b64,
+                    "image_mime": image_mime or "image/jpeg",
+                    "image_size_bytes": int(image_size or 0),
+                    "image_purged_at": None,
+                }
+            )
+        if existing:
+            self.db.farm_daily_logs.update_one(
+                {"id": existing["id"]},
+                {"$set": base},
+            )
+            doc = self.db.farm_daily_logs.find_one({"id": existing["id"]})
+        else:
+            if image_b64 is None:
+                raise ValueError("photo_required")
+            record = {
+                "id": self._next_id(self.db.farm_daily_logs),
+                **base,
+                "image_data": image_b64,
+                "image_mime": image_mime or "image/jpeg",
+                "image_size_bytes": int(image_size or 0),
+                "image_purged_at": None,
+                "created_at": now,
+            }
+            self.db.farm_daily_logs.insert_one(record)
+            doc = record
+        return self._serialize(doc)
+
+    def get_farm_log_for_date(self, user_id: int, log_date: str) -> Optional[dict]:
+        return self._serialize(
+            self.db.farm_daily_logs.find_one({"user_id": user_id, "log_date": log_date})
+        )
+
+    def get_farm_log_by_id(self, log_id: int) -> Optional[dict]:
+        return self._serialize(self.db.farm_daily_logs.find_one({"id": log_id}))
+
+    def list_farm_logs_for_user(self, user_id: int, limit: int = 60) -> List[dict]:
+        cursor = (
+            self.db.farm_daily_logs.find({"user_id": user_id})
+            .sort("log_date", DESCENDING)
+            .limit(limit)
+        )
+        return self._serialize_many(cursor)
+
+    def list_all_farm_logs(self, limit: int = 200) -> List[dict]:
+        cursor = self.db.farm_daily_logs.find().sort("log_date", DESCENDING).limit(limit)
+        return self._serialize_many(cursor)
 
     def list_user_transactions(self, user_id: int) -> List[dict]:
         rows: List[dict] = []

@@ -3007,3 +3007,240 @@ textarea.form-control {
   color: var(--color-primary);
   margin: 0;
 }
+
+.route-loading,
+.farmer-loading {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.site-main--farmer {
+  padding: 0;
+  min-height: 100vh;
+}
+
+.farmer-auth-wrap {
+  background: linear-gradient(145deg, #0d3d1a 0%, #1a5c2e 45%, #2d7a42 100%);
+}
+
+.farmer-login-card {
+  max-width: 440px;
+}
+
+.farmer-login-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(45, 122, 66, 0.12);
+  color: var(--color-primary);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.farmer-shell {
+  min-height: 100vh;
+  background: #f4f8f5;
+}
+
+.farmer-header {
+  background: linear-gradient(120deg, #0d3d1a, #2d7a42);
+  color: #fff;
+  padding: 28px 24px 32px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.farmer-header h1 {
+  margin: 4px 0;
+  font-size: 1.75rem;
+}
+
+.farmer-header-kicker {
+  margin: 0;
+  opacity: 0.85;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.farmer-header-meta {
+  margin: 0;
+  opacity: 0.8;
+  font-size: 14px;
+}
+
+.farmer-header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-outline-light {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.farmer-grid {
+  max-width: 1100px;
+  margin: -20px auto 40px;
+  padding: 0 16px;
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .farmer-grid {
+    grid-template-columns: 1fr;
+    margin-top: 16px;
+  }
+}
+
+.farmer-card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(13, 31, 18, 0.08);
+  padding: 24px;
+}
+
+.farmer-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+  font-size: 1.15rem;
+}
+
+.farmer-today-status {
+  color: var(--color-muted);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.farmer-water-choice {
+  border: none;
+  padding: 0;
+  margin: 0 0 18px;
+}
+
+.farmer-water-choice legend {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.farmer-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.farmer-radio input {
+  margin: 0;
+}
+
+.farmer-radio.active {
+  border-color: var(--color-primary);
+  background: rgba(45, 122, 66, 0.06);
+}
+
+.farmer-preview-wrap {
+  position: relative;
+  margin: 10px 0;
+}
+
+.farmer-preview {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.farmer-preview-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.farmer-clear-photo {
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.farmer-history {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.farmer-history li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.farmer-history-meta {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin-top: 4px;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+  font-weight: 600;
+}
+
+.tag-ok {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.tag-warn {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.admin-log-thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  vertical-align: middle;
+}
+
+.admin-thumb-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

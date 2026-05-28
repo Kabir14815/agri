@@ -199,9 +199,17 @@ def _cors_origins() -> List[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from .farmer_logs import purge_old_images
+
     db = get_database()
     store = MongoStore(db)
     store.seed()
+    try:
+        purged = purge_old_images(store)
+        if purged:
+            print(f"[farm_logs] Purged images from {purged} old daily log(s)")
+    except Exception as exc:
+        print(f"[farm_logs] Cleanup skipped: {exc}")
     app.state.store = store
     yield
     close_database()
@@ -261,11 +269,39 @@ def _public_user(u: dict) -> dict:
     return data
 
 
+def _farmer_profile(u: dict) -> dict:
+    return {
+        "id": u["id"],
+        "full_name": u["full_name"],
+        "email": u.get("email"),
+        "phone": u.get("phone"),
+        "member_id": member_id_from_user(u),
+        "role": "farmer",
+        "city": u.get("city"),
+        "state": u.get("state"),
+        "address": u.get("address"),
+    }
+
+
 def _user_dashboard_payload(u: dict, store: MongoStore) -> dict:
     refreshed = store.accrue_investment_interest(u["id"])
     if refreshed:
         u = refreshed
     return build_dashboard_payload(u)
+
+
+def _login_user_payload(u: dict, store: MongoStore) -> dict:
+    role = u.get("role", "customer")
+    if role == "farmer":
+        return _farmer_profile(u)
+    if role == "admin":
+        return {
+            "id": u["id"],
+            "full_name": u["full_name"],
+            "email": u["email"],
+            "role": "admin",
+        }
+    return _user_dashboard_payload(u, store)
 
 
 def _bearer_token(authorization: Optional[str]) -> str:
@@ -285,6 +321,22 @@ def require_user(
         raise HTTPException(
             status_code=403, detail="Use the admin panel for admin accounts"
         )
+    if user.get("role") == "farmer":
+        raise HTTPException(
+            status_code=403, detail="Farmers must use the farmer portal at /farmer-login"
+        )
+    return user
+
+
+def require_farmer(
+    authorization: Optional[str] = Header(default=None),
+    store: MongoStore = Depends(get_store),
+) -> dict:
+    user = _user_from_token(store, _bearer_token(authorization))
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    if user.get("role") != "farmer":
+        raise HTTPException(status_code=403, detail="Farmer access only")
     return user
 
 
@@ -405,6 +457,8 @@ def register(payload: RegisterPayload, store: MongoStore = Depends(get_store)):
     if store.find_user_by_email(payload.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     data = payload.model_dump()
+    if data.get("role") not in ("customer", "franchisee", "farmer"):
+        data["role"] = "customer"
     if data.get("sponsor_member_id"):
         from .referral import normalize_member_id
 
@@ -441,9 +495,123 @@ def login(
         return {
             "success": True,
             "token": f"demo-token-{u['id']}",
-            "user": _user_dashboard_payload(u, store),
+            "user": _login_user_payload(u, store),
         }
     raise HTTPException(status_code=401, detail="Invalid member ID or password")
+
+
+async def _read_upload_bytes(upload: Optional[UploadFile]) -> bytes:
+    if not upload or not upload.filename:
+        raise HTTPException(status_code=400, detail="Photo is required")
+    raw = await upload.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Photo file is empty")
+    if len(raw) > 12 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image too large (max 12MB)")
+    return raw
+
+
+@app.get("/api/farmer/dashboard")
+def farmer_dashboard(
+    farmer: dict = Depends(require_farmer),
+    store: MongoStore = Depends(get_store),
+):
+    from .farmer_logs import log_public, today_utc
+
+    today = today_utc()
+    today_log = store.get_farm_log_for_date(farmer["id"], today)
+    history = store.list_farm_logs_for_user(farmer["id"], limit=30)
+    return {
+        "profile": _farmer_profile(farmer),
+        "today": log_public(today_log, include_image=True) if today_log else None,
+        "history": [log_public(h) for h in history],
+        "log_date": today,
+    }
+
+
+@app.post("/api/farmer/daily-log", status_code=status.HTTP_201_CREATED)
+async def farmer_submit_daily_log(
+    watered: bool = Form(...),
+    note: str = Form(default=""),
+    photo: Optional[UploadFile] = File(default=None),
+    farmer: dict = Depends(require_farmer),
+    store: MongoStore = Depends(get_store),
+):
+    from .image_compress import compress_image_bytes
+    from .farmer_logs import log_public, today_utc
+
+    b64 = mime = None
+    size = None
+    if photo and photo.filename:
+        raw = await _read_upload_bytes(photo)
+        try:
+            b64, mime, size = compress_image_bytes(raw)
+        except ValueError as exc:
+            if str(exc) == "invalid_image":
+                raise HTTPException(status_code=400, detail="Invalid image file") from exc
+            raise HTTPException(status_code=400, detail="Could not process image") from exc
+    elif not store.get_farm_log_for_date(farmer["id"], today_utc()):
+        raise HTTPException(status_code=400, detail="Photo is required for your first log today")
+
+    try:
+        record = store.upsert_farm_daily_log(
+            farmer,
+            watered=watered,
+            image_b64=b64,
+            image_mime=mime,
+            image_size=size,
+            note=note,
+        )
+    except ValueError as exc:
+        if str(exc) == "photo_required":
+            raise HTTPException(status_code=400, detail="Photo is required") from exc
+        raise
+    return {
+        "success": True,
+        "log": log_public(record, include_image=True),
+        "message": "Daily farm log saved.",
+    }
+
+
+@app.get("/api/farmer/daily-log/{log_id}/image")
+def farmer_log_image(
+    log_id: int,
+    farmer: dict = Depends(require_farmer),
+    store: MongoStore = Depends(get_store),
+):
+    from .farmer_logs import log_public
+
+    record = store.get_farm_log_by_id(log_id)
+    if not record or record["user_id"] != farmer["id"]:
+        raise _not_found()
+    if not record.get("image_data"):
+        raise HTTPException(status_code=410, detail="Image removed after retention period")
+    return log_public(record, include_image=True)
+
+
+@app.get("/api/admin/farmer-logs")
+def admin_farmer_logs(
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    from .farmer_logs import log_public
+
+    rows = []
+    for rec in store.list_all_farm_logs(limit=300):
+        include = bool(rec.get("image_data"))
+        rows.append(log_public(rec, include_image=include))
+    return {"logs": rows}
+
+
+@app.post("/api/admin/farmer-logs/purge-images")
+def admin_purge_farmer_images(
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    from .farmer_logs import purge_old_images
+
+    count = purge_old_images(store)
+    return {"success": True, "purged": count}
 
 
 @app.get("/api/user/dashboard")

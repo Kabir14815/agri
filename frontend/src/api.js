@@ -12,6 +12,11 @@ function userAuthHeader() {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+function farmerAuthHeader() {
+  const token = localStorage.getItem('kgf_farmer_token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 function formatApiError(detail) {
   if (Array.isArray(detail)) {
     return detail.map((d) => d.msg || d.message || JSON.stringify(d)).join(', ')
@@ -26,6 +31,7 @@ async function request(path, options = {}) {
   let headers = { 'Content-Type': 'application/json' }
   if (options.auth === true) headers = { ...headers, ...authHeader() }
   else if (options.auth === 'user') headers = { ...headers, ...userAuthHeader() }
+  else if (options.auth === 'farmer') headers = { ...headers, ...farmerAuthHeader() }
   const res = await fetch(`${BASE}${path}`, {
     headers,
     ...options,
@@ -145,6 +151,24 @@ export const api = {
   getReferralInfo: () => request('/user/referral-info', { auth: 'user' }),
 }
 
+export const farmerApi = {
+  dashboard: () => request('/farmer/dashboard', { auth: 'farmer' }),
+  submitDailyLog: (formData) => {
+    const headers = farmerAuthHeader()
+    return fetch(`${BASE}/farmer/daily-log`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Request failed' }))
+        throw new Error(formatApiError(err.detail))
+      }
+      return res.json()
+    })
+  },
+}
+
 // ---------- Admin API ----------
 
 export const adminApi = {
@@ -209,6 +233,9 @@ export const adminApi = {
       body: JSON.stringify({ status }),
     }),
   walletTransfers: () => request('/admin/wallet-transfers', { auth: true }),
+  farmerLogs: () => request('/admin/farmer-logs', { auth: true }),
+  purgeFarmerImages: () =>
+    request('/admin/farmer-logs/purge-images', { method: 'POST', auth: true }),
 
   // Generic CRUD
   list: (resource) => request(`/${resource}`),

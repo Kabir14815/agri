@@ -85,11 +85,18 @@ export default function Navbar() {
                 </NavLink>
               </li>
             ) : (
-              <li>
-                <NavLink to="/login" onClick={close}>
-                  Login
-                </NavLink>
-              </li>
+              <>
+                <li>
+                  <NavLink to="/login" onClick={close}>
+                    Login
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/farmer-login" onClick={close}>
+                    Farmer Login
+                  </NavLink>
+                </li>
+              </>
             )}
             {adminUser && (
               <li>

@@ -80,6 +80,15 @@ export default function Login() {
         return
       }
 
+      if (res.user.role === 'farmer') {
+        setStatus({
+          type: 'error',
+          text: 'Farmers must sign in at the Farmer Portal.',
+        })
+        setTimeout(() => navigate('/farmer-login', { replace: true }), 900)
+        return
+      }
+
       applyUserSession(res.token, res.user, 'customer')
       setStatus({
         type: 'success',

@@ -1,0 +1,262 @@
+.site-main--farmer {
+  padding: 0;
+  min-height: 100vh;
+  background: linear-gradient(160deg, #0d3d2a 0%, #1a5c40 45%, #0f2a1f 100%);
+}
+
+.route-loading,
+.farmer-loading {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-muted, #666);
+}
+
+.farmer-auth-wrap {
+  min-height: calc(100vh - 80px);
+}
+
+.farmer-login-card {
+  max-width: 440px;
+}
+
+.farmer-login-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(26, 92, 64, 0.12);
+  color: #1a5c40;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.farmer-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+  color: #f4faf6;
+}
+
+.farmer-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.farmer-header-kicker {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  opacity: 0.75;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.farmer-header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.farmer-header-meta {
+  margin: 6px 0 0;
+  opacity: 0.8;
+  font-size: 0.95rem;
+}
+
+.farmer-header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-outline-light {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-outline-light:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.farmer-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .farmer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.farmer-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 20px 22px;
+  backdrop-filter: blur(8px);
+}
+
+.farmer-card h2 {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.farmer-today-status {
+  margin: 0 0 16px;
+  opacity: 0.85;
+}
+
+.farmer-form .form-group label {
+  color: #e8f5ec;
+}
+
+.farmer-form input[type='file'] {
+  margin-top: 8px;
+  color: #dceee3;
+}
+
+.farmer-form textarea,
+.farmer-form input[type='text'] {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+  color: #fff;
+  padding: 10px 12px;
+}
+
+.farmer-water-choice {
+  border: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+.farmer-water-choice legend {
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.farmer-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.farmer-radio input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.farmer-radio.active {
+  background: rgba(76, 175, 120, 0.35);
+  border-color: #7dcea0;
+}
+
+.farmer-preview-wrap {
+  position: relative;
+  margin: 10px 0;
+}
+
+.farmer-preview {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+}
+
+.farmer-preview-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.farmer-clear-photo {
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: #ffb4b4;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.farmer-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.farmer-history li {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.farmer-history li:last-child {
+  border-bottom: none;
+}
+
+.farmer-history .tag {
+  margin-left: 8px;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.tag-ok {
+  background: rgba(76, 175, 120, 0.35);
+}
+
+.tag-warn {
+  background: rgba(255, 193, 7, 0.25);
+}
+
+.farmer-history-meta {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  margin-top: 4px;
+}
+
+.muted {
+  opacity: 0.7;
+}
+
+.admin-log-thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  vertical-align: middle;
+}
+
+.admin-thumb-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
