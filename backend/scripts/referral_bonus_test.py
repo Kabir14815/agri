@@ -45,7 +45,7 @@ def main():
     modes = req("GET", "/user/deposit-modes")
     if modes.get("min_investment") != 250000:
         fail(f"min_investment expected 250000, got {modes.get('min_investment')}")
-    print("OK  deposit min ₹2.5L in API")
+    print("OK  deposit min Rs 2.5L in API")
 
     admin = req("POST", "/auth/login", {"member_id": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
     admin_token = admin["token"]
@@ -89,36 +89,36 @@ def main():
 
     try:
         req("PATCH", f"/admin/users/{child_id}/mlm", {"amount": 100000}, token=admin_token)
-        fail("Expected min investment error for ₹100000")
+        fail("Expected min investment error for Rs 100000")
     except urllib.error.HTTPError as e:
         body = e.read().decode()
         if "2,50,000" not in body and "250" not in body:
             fail(f"Unexpected error for low amount: {body}")
-    print("OK  rejected package below ₹2.5L")
+    print("OK  rejected package below Rs 2.5L")
 
     req("PATCH", f"/admin/users/{child_id}/mlm", {"amount": INVEST}, token=admin_token)
-    print(f"OK  activated child with ₹{INVEST}")
+    print(f"OK  activated child with Rs {INVEST}")
 
     child_dash = req("GET", "/user/dashboard", token=req(
         "POST", "/auth/login", {"member_id": child_mid, "password": PASSWORD}
     )["token"])
     if child_dash.get("level_open") != 5:
-        fail(f"At ₹2.5L expected 5 levels open, got {child_dash.get('level_open')}")
+        fail(f"At Rs 2.5L expected 5 levels open, got {child_dash.get('level_open')}")
 
     req("PATCH", f"/admin/users/{child_id}/mlm", {"amount": INVEST * 2}, token=admin_token)
     child_dash2 = req("GET", "/user/dashboard", token=req(
         "POST", "/auth/login", {"member_id": child_mid, "password": PASSWORD}
     )["token"])
     if child_dash2.get("level_open") != 12:
-        fail(f"At ₹5L expected 12 levels open, got {child_dash2.get('level_open')}")
-    print("OK  level unlock 5 → 12 at ₹2.5L + ₹2.5L")
+        fail(f"At Rs 5L expected 12 levels open, got {child_dash2.get('level_open')}")
+    print("OK  level unlock 5 -> 12 at Rs 2.5L + Rs 2.5L")
 
     after = direct_income(req("GET", "/user/dashboard", token=token_s))
     expected = round(INVEST * 0.02, 2)
     gained = round(after - before, 2)
     if gained < expected - 0.01:
         fail(f"Sponsor direct income should increase by ~{expected}, gained {gained}")
-    print(f"OK  sponsor direct bonus ₹{gained} (expected ~₹{expected})")
+    print(f"OK  sponsor direct bonus Rs {gained} (expected ~Rs {expected})")
 
     tree = req("GET", f"/user/referral-tree?member_id={sponsor_mid}", token=token_s)
     if tree.get("max_depth") != 24:
