@@ -57,7 +57,7 @@ function DonutChart({ total, pending, cross }) {
 }
 
 export default function DashboardHome() {
-  const { data: d, loading } = useLiveDashboard()
+  const { data: d, loading, error, refresh } = useLiveDashboard()
   const [copyMsg, setCopyMsg] = useState('')
 
   const copyReferral = async () => {
@@ -71,7 +71,22 @@ export default function DashboardHome() {
     }
   }
 
-  if (loading || !d) {
+  if (loading && !d) {
+    return <div className="mlm-loading">Loading dashboard…</div>
+  }
+
+  if (error && !d) {
+    return (
+      <div className="mlm-loading">
+        <p className="form-message error">{error}</p>
+        <button type="button" className="btn btn-primary" onClick={() => refresh()}>
+          Retry
+        </button>
+      </div>
+    )
+  }
+
+  if (!d) {
     return <div className="mlm-loading">Loading dashboard…</div>
   }
 
@@ -154,13 +169,12 @@ export default function DashboardHome() {
         </article>
 
         <article className="mlm-card mlm-card-level">
-          <small>Level Open</small>
+          <small>Levels open</small>
           <h2 className="mlm-big-num">{d.level_open}</h2>
+          <p>
+            of {d.referral_plan?.tree_levels || 24} max · 2.5L→5 · 5L→12 · 7.5L→19 · 10L→24
+          </p>
           <p>{d.subscribers_count} subscribers</p>
-          <button type="button" className="mlm-btn-sm">View all subscribers</button>
-          <button type="button" className="mlm-dl-btn float-dl" aria-label="Download">
-            <FiDownload />
-          </button>
         </article>
 
         <article className="mlm-card mlm-card-wallet">

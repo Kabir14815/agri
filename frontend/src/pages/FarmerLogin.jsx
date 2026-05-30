@@ -70,7 +70,7 @@ export default function FarmerLogin() {
               }
               required
               autoComplete="username"
-              placeholder="e.g. KGF870367"
+              placeholder="Member ID or farmer@kgffarming.com"
             />
           </div>
           <div className="form-group">
@@ -100,8 +100,7 @@ export default function FarmerLogin() {
 
         <div className="demo-creds" style={{ marginTop: 20 }}>
           <strong>Demo farmer</strong>
-          After deploy, use your assigned Member ID. Seed account: farmer@kgffarming.com /
-          farmer1234 (check member ID on admin Users).
+          farmer@kgffarming.com / farmer1234 — or use Member ID from Admin → Users.
         </div>
       </div>
     </div>

@@ -99,6 +99,20 @@ def main():
     req("PATCH", f"/admin/users/{child_id}/mlm", {"amount": INVEST}, token=admin_token)
     print(f"OK  activated child with ₹{INVEST}")
 
+    child_dash = req("GET", "/user/dashboard", token=req(
+        "POST", "/auth/login", {"member_id": child_mid, "password": PASSWORD}
+    )["token"])
+    if child_dash.get("level_open") != 5:
+        fail(f"At ₹2.5L expected 5 levels open, got {child_dash.get('level_open')}")
+
+    req("PATCH", f"/admin/users/{child_id}/mlm", {"amount": INVEST * 2}, token=admin_token)
+    child_dash2 = req("GET", "/user/dashboard", token=req(
+        "POST", "/auth/login", {"member_id": child_mid, "password": PASSWORD}
+    )["token"])
+    if child_dash2.get("level_open") != 12:
+        fail(f"At ₹5L expected 12 levels open, got {child_dash2.get('level_open')}")
+    print("OK  level unlock 5 → 12 at ₹2.5L + ₹2.5L")
+
     after = direct_income(req("GET", "/user/dashboard", token=token_s))
     expected = round(INVEST * 0.02, 2)
     gained = round(after - before, 2)

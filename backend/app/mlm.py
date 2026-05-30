@@ -187,7 +187,7 @@ def member_id_for(user_id: int) -> str:
 
 
 def default_mlm_stats(user_id: int, package_amount: float = 0) -> Dict[str, Any]:
-    from .referral_bonus import level_open_for_package
+    from .referral_config import level_open_for_package
 
     pkg = float(package_amount or 0)
     base = pkg * 0.6 if pkg else 0
@@ -247,12 +247,13 @@ def resolve_mlm_stats(user: dict) -> Dict[str, Any]:
     if not stats.get("location"):
         parts = [user.get("city"), user.get("state")]
         stats["location"] = ", ".join(p for p in parts if p) or "India"
-    from .referral_bonus import (
+    from .referral_config import (
         DIRECT_BONUS_LEVELS,
         DIRECT_BONUS_RATE,
         MIN_INVESTMENT,
         REFERRAL_TREE_MAX_LEVELS,
         level_open_for_package,
+        next_level_unlock_amount,
     )
 
     pkg_amt = float(stats.get("package_amount", 0) or 0)
@@ -262,6 +263,15 @@ def resolve_mlm_stats(user: dict) -> Dict[str, Any]:
         "bonus_levels": DIRECT_BONUS_LEVELS,
         "bonus_rate_percent": DIRECT_BONUS_RATE * 100,
         "min_investment": MIN_INVESTMENT,
+        "next_unlock_amount": next_level_unlock_amount(pkg_amt),
+        "level_tiers": [
+            {"amount": t[0], "levels_open": t[1]} for t in (
+                (250_000, 5),
+                (500_000, 12),
+                (750_000, 19),
+                (1_000_000, 24),
+            )
+        ],
     }
     return stats
 

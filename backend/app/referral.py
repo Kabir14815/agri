@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from .mlm import member_id_for, resolve_mlm_stats
-from .referral_bonus import REFERRAL_TREE_MAX_LEVELS
+from .referral_config import REFERRAL_TREE_MAX_LEVELS
 
 DEMO_ROOT_MEMBER_ID = "KGF870365"
 DEMO_ROOT_EMAIL = "demo@kgffarming.com"

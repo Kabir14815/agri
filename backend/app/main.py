@@ -718,7 +718,7 @@ async def _read_receipt_upload(receipt: Optional[UploadFile]) -> tuple[Optional[
 
 @app.get("/api/user/deposit-modes")
 def user_deposit_modes():
-    from .referral_bonus import MIN_INVESTMENT
+    from .referral_config import MIN_INVESTMENT
 
     return {
         "modes": list(DEPOSIT_PAYMENT_MODES),

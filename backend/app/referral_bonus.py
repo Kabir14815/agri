@@ -3,16 +3,26 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from .referral import member_id_from_user, normalize_member_id
+from .referral_config import (
+    DIRECT_BONUS_LEVELS,
+    DIRECT_BONUS_RATE,
+    MIN_INVESTMENT,
+    is_active_investor,
+    level_open_for_package,
+    next_level_unlock_amount,
+)
 
-MIN_INVESTMENT = 250_000.0
-REFERRAL_TREE_MAX_LEVELS = 24
-DIRECT_BONUS_RATE = 0.02
-DIRECT_BONUS_LEVELS = 5
-
-
-def is_active_investor(package_amount: float) -> bool:
-    return float(package_amount or 0) >= MIN_INVESTMENT
+__all__ = [
+    "MIN_INVESTMENT",
+    "DIRECT_BONUS_RATE",
+    "DIRECT_BONUS_LEVELS",
+    "is_active_investor",
+    "validate_first_deposit_amount",
+    "get_upline_chain",
+    "distribute_investment_bonus",
+    "level_open_for_package",
+    "next_level_unlock_amount",
+]
 
 
 def validate_first_deposit_amount(user: dict, deposit_amount: float) -> None:
@@ -26,6 +36,8 @@ def validate_first_deposit_amount(user: dict, deposit_amount: float) -> None:
 
 
 def get_upline_chain(store: Any, user: dict, max_levels: int = DIRECT_BONUS_LEVELS) -> List[dict]:
+    from .referral import member_id_from_user, normalize_member_id
+
     chain: List[dict] = []
     current = user
     for _ in range(max_levels):
@@ -50,6 +62,8 @@ def distribute_investment_bonus(
     Pay 2% of investment_amount to each upline (levels 1–5).
     Each new child/branch investment triggers its own upline chain.
     """
+    from .referral import member_id_from_user
+
     amount = round(float(investment_amount or 0), 2)
     if amount <= 0:
         return []
@@ -83,9 +97,3 @@ def distribute_investment_bonus(
             }
         )
     return payouts
-
-
-def level_open_for_package(package_amount: float) -> int:
-    if is_active_investor(package_amount):
-        return REFERRAL_TREE_MAX_LEVELS
-    return 0

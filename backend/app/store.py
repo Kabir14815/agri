@@ -157,14 +157,30 @@ class MongoStore:
                 elif demo.get("role") != "admin":
                     user["mlm"] = default_mlm_stats(user["id"], user.get("amount", 0))
                 self.db.users.insert_one(user)
-            elif demo_mlm and not existing.get("mlm"):
-                # Seed demo MLM once; do not overwrite live balances on every deploy
-                seeded = dict(demo_mlm)
-                seeded.setdefault("member_id", seeded.get("member_id") or member_id_for(existing["id"]))
-                self.db.users.update_one(
-                    {"email": demo["email"]},
-                    {"$set": {"mlm": seeded, "amount": float(existing.get("amount") or seeded.get("package_amount", 0))}},
-                )
+            elif not existing.get("mlm"):
+                if demo_mlm:
+                    seeded = dict(demo_mlm)
+                    seeded.setdefault(
+                        "member_id",
+                        seeded.get("member_id") or member_id_for(existing["id"]),
+                    )
+                    patch = {"mlm": seeded}
+                    if seeded.get("package_amount"):
+                        patch["amount"] = float(
+                            existing.get("amount") or seeded["package_amount"]
+                        )
+                    self.db.users.update_one({"email": demo["email"]}, {"$set": patch})
+                elif demo.get("role") != "admin":
+                    self.db.users.update_one(
+                        {"email": demo["email"]},
+                        {
+                            "$set": {
+                                "mlm": default_mlm_stats(
+                                    existing["id"], existing.get("amount", 0)
+                                )
+                            }
+                        },
+                    )
 
         self.db.users.create_index([("email", ASCENDING)], unique=True)
         self.db.users.create_index([("id", ASCENDING)], unique=True)

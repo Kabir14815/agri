@@ -22,7 +22,7 @@ export function useLiveDashboard() {
         return d
       })
       .catch((e) => {
-        setError(e)
+        setError(e?.message || 'Could not load dashboard')
         setData(null)
         throw e
       })
