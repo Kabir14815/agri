@@ -18,6 +18,7 @@ import {
   FiHelpCircle,
   FiUserPlus,
   FiLock,
+  FiCamera,
 } from 'react-icons/fi'
 import { useUserAuth } from './UserAuth.jsx'
 
@@ -64,6 +65,7 @@ const NAV = [
     ],
   },
   { to: '/dashboard/activate', icon: FiPower, label: 'Activate', color: '#84cc16' },
+  { to: '/dashboard/daily-log', icon: FiCamera, label: 'Daily Crop Log', color: '#16a34a' },
 ]
 
 /** Extra menu — circular icon style (mobile-style shortcuts) */
@@ -93,6 +95,7 @@ const TITLES = {
   '/dashboard/wallet/topup': 'Topup Wallet',
   '/dashboard/wallet/statement': 'Wallet Statement',
   '/dashboard/activate': 'Activate',
+  '/dashboard/daily-log': 'Daily Crop Log',
   '/dashboard/incomes': 'Incomes',
   '/dashboard/exchange': 'Exchange Fund',
   '/dashboard/transactions': 'Transactions',

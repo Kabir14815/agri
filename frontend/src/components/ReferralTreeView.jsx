@@ -36,10 +36,13 @@ export default function ReferralTreeView({ tree, onView }) {
   if (!tree?.root) return null
   return (
     <div className="mlm-tree-canvas mlm-tree-canvas-nested">
-      {tree.max_depth && (
+      {tree.levels_open != null && (
         <p className="mlm-tree-plan-hint">
-          Plan: {tree.max_depth} levels · {tree.bonus_rate_percent || 2}% direct bonus up to{' '}
-          {tree.bonus_levels || 5} upline levels (min ₹2.5L investment)
+          Your plan: <strong>{tree.levels_open}</strong> of {tree.tree_levels_max || 24} levels
+          open
+          {tree.max_depth ? ` (showing ${tree.max_depth} deep)` : ''}. Unlock: Rs 2.5L→5 · Rs
+          5L→12 · Rs 7.5L→19 · Rs 10L→24. Bonus: {tree.bonus_rate_percent || 2}% for{' '}
+          {tree.bonus_levels || 5} upline levels.
         </p>
       )}
       <div className="mlm-tree-level root-level">

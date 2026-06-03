@@ -26,6 +26,7 @@ import DashboardTransactions from './dashboard/DashboardTransactions.jsx'
 import DashboardHelpDesk from './dashboard/DashboardHelpDesk.jsx'
 import DashboardRegister from './dashboard/DashboardRegister.jsx'
 import DashboardSecurity from './dashboard/DashboardSecurity.jsx'
+import DashboardDailyLog from './dashboard/DashboardDailyLog.jsx'
 
 export default function Dashboard() {
   return (
@@ -55,6 +56,7 @@ export default function Dashboard() {
           <Route path="statement" element={<WalletStatement />} />
         </Route>
         <Route path="activate" element={<DashboardActivate />} />
+        <Route path="daily-log" element={<DashboardDailyLog />} />
         <Route path="incomes" element={<DashboardIncomes />} />
         <Route path="exchange" element={<DashboardExchange />} />
         <Route path="transactions" element={<DashboardTransactions />} />

@@ -11,6 +11,11 @@ export default function FarmerLogin() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
 
+  const onMemberIdChange = (value) => {
+    const next = value.includes('@') ? value.toLowerCase() : value.toUpperCase()
+    setForm((f) => ({ ...f, member_id: next }))
+  }
+
   const onSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -65,12 +70,10 @@ export default function FarmerLogin() {
               id="member_id"
               name="member_id"
               value={form.member_id}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, member_id: e.target.value.toUpperCase() }))
-              }
+              onChange={(e) => onMemberIdChange(e.target.value)}
               required
               autoComplete="username"
-              placeholder="Member ID or farmer@kgffarming.com"
+              placeholder="KGF870013 or farmer@kgffarming.com"
             />
           </div>
           <div className="form-group">
@@ -100,7 +103,10 @@ export default function FarmerLogin() {
 
         <div className="demo-creds" style={{ marginTop: 20 }}>
           <strong>Demo farmer</strong>
-          farmer@kgffarming.com / farmer1234 — or use Member ID from Admin → Users.
+          <br />
+          Member ID: <strong>KGF870013</strong> / password: farmer1234
+          <br />
+          or email: farmer@kgffarming.com / farmer1234
         </div>
       </div>
     </div>

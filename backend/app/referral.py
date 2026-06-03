@@ -162,8 +162,14 @@ def build_referral_tree(
     store,
     viewer: dict,
     target_member_id: Optional[str] = None,
-    max_depth: int = REFERRAL_TREE_MAX_LEVELS,
+    max_depth: Optional[int] = None,
 ) -> dict:
+    from .referral_config import REFERRAL_TREE_MAX_LEVELS
+
+    viewer_stats = resolve_mlm_stats(viewer)
+    levels_open = int(viewer_stats.get("level_open") or 0)
+    if max_depth is None:
+        max_depth = max(1, levels_open) if levels_open else 1
     target_member_id = normalize_member_id(target_member_id) or member_id_from_user(viewer)
     max_depth = max(1, min(int(max_depth), REFERRAL_TREE_MAX_LEVELS))
 
@@ -192,7 +198,9 @@ def build_referral_tree(
     return {
         "root": root_node,
         "children": children,
-        "max_depth": REFERRAL_TREE_MAX_LEVELS,
+        "levels_open": levels_open,
+        "max_depth": max_depth,
+        "tree_levels_max": REFERRAL_TREE_MAX_LEVELS,
         "bonus_levels": 5,
         "bonus_rate_percent": 2,
     }

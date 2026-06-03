@@ -1,17 +1,13 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../../api.js'
+import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 
 export default function DashboardActivate() {
-  const [d, setD] = useState(null)
+  const { data: d, loading } = useLiveDashboard()
 
-  useEffect(() => {
-    api.getActivateStatus().then(setD).catch(() => {})
-  }, [])
-
-  if (!d) return <div className="mlm-loading">Loading…</div>
+  if (loading || !d) return <div className="mlm-loading">Loading…</div>
 
   const active = d.package_amount > 0
+  const minL = d.referral_plan?.min_investment || 250000
 
   return (
     <>
@@ -20,8 +16,8 @@ export default function DashboardActivate() {
         <h3>{active ? 'Account Active' : 'Account Inactive'}</h3>
         <p>
           {active
-            ? `Your ${d.rank} membership is active with package ${d.package_amount}.`
-            : 'Purchase a package to activate your account and start earning.'}
+            ? `Your ${d.rank} membership is active with package Rs ${d.package_amount.toLocaleString('en-IN')}. ${d.level_open} referral levels open.`
+            : `Minimum investment Rs ${minL.toLocaleString('en-IN')} to activate and unlock 5 referral levels.`}
         </p>
         <span className="mlm-rank-badge">{d.rank}</span>
       </div>

@@ -58,7 +58,12 @@ export default function Login() {
     const { name, value } = e.target
     setForm({
       ...form,
-      [name]: name === 'member_id' ? value.toUpperCase() : value,
+      [name]:
+        name === 'member_id'
+          ? value.includes('@')
+            ? value.toLowerCase()
+            : value.toUpperCase()
+          : value,
     })
   }
 
@@ -77,15 +82,6 @@ export default function Login() {
           type: 'error',
           text: 'Admin accounts must sign in at /admin/login',
         })
-        return
-      }
-
-      if (res.user.role === 'farmer') {
-        setStatus({
-          type: 'error',
-          text: 'Farmers must sign in at the Farmer Portal.',
-        })
-        setTimeout(() => navigate('/farmer-login', { replace: true }), 900)
         return
       }
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 # Rank tiers: incremental business required per leg (cumulative for achievement)
@@ -228,6 +229,10 @@ def default_mlm_stats(user_id: int, package_amount: float = 0) -> Dict[str, Any]
         "investment_interest_today": 0.0,
         "investment_tds_today": 0.0,
         "investment_return_income": 0.0,
+        "interest_penalty_total": 0.0,
+        "interest_penalty_today": 0.0,
+        "interest_missed_days_total": 0,
+        "income_stats_date": None,
     }
 
 
@@ -240,8 +245,7 @@ def resolve_mlm_stats(user: dict) -> Dict[str, Any]:
         stats = default_mlm_stats(user["id"], pkg_amount)
 
     stats.setdefault("member_id", member_id_for(user["id"]))
-    db_pkg = float(stats.get("package_amount", 0) or 0)
-    stats["package_amount"] = max(db_pkg, pkg_amount)
+    stats["package_amount"] = pkg_amount
     if not stats.get("income_wallet") and pkg_amount:
         stats.setdefault("income_wallet", pkg_amount)
     if not stats.get("location"):
@@ -312,9 +316,13 @@ def compute_ranks(main_leg: float, rest_leg: float) -> List[Dict[str, Any]]:
     return rows, current_rank or "MEMBER"
 
 
-def build_dashboard_payload(user: dict, site_base: str = "https://kgffarmingindia.com") -> dict:
-    from .investment_interest import investment_summary
+def build_dashboard_payload(
+    user: dict, site_base: str = "https://kgffarmingindia.com", store=None
+) -> dict:
+    from .investment_interest import investment_summary, investment_principal
+    from .farmer_logs import log_public, today_utc
 
+    computed_at = datetime.utcnow().isoformat() + "Z"
     stats = resolve_mlm_stats(user)
     main_leg = float(stats["main_leg_business"])
     rest_leg = float(stats["rest_leg_business"])
@@ -357,6 +365,15 @@ def build_dashboard_payload(user: dict, site_base: str = "https://kgffarmingindi
         {"label": "Salary Bonus Today", "value": stats["salary_bonus_today"]},
         {"label": "Repurchase Income Today", "value": stats["repurchase_income_today"]},
     ]
+    penalty_today = float(stats.get("interest_penalty_today", 0) or 0)
+    if penalty_today > 0:
+        today_incomes.insert(
+            0,
+            {
+                "label": "Interest cut today (no daily photo)",
+                "value": penalty_today,
+            },
+        )
     max_today = max((t["value"] for t in today_incomes), default=1) or 1
     for item in today_incomes:
         item["percent"] = round((item["value"] / max_today) * 100, 1) if max_today else 0
@@ -365,6 +382,22 @@ def build_dashboard_payload(user: dict, site_base: str = "https://kgffarmingindi
     limit_pending = float(stats["earning_limit_pending"])
     limit_cross = float(stats["earning_limit_cross"])
     limit_used = max(0, limit_total - limit_pending - limit_cross)
+
+    principal = investment_principal(stats, float(user.get("amount", 0) or 0))
+    today_key = today_utc()
+    today_log = (
+        store.get_farm_log_for_date(user["id"], today_key) if store else None
+    )
+    submitted_today = bool(
+        today_log
+        and (
+            today_log.get("image_data")
+            or int(today_log.get("image_size_bytes", 0) or 0) > 0
+        )
+    )
+    recent_penalties = (
+        store.list_interest_penalties_for_user(user["id"], 14) if store else []
+    )
 
     return {
         "id": user["id"],
@@ -402,4 +435,15 @@ def build_dashboard_payload(user: dict, site_base: str = "https://kgffarmingindi
         "direct_active_users": int(stats["direct_active_users"]),
         "ranks": ranks,
         "investment": investment_summary(stats, float(user.get("amount", 0) or 0)),
+        "daily_log": {
+            "log_date": today_key,
+            "requires_photo": principal > 0,
+            "submitted_today": submitted_today,
+            "today": log_public(today_log, include_image=True) if today_log else None,
+            "penalty_total": float(stats.get("interest_penalty_total", 0) or 0),
+            "penalty_today": float(stats.get("interest_penalty_today", 0) or 0),
+            "missed_days_total": int(stats.get("interest_missed_days_total", 0) or 0),
+            "recent_penalties": recent_penalties,
+        },
+        "computed_at": computed_at,
     }

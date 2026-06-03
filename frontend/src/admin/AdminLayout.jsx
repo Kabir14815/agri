@@ -35,7 +35,7 @@ const NAV = [
   { to: '/admin/users', icon: <FiUsers />, label: 'Users' },
   { to: '/admin/referrals', icon: <FiGitBranch />, label: 'Referrals' },
   { to: '/admin/deposits', icon: <FiDollarSign />, label: 'Deposits' },
-  { to: '/admin/farmer-logs', icon: <FiDroplet />, label: 'Farmer Logs' },
+  { to: '/admin/farmer-logs', icon: <FiDroplet />, label: 'Daily Crop Logs' },
   { to: '/admin/exchange', icon: <FiRefreshCw />, label: 'Exchange Fund' },
   { to: '/admin/wallet-transfers', icon: <FiSend />, label: 'Wallet Transfers' },
   { to: '/admin/help-desk', icon: <FiLifeBuoy />, label: 'Help Desk' },

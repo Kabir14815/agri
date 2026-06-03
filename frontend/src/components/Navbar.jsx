@@ -91,11 +91,6 @@ export default function Navbar() {
                     Login
                   </NavLink>
                 </li>
-                <li>
-                  <NavLink to="/farmer-login" onClick={close}>
-                    Farmer Login
-                  </NavLink>
-                </li>
               </>
             )}
             {adminUser && (

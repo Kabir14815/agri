@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pymongo import ASCENDING, DESCENDING
+from pymongo import ASCENDING, DESCENDING, ReturnDocument
 from pymongo.database import Database
 
 from .mlm import DEMO_MLM_BY_EMAIL, default_mlm_stats
@@ -38,7 +38,7 @@ DEMO_USERS = [
         "city": "Jind",
         "state": "Haryana",
         "pincode": "126102",
-        "amount": 12500.0,
+        "amount": 250_000.0,
     },
     {
         "full_name": "Demo Franchisee",
@@ -69,7 +69,7 @@ DEMO_USERS = [
         "email": "farmer@kgffarming.com",
         "phone": "9876543210",
         "password": "farmer1234",
-        "role": "farmer",
+        "role": "customer",
         "address": "Village plot, Jind",
         "city": "Jind",
         "state": "Haryana",
@@ -139,12 +139,14 @@ class MongoStore:
         )
 
         from .mlm import member_id_for
+        from .passwords import hash_password
 
         for demo in DEMO_USERS:
             existing = self.db.users.find_one({"email": demo["email"]})
             demo_mlm = DEMO_MLM_BY_EMAIL.get(demo["email"])
             if existing is None:
                 user = {**demo, "registered_at": now}
+                user["password"] = hash_password(demo["password"])
                 user["id"] = self._next_id(self.db.users)
                 if demo_mlm:
                     user["mlm"] = dict(demo_mlm)
@@ -194,6 +196,7 @@ class MongoStore:
             "wallet_transfers",
             "referral_visits",
             "farm_daily_logs",
+            "interest_penalties",
         ]:
             self.db[name].create_index([("id", ASCENDING)], unique=True)
         self.db.farm_daily_logs.create_index(
@@ -201,6 +204,10 @@ class MongoStore:
         )
         self.db.farm_daily_logs.create_index([("log_date", DESCENDING)])
         self.db.farm_daily_logs.create_index([("created_at", ASCENDING)])
+        self.db.interest_penalties.create_index(
+            [("user_id", ASCENDING), ("log_date", ASCENDING)], unique=True
+        )
+        self.db.interest_penalties.create_index([("log_date", DESCENDING)])
         self.db.referral_visits.create_index([("code", ASCENDING)])
         self.db.referral_visits.create_index([("visited_at", DESCENDING)])
         self.db.users.create_index([("sponsor_member_id", ASCENDING)])
@@ -208,6 +215,10 @@ class MongoStore:
         self.db.wallet_transfers.create_index([("from_user_id", ASCENDING)])
         self.db.wallet_transfers.create_index([("to_user_id", ASCENDING)])
         self.db.wallet_transfers.create_index([("created_at", DESCENDING)])
+        self.db.wallet_ledger.create_index([("user_id", ASCENDING), ("id", DESCENDING)])
+        self.db.wallet_ledger.create_index([("user_id", ASCENDING), ("wallet", ASCENDING)])
+        self.db.deposits.create_index([("user_id", ASCENDING)])
+        self.db.deposits.create_index([("status", ASCENDING)])
 
     # ----------------------------- Referral tracking -----------------------
 
@@ -296,6 +307,9 @@ class MongoStore:
     # ----------------------------- Users & contacts ------------------------
 
     def find_user_by_email(self, email: str) -> Optional[dict]:
+        email = (email or "").strip().lower()
+        if not email:
+            return None
         return self._serialize(self.db.users.find_one({"email": email}))
 
     def find_user_by_id(self, user_id: int) -> Optional[dict]:
@@ -356,6 +370,165 @@ class MongoStore:
                 queue.append((cid, depth + 1))
         return False
 
+    def _income_totals_from_ledger(self, user_id: int) -> dict:
+        direct = 0.0
+        level = 0.0
+        investment = 0.0
+        for entry in self.list_wallet_ledger(user_id):
+            if entry.get("direction") != "credit" or entry.get("wallet") != "income":
+                continue
+            amt = float(entry.get("amount", 0) or 0)
+            desc = (entry.get("description") or "").lower()
+            if desc.startswith("direct bonus") or "direct bonus" in desc:
+                direct += amt
+            elif "level" in desc and "bonus" in desc:
+                level += amt
+            elif "investment return" in desc:
+                investment += amt
+        return {
+            "direct_income": round(direct, 2),
+            "level_income": round(level, 2),
+            "investment_interest_total": round(investment, 2),
+            "investment_return_income": round(investment, 2),
+        }
+
+    def _wallet_balance_from_ledger(self, user_id: int, wallet: str) -> float:
+        balance = 0.0
+        for entry in self.list_wallet_ledger(user_id, wallet):
+            amt = float(entry.get("amount", 0) or 0)
+            if entry.get("direction") == "credit":
+                balance += amt
+            else:
+                balance -= amt
+        return round(balance, 2)
+
+    def _penalty_totals_from_db(self, user_id: int) -> dict:
+        rows = list(self.db.interest_penalties.find({"user_id": user_id}))
+        total = round(sum(float(r.get("net", 0) or 0) for r in rows), 2)
+        return {"penalty_total": total, "missed_days": len(rows)}
+
+    def _reset_daily_income_fields_if_new_day(self, stats: dict) -> dict:
+        from .farmer_logs import today_utc
+
+        today = today_utc()
+        stats = dict(stats)
+        if stats.get("income_stats_date") == today:
+            return stats
+        stats["income_stats_date"] = today
+        stats["direct_income_today"] = 0.0
+        stats["level_income_today"] = 0.0
+        stats["reward_bonus_today"] = 0.0
+        stats["salary_bonus_today"] = 0.0
+        stats["repurchase_income_today"] = 0.0
+        return stats
+
+    def _team_metrics(self, member_id: str, max_depth: int) -> dict:
+        from .referral import member_id_from_user
+        from .referral_config import is_active_investor
+
+        direct = self.list_direct_referrals(member_id)
+        direct_business = round(sum(float(r.get("amount", 0) or 0) for r in direct), 2)
+        direct_active = sum(
+            1 for r in direct if is_active_investor(float(r.get("amount", 0) or 0))
+        )
+
+        team_business = 0.0
+        team_count = 0
+        if max_depth > 0:
+            queue = [(member_id, 0)]
+            seen = set()
+            while queue:
+                mid, depth = queue.pop(0)
+                if mid in seen:
+                    continue
+                seen.add(mid)
+                for child in self.list_direct_referrals(mid):
+                    cid = member_id_from_user(child)
+                    amt = float(child.get("amount", 0) or 0)
+                    team_business += amt
+                    team_count += 1
+                    if depth + 1 < max_depth:
+                        queue.append((cid, depth + 1))
+
+        return {
+            "subscribers_count": len(direct),
+            "direct_active_users": direct_active,
+            "direct_business": direct_business,
+            "team_business": round(team_business, 2),
+            "team_count": team_count,
+        }
+
+    def sync_live_mlm_stats(self, user_id: int) -> dict:
+        """Recompute wallets, team & incomes from MongoDB ledger — keeps dashboard dynamic."""
+        from .accrual_lock import accrual_snapshot
+        from .mlm import default_mlm_stats
+        from .referral import member_id_from_user
+        from .referral_config import level_open_for_package
+
+        user = self.find_user_by_id(user_id)
+        if not user:
+            raise KeyError("not_found")
+
+        amount = float(user.get("amount", 0) or 0)
+        stats = dict(user.get("mlm") or default_mlm_stats(user_id, amount))
+        accrual_saved = accrual_snapshot(stats)
+        stats = self._reset_daily_income_fields_if_new_day(stats)
+
+        member_id = stats.get("member_id") or member_id_from_user(user)
+        stats["member_id"] = member_id
+        stats["package_amount"] = amount
+        stats["investment_principal"] = amount
+        stats["level_open"] = level_open_for_package(amount)
+
+        ledger = self._income_totals_from_ledger(user_id)
+        stats["direct_income"] = ledger["direct_income"]
+        stats["level_income"] = ledger["level_income"]
+        stats["investment_interest_total"] = ledger["investment_interest_total"]
+        stats["investment_return_income"] = ledger["investment_return_income"]
+
+        stats["income_wallet"] = self._wallet_balance_from_ledger(user_id, "income")
+        stats["repurchase_wallet"] = self._wallet_balance_from_ledger(user_id, "repurchase")
+        stats["topup_wallet"] = self._wallet_balance_from_ledger(user_id, "topup")
+
+        penalties = self._penalty_totals_from_db(user_id)
+        stats["interest_penalty_total"] = penalties["penalty_total"]
+        stats["interest_missed_days_total"] = penalties["missed_days"]
+
+        team = self._team_metrics(member_id, stats["level_open"] or 1)
+        stats["subscribers_count"] = team["subscribers_count"]
+        stats["direct_active_users"] = team["direct_active_users"]
+        stats["direct_business"] = team["direct_business"]
+        stats["team_business"] = team["team_business"]
+
+        stats.update(accrual_saved)
+
+        stats["total_earning"] = round(
+            stats["direct_income"]
+            + stats["level_income"]
+            + stats["investment_interest_total"]
+            + float(stats.get("reward_bonus", 0) or 0)
+            + float(stats.get("salary_bonus", 0) or 0)
+            + float(stats.get("self_unit_profit", 0) or 0),
+            2,
+        )
+
+        parts = [user.get("city"), user.get("state")]
+        if any(parts):
+            stats["location"] = ", ".join(p for p in parts if p)
+
+        self.db.users.update_one(
+            {"id": user_id},
+            {"$set": {"mlm": stats, "amount": amount}},
+        )
+        return self.find_user_by_id(user_id)
+
+    def prepare_dashboard_user(self, user_id: int) -> dict:
+        """Accrue interest, sync wallets/incomes from ledger, return fresh user row."""
+        user = self.accrue_investment_interest(user_id)
+        if not user:
+            raise KeyError("not_found")
+        return user
+
     def credit_referral_bonus(
         self,
         sponsor: dict,
@@ -368,19 +541,7 @@ class MongoStore:
     ) -> None:
         from .mlm import default_mlm_stats
 
-        mlm = dict(sponsor.get("mlm") or default_mlm_stats(sponsor["id"], sponsor.get("amount", 0)))
         bonus = round(float(bonus), 2)
-        mlm["income_wallet"] = round(float(mlm.get("income_wallet", 0)) + bonus, 2)
-        mlm["total_earning"] = round(float(mlm.get("total_earning", 0)) + bonus, 2)
-        if level == 1:
-            mlm["direct_income"] = round(float(mlm.get("direct_income", 0)) + bonus, 2)
-            mlm["direct_income_today"] = round(float(mlm.get("direct_income_today", 0)) + bonus, 2)
-            mlm["direct_business"] = round(float(mlm.get("direct_business", 0)) + float(from_amount), 2)
-        else:
-            mlm["level_income"] = round(float(mlm.get("level_income", 0)) + bonus, 2)
-            mlm["level_income_today"] = round(float(mlm.get("level_income_today", 0)) + bonus, 2)
-        mlm["team_business"] = round(float(mlm.get("team_business", 0)) + float(from_amount), 2)
-        self.db.users.update_one({"id": sponsor["id"]}, {"$set": {"mlm": mlm}})
         label = "Direct" if level == 1 else f"Level {level}"
         self.add_wallet_entry(
             sponsor["id"],
@@ -389,12 +550,24 @@ class MongoStore:
             f"{label} bonus 2% from {from_member_id} ({source})",
             "credit",
         )
+        user = self.find_user_by_id(sponsor["id"]) or sponsor
+        mlm = dict(user.get("mlm") or default_mlm_stats(sponsor["id"], sponsor.get("amount", 0)))
+        mlm = self._reset_daily_income_fields_if_new_day(mlm)
+        if level == 1:
+            mlm["direct_income_today"] = round(float(mlm.get("direct_income_today", 0)) + bonus, 2)
+        else:
+            mlm["level_income_today"] = round(float(mlm.get("level_income_today", 0)) + bonus, 2)
+        self._set_user_mlm_stats(sponsor["id"], mlm)
+        self.sync_live_mlm_stats(sponsor["id"])
 
     def create_user(self, data: dict) -> dict:
+        from .passwords import hash_password
+
         coll = self.db.users
         user = dict(data)
         user["id"] = self._next_id(coll)
         user["amount"] = float(user.get("amount", 0) or 0)
+        user["password"] = hash_password(data.get("password", ""))
         user["registered_at"] = datetime.utcnow().isoformat() + "Z"
         user.setdefault("country", data.get("country") or "India")
         user.setdefault("gst_no", "")
@@ -487,7 +660,23 @@ class MongoStore:
             from .referral_bonus import distribute_investment_bonus
 
             distribute_investment_bonus(self, serialized, delta, "package_update")
+            self.sync_live_mlm_stats(user_id)
         return serialized
+
+    def verify_user_password(self, user: dict, plain: str) -> bool:
+        from .passwords import verify_password
+
+        return verify_password(plain, user.get("password", ""))
+
+    def upgrade_password_hash(self, user_id: int, plain: str) -> None:
+        from .passwords import hash_password, needs_rehash
+
+        user = self.find_user_by_id(user_id)
+        if not user or not needs_rehash(user.get("password", "")):
+            return
+        self.db.users.update_one(
+            {"id": user_id}, {"$set": {"password": hash_password(plain)}}
+        )
 
     def update_user(self, user_id: int, updates: dict) -> dict:
         allowed = {
@@ -507,6 +696,10 @@ class MongoStore:
         payload = {k: v for k, v in updates.items() if k in allowed}
         if not payload:
             raise ValueError("No valid fields to update")
+        if "password" in payload:
+            from .passwords import hash_password
+
+            payload["password"] = hash_password(str(payload["password"]))
         result = self.db.users.find_one_and_update(
             {"id": user_id},
             {"$set": payload},
@@ -700,6 +893,7 @@ class MongoStore:
                 distribute_investment_bonus(
                     self, updated, dep_amount, f"deposit_{deposit_id}"
                 )
+            self.sync_live_mlm_stats(user["id"])
         return self.set_deposit_status(deposit_id, "approved")
 
     def add_wallet_entry(
@@ -788,32 +982,131 @@ class MongoStore:
         if not user:
             return None
 
+        old_last = (user.get("mlm") or {}).get("interest_last_accrual_date")
         stats = self._get_user_mlm_stats(user)
         stats, summary = self._run_interest_accrual(stats, user)
         if not summary:
             if float(stats.get("package_amount", 0) or user.get("amount", 0) or 0) > 0:
                 self._set_user_mlm_stats(user_id, stats)
+            return self.sync_live_mlm_stats(user_id)
+
+        if old_last is None:
+            lock_query: dict = {
+                "id": user_id,
+                "$or": [
+                    {"mlm.interest_last_accrual_date": {"$exists": False}},
+                    {"mlm.interest_last_accrual_date": None},
+                ],
+            }
+        else:
+            lock_query = {"id": user_id, "mlm.interest_last_accrual_date": old_last}
+
+        updated = self.db.users.find_one_and_update(
+            lock_query,
+            {"$set": {"mlm": stats}},
+            return_document=ReturnDocument.AFTER,
+        )
+        if not updated:
             return self.find_user_by_id(user_id)
 
-        self._set_user_mlm_stats(user_id, stats)
-        days = summary["days"]
-        self.add_wallet_entry(
-            user_id,
-            "income",
-            summary["net"],
-            (
-                f"Investment return ({days} day{'s' if days != 1 else ''}): "
-                f"gross Rs {summary['gross']:.2f}, TDS Rs {summary['tds']:.2f}, "
-                f"net Rs {summary['net']:.2f}"
-            ),
-            "credit",
-        )
-        return self.find_user_by_id(user_id)
+        user = self._serialize(updated)
+        if summary.get("penalty_days"):
+            self.record_interest_penalties(
+                user, summary["penalty_days"], f"accrual_{user_id}_{summary['days']}"
+            )
+        if summary["net"] > 0:
+            self.add_wallet_entry(
+                user_id,
+                "income",
+                summary["net"],
+                (
+                    f"Investment return ({summary['credited_days']} day"
+                    f"{'s' if summary['credited_days'] != 1 else ''}): "
+                    f"gross Rs {summary['gross']:.2f}, TDS Rs {summary['tds']:.2f}, "
+                    f"net Rs {summary['net']:.2f}"
+                ),
+                "credit",
+            )
+        return self.sync_live_mlm_stats(user_id)
 
     def _run_interest_accrual(self, stats: dict, user: dict):
         from .investment_interest import accrue_through_today
 
-        return accrue_through_today(stats, float(user.get("amount", 0) or 0))
+        def checker(d):
+            return self.has_compliant_daily_log(user["id"], d)
+
+        return accrue_through_today(
+            stats, float(user.get("amount", 0) or 0), daily_log_checker=checker
+        )
+
+    def has_compliant_daily_log(self, user_id: int, log_date) -> bool:
+        """True when member uploaded a crop photo for this UTC date."""
+        from datetime import date as date_cls
+
+        if isinstance(log_date, date_cls):
+            key = log_date.isoformat()
+        else:
+            key = str(log_date)[:10]
+        record = self.get_farm_log_for_date(user_id, key)
+        if not record:
+            return False
+        return bool(
+            record.get("image_data")
+            or int(record.get("image_size_bytes", 0) or 0) > 0
+        )
+
+    def record_interest_penalties(
+        self, user: dict, penalty_days: list, batch_id: str
+    ) -> None:
+        if not penalty_days:
+            return
+        from .referral import member_id_from_user
+
+        member_id = member_id_from_user(user)
+        now = datetime.utcnow().isoformat() + "Z"
+        for row in penalty_days:
+            log_date = row["log_date"]
+            existing = self.db.interest_penalties.find_one(
+                {"user_id": user["id"], "log_date": log_date}
+            )
+            if existing:
+                continue
+            self.db.interest_penalties.insert_one(
+                {
+                    "id": self._next_id(self.db.interest_penalties),
+                    "user_id": user["id"],
+                    "member_id": member_id,
+                    "full_name": user.get("full_name", ""),
+                    "log_date": log_date,
+                    "gross": row["gross"],
+                    "tds": row["tds"],
+                    "net": row["net"],
+                    "reason": "no_daily_photo",
+                    "batch_id": batch_id,
+                    "created_at": now,
+                }
+            )
+
+    def list_interest_penalties_for_user(self, user_id: int, limit: int = 30) -> List[dict]:
+        cursor = (
+            self.db.interest_penalties.find({"user_id": user_id})
+            .sort("log_date", DESCENDING)
+            .limit(limit)
+        )
+        return self._serialize_many(cursor)
+
+    def list_all_interest_penalties(self, limit: int = 300) -> List[dict]:
+        cursor = (
+            self.db.interest_penalties.find().sort("log_date", DESCENDING).limit(limit)
+        )
+        return self._serialize_many(cursor)
+
+    def interest_penalty_summary_for_user(self, user_id: int) -> dict:
+        rows = list(
+            self.db.interest_penalties.find({"user_id": user_id}).sort("log_date", DESCENDING)
+        )
+        total = round(sum(float(r.get("net", 0) or 0) for r in rows), 2)
+        return {"count": len(rows), "total_net": total}
 
     def create_help_ticket(self, user_id: int, subject: str, message: str) -> dict:
         record = {
@@ -903,12 +1196,11 @@ class MongoStore:
         return self._serialize(result)
 
     def _user_mlm_wallets(self, user: dict) -> Dict[str, float]:
-        stats = self._get_user_mlm_stats(user)
+        uid = user["id"]
         return {
-            "income": self._wallet_balance(stats, "income"),
-            "repurchase": self._wallet_balance(stats, "repurchase"),
-            "topup": self._wallet_balance(stats, "topup"),
-            "_stats": stats,
+            "income": self._wallet_balance_from_ledger(uid, "income"),
+            "repurchase": self._wallet_balance_from_ledger(uid, "repurchase"),
+            "topup": self._wallet_balance_from_ledger(uid, "topup"),
         }
 
     def lookup_member_for_transfer(self, member_id: str) -> Optional[dict]:
@@ -951,18 +1243,9 @@ class MongoStore:
             raise ValueError("cannot_transfer_self")
 
         sender_mid = member_id_from_user(sender)
-        sender_stats = self._get_user_mlm_stats(sender)
-        field = self.WALLET_FIELDS[wallet]
-        balance = self._wallet_balance(sender_stats, wallet)
+        balance = self._wallet_balance_from_ledger(from_user_id, wallet)
         if balance < amount:
             raise ValueError("insufficient_balance")
-
-        recipient_stats = self._get_user_mlm_stats(recipient)
-        sender_stats[field] = round(balance - amount, 2)
-        recipient_stats[field] = round(self._wallet_balance(recipient_stats, wallet) + amount, 2)
-
-        self._set_user_mlm_stats(from_user_id, sender_stats)
-        self._set_user_mlm_stats(recipient["id"], recipient_stats)
 
         record = {
             "id": self._next_id(self.db.wallet_transfers),
@@ -993,6 +1276,8 @@ class MongoStore:
             f"Transfer from {sender_mid} ({sender.get('full_name', '')})",
             "credit",
         )
+        self.sync_live_mlm_stats(from_user_id)
+        self.sync_live_mlm_stats(recipient["id"])
         return self._serialize(record)
 
     def list_wallet_transfers_for_user(self, user_id: int) -> List[dict]:

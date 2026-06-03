@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import TopBar from './components/TopBar.jsx'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
@@ -17,17 +17,14 @@ import Register from './pages/Register.jsx'
 import FranchiseeLogin from './pages/FranchiseeLogin.jsx'
 import OurLegals from './pages/OurLegals.jsx'
 import NotFound from './pages/NotFound.jsx'
-import FarmerLogin from './pages/FarmerLogin.jsx'
 
 import { AdminAuthProvider, RequireAdmin } from './admin/AdminAuth.jsx'
 import { UserAuthProvider, RequireUser } from './user/UserAuth.jsx'
-import { FarmerAuthProvider, RequireFarmer } from './farmer/FarmerAuth.jsx'
 import { CompanyProvider } from './context/CompanyContext.jsx'
 import ReferralLanding from './pages/ReferralLanding.jsx'
 import ReferralTracker from './components/ReferralTracker.jsx'
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
-const FarmerDashboard = lazy(() => import('./pages/FarmerDashboard.jsx'))
 const AdminLayout = lazy(() => import('./admin/AdminLayout.jsx'))
 const AdminLogin = lazy(() => import('./admin/AdminLogin.jsx'))
 const AdminDashboard = lazy(() => import('./admin/AdminDashboard.jsx'))
@@ -54,13 +51,11 @@ export default function App() {
   const { pathname } = useLocation()
   const isAdmin = pathname.startsWith('/admin')
   const isMemberDash = pathname.startsWith('/dashboard')
-  const isFarmer = pathname.startsWith('/farmer')
-  const hideChrome = isAdmin || isMemberDash || isFarmer
+  const hideChrome = isAdmin || isMemberDash
 
   return (
     <AdminAuthProvider>
       <UserAuthProvider>
-      <FarmerAuthProvider>
       <CompanyProvider>
       <ScrollToTop />
       <ReferralTracker />
@@ -71,7 +66,7 @@ export default function App() {
         </>
       )}
       <main
-        className={`site-main${isMemberDash ? ' site-main--dash' : ''}${isAdmin ? ' site-main--admin' : ''}${isFarmer ? ' site-main--farmer' : ''}`}
+        className={`site-main${isMemberDash ? ' site-main--dash' : ''}${isAdmin ? ' site-main--admin' : ''}`}
       >
         <Suspense fallback={<RouteFallback />}>
         <Routes>
@@ -90,15 +85,8 @@ export default function App() {
           <Route path="/register/ref/:code" element={<Register />} />
           <Route path="/register" element={<Register />} />
           <Route path="/franchisee-login" element={<FranchiseeLogin />} />
-          <Route path="/farmer-login" element={<FarmerLogin />} />
-          <Route
-            path="/farmer"
-            element={
-              <RequireFarmer>
-                <FarmerDashboard />
-              </RequireFarmer>
-            }
-          />
+          <Route path="/farmer-login" element={<Navigate to="/login" replace />} />
+          <Route path="/farmer" element={<Navigate to="/dashboard/daily-log" replace />} />
           <Route
             path="/dashboard/*"
             element={
@@ -140,7 +128,6 @@ export default function App() {
       </main>
       {!hideChrome && <Footer />}
       </CompanyProvider>
-      </FarmerAuthProvider>
       </UserAuthProvider>
     </AdminAuthProvider>
   )

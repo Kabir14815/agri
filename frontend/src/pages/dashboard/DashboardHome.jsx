@@ -7,6 +7,8 @@ import {
   FiDownload,
   FiPhone,
   FiMapPin,
+  FiCamera,
+  FiAlertTriangle,
 } from 'react-icons/fi'
 import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 import { formatInr, formatInrPlain } from '../../utils/format.js'
@@ -91,6 +93,7 @@ export default function DashboardHome() {
   }
 
   const limit = d.earning_limits || {}
+  const dailyLog = d.daily_log || {}
 
   return (
     <>
@@ -133,6 +136,38 @@ export default function DashboardHome() {
         {copyMsg && <small className="mlm-copy-msg">{copyMsg}</small>}
       </div>
 
+      {dailyLog.requires_photo && (
+        <div
+          className={`mlm-alert ${dailyLog.submitted_today ? 'mlm-alert-ok' : 'mlm-alert-warn'}`}
+          style={{ marginBottom: 20 }}
+        >
+          {dailyLog.submitted_today ? (
+            <>
+              <FiCamera />
+              <span>
+                Today&apos;s crop photo submitted · interest protected for {dailyLog.log_date}.
+              </span>
+            </>
+          ) : (
+            <>
+              <FiAlertTriangle />
+              <div>
+                <strong>Daily crop photo required</strong>
+                <p>
+                  Upload before midnight UTC or lose today&apos;s interest (
+                  {formatInr(dailyLog.penalty_today || d.investment?.daily_net || 0, 2)}).
+                  {dailyLog.penalty_total > 0 &&
+                    ` Total lost so far: ${formatInr(dailyLog.penalty_total, 2)}.`}
+                </p>
+                <Link to="/dashboard/daily-log" className="mlm-alert-link">
+                  Upload now →
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="mlm-grid">
         <article className="mlm-card mlm-card-green mlm-card-package">
           <div>
@@ -172,7 +207,12 @@ export default function DashboardHome() {
           <small>Levels open</small>
           <h2 className="mlm-big-num">{d.level_open}</h2>
           <p>
-            of {d.referral_plan?.tree_levels || 24} max · 2.5L→5 · 5L→12 · 7.5L→19 · 10L→24
+            of {d.referral_plan?.tree_levels || 24} max
+            {d.referral_plan?.next_unlock_amount
+              ? ` · next unlock at Rs ${(d.referral_plan.next_unlock_amount / 100000).toFixed(1)}L`
+              : d.level_open >= 24
+                ? ' · all levels unlocked'
+                : ''}
           </p>
           <p>{d.subscribers_count} subscribers</p>
         </article>
@@ -269,6 +309,13 @@ export default function DashboardHome() {
           </Link>
         </article>
       </div>
+      {d.computed_at && (
+        <p className="mlm-hint" style={{ marginTop: 24 }}>
+          Balances and incomes refresh on each visit (last updated{' '}
+          {new Date(d.computed_at).toLocaleString()} UTC). Investment interest accrues daily
+          when you open the dashboard.
+        </p>
+      )}
     </>
   )
 }

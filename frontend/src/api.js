@@ -149,6 +149,21 @@ export const api = {
       body: JSON.stringify(data),
     }),
   getReferralInfo: () => request('/user/referral-info', { auth: 'user' }),
+  getDailyLog: () => request('/user/daily-log', { auth: 'user' }),
+  submitDailyLog: (formData) => {
+    const headers = userAuthHeader()
+    return fetch(`${BASE}/user/daily-log`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Request failed' }))
+        throw new Error(formatApiError(err.detail))
+      }
+      return res.json()
+    })
+  },
 }
 
 export const farmerApi = {
@@ -234,6 +249,7 @@ export const adminApi = {
     }),
   walletTransfers: () => request('/admin/wallet-transfers', { auth: true }),
   farmerLogs: () => request('/admin/farmer-logs', { auth: true }),
+  interestPenalties: () => request('/admin/interest-penalties', { auth: true }),
   purgeFarmerImages: () =>
     request('/admin/farmer-logs/purge-images', { method: 'POST', auth: true }),
 

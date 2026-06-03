@@ -57,7 +57,12 @@ export default function DashboardReferralTree() {
 
   return (
     <>
-      <h2 className="mlm-page-title mlm-tree-title">Referral Tree (24 levels)</h2>
+      <h2 className="mlm-page-title mlm-tree-title">
+        Referral Tree
+        {tree?.levels_open != null
+          ? ` (${tree.levels_open} of ${tree.tree_levels_max || 24} levels open)`
+          : ''}
+      </h2>
 
       <form className="mlm-tree-search" onSubmit={onSearch}>
         <input

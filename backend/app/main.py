@@ -250,11 +250,15 @@ def _find(store: MongoStore, collection: str, item_id: int) -> dict:
 
 
 def _user_from_token(store: MongoStore, token: str) -> Optional[dict]:
-    if not token or not token.startswith("demo-token-"):
-        return None
-    try:
-        uid = int(token.rsplit("-", 1)[1])
-    except (ValueError, IndexError):
+    from .auth_tokens import parse_session_token
+
+    uid = parse_session_token(token)
+    if uid is None and token.startswith("demo-token-"):
+        try:
+            uid = int(token.rsplit("-", 1)[1])
+        except (ValueError, IndexError):
+            return None
+    if uid is None:
         return None
     return store.find_user_by_id(uid)
 
@@ -284,16 +288,12 @@ def _farmer_profile(u: dict) -> dict:
 
 
 def _user_dashboard_payload(u: dict, store: MongoStore) -> dict:
-    refreshed = store.accrue_investment_interest(u["id"])
-    if refreshed:
-        u = refreshed
-    return build_dashboard_payload(u)
+    user = store.prepare_dashboard_user(u["id"])
+    return build_dashboard_payload(user, store=store)
 
 
 def _login_user_payload(u: dict, store: MongoStore) -> dict:
     role = u.get("role", "customer")
-    if role == "farmer":
-        return _farmer_profile(u)
     if role == "admin":
         return {
             "id": u["id"],
@@ -320,10 +320,6 @@ def require_user(
     if user.get("role") == "admin":
         raise HTTPException(
             status_code=403, detail="Use the admin panel for admin accounts"
-        )
-    if user.get("role") == "farmer":
-        raise HTTPException(
-            status_code=403, detail="Farmers must use the farmer portal at /farmer-login"
         )
     return user
 
@@ -488,13 +484,16 @@ def login(
 
     login_id = payload.member_id.strip()
     if "@" in login_id:
-        u = store.find_user_by_email(login_id)
+        u = store.find_user_by_email(login_id.lower())
     else:
         u = store.find_user_by_member_id(normalize_member_id(login_id))
-    if u and u.get("password") == payload.password:
+    if u and store.verify_user_password(u, payload.password):
+        store.upgrade_password_hash(u["id"], payload.password)
+        from .auth_tokens import create_session_token
+
         return {
             "success": True,
-            "token": f"demo-token-{u['id']}",
+            "token": create_session_token(u["id"]),
             "user": _login_user_payload(u, store),
         }
     raise HTTPException(status_code=401, detail="Invalid member ID or password")
@@ -589,6 +588,98 @@ def farmer_log_image(
     return log_public(record, include_image=True)
 
 
+async def _submit_daily_log_for_user(
+    user: dict,
+    store: MongoStore,
+    watered: bool,
+    note: str,
+    photo: Optional[UploadFile],
+) -> dict:
+    from .image_compress import compress_image_bytes
+    from .farmer_logs import log_public, today_utc
+
+    b64 = mime = None
+    size = None
+    if photo and photo.filename:
+        raw = await _read_upload_bytes(photo)
+        try:
+            b64, mime, size = compress_image_bytes(raw)
+        except ValueError as exc:
+            if str(exc) == "invalid_image":
+                raise HTTPException(status_code=400, detail="Invalid image file") from exc
+            raise HTTPException(status_code=400, detail="Could not process image") from exc
+    elif not store.get_farm_log_for_date(user["id"], today_utc()):
+        raise HTTPException(status_code=400, detail="Photo is required for your first log today")
+
+    try:
+        record = store.upsert_farm_daily_log(
+            user,
+            watered=watered,
+            image_b64=b64,
+            image_mime=mime,
+            image_size=size,
+            note=note,
+        )
+    except ValueError as exc:
+        if str(exc) == "photo_required":
+            raise HTTPException(status_code=400, detail="Photo is required") from exc
+        raise
+    return {
+        "success": True,
+        "log": log_public(record, include_image=True),
+        "message": "Daily crop log saved.",
+    }
+
+
+@app.get("/api/user/daily-log")
+def user_daily_log_status(
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    from .farmer_logs import log_public, today_utc
+
+    refreshed = store.prepare_dashboard_user(user["id"])
+    today = today_utc()
+    today_log = store.get_farm_log_for_date(refreshed["id"], today)
+    history = store.list_farm_logs_for_user(refreshed["id"], limit=30)
+    penalties = store.list_interest_penalties_for_user(refreshed["id"], limit=30)
+    dash = build_dashboard_payload(refreshed, store=store)
+    return {
+        "log_date": today,
+        "today": log_public(today_log, include_image=True) if today_log else None,
+        "history": [log_public(h) for h in history],
+        "penalties": penalties,
+        "compliance": dash.get("daily_log", {}),
+    }
+
+
+@app.post("/api/user/daily-log", status_code=status.HTTP_201_CREATED)
+async def user_submit_daily_log(
+    watered: bool = Form(...),
+    note: str = Form(default=""),
+    photo: Optional[UploadFile] = File(default=None),
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    return await _submit_daily_log_for_user(user, store, watered, note, photo)
+
+
+@app.get("/api/user/daily-log/{log_id}/image")
+def user_daily_log_image(
+    log_id: int,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    from .farmer_logs import log_public
+
+    record = store.get_farm_log_by_id(log_id)
+    if not record or record["user_id"] != user["id"]:
+        raise _not_found()
+    if not record.get("image_data"):
+        raise HTTPException(status_code=410, detail="Image removed after retention period")
+    return log_public(record, include_image=True)
+
+
 @app.get("/api/admin/farmer-logs")
 def admin_farmer_logs(
     admin: dict = Depends(require_admin),
@@ -614,28 +705,35 @@ def admin_purge_farmer_images(
     return {"success": True, "purged": count}
 
 
+@app.get("/api/admin/interest-penalties")
+def admin_interest_penalties(
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    return {"penalties": store.list_all_interest_penalties(limit=300)}
+
+
 @app.get("/api/user/dashboard")
 def user_dashboard(
     user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
 ):
-    refreshed = store.find_user_by_id(user["id"])
-    if refreshed:
-        user = refreshed
     return _user_dashboard_payload(user, store)
 
 
-def _profile_for_user(user: dict) -> dict:
+def _profile_for_user(user: dict, store: MongoStore) -> dict:
     merged = enrich_user_defaults(dict(user))
     profile = user_profile_payload(merged)
-    dash = build_dashboard_payload(merged)
+    dash = build_dashboard_payload(merged, store=store)
     profile["member_id"] = dash["member_id"]
     profile["rank"] = dash["rank"]
     return profile
 
 
 @app.get("/api/user/profile")
-def user_profile(user: dict = Depends(require_user)):
-    return _profile_for_user(user)
+def user_profile(
+    user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
+):
+    return _profile_for_user(user, store)
 
 
 @app.patch("/api/user/profile")
@@ -651,7 +749,7 @@ def user_profile_update(
         updated = store.update_user(user["id"], data)
     except KeyError:
         raise _not_found() from None
-    return {"success": True, "profile": _profile_for_user(updated)}
+    return {"success": True, "profile": _profile_for_user(updated, store)}
 
 
 @app.patch("/api/user/bank")
@@ -664,7 +762,7 @@ def user_bank_update(
         updated = store.update_user(user["id"], {"bank": payload.model_dump()})
     except KeyError:
         raise _not_found() from None
-    return {"success": True, "profile": _profile_for_user(updated)}
+    return {"success": True, "profile": _profile_for_user(updated, store)}
 
 
 @app.patch("/api/user/password")
@@ -673,7 +771,7 @@ def user_password_change(
     user: dict = Depends(require_user),
     store: MongoStore = Depends(get_store),
 ):
-    if user.get("password") != payload.current_password:
+    if not store.verify_user_password(user, payload.current_password):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     try:
         store.update_user(user["id"], {"password": payload.new_password})
@@ -691,6 +789,7 @@ def user_referral_tree(
     target = (member_id or "").strip().upper() or None
     if target and not can_view_tree(user, target, store):
         raise HTTPException(status_code=403, detail="You cannot view this member's tree")
+    user = store.prepare_dashboard_user(user["id"])
     tree = build_referral_tree(store, user, target)
     tree["viewer_member_id"] = member_id_from_user(user)
     return tree
@@ -817,8 +916,8 @@ def user_create_deposit_json(
 def user_wallet(
     user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
 ):
-    user = store.accrue_investment_interest(user["id"]) or user
-    dash = build_dashboard_payload(user)
+    user = store.prepare_dashboard_user(user["id"])
+    dash = build_dashboard_payload(user, store=store)
     return {
         "income_wallet": dash["income_wallet"],
         "repurchase_wallet": dash["repurchase_wallet"],
@@ -844,7 +943,7 @@ def user_wallet_statement(
 def user_wallet_transfer_info(
     user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
 ):
-    user = store.accrue_investment_interest(user["id"]) or user
+    user = store.prepare_dashboard_user(user["id"])
     wallets = store._user_mlm_wallets(user)
     return {
         "available_fund": wallets["income"],
@@ -900,7 +999,7 @@ def user_wallet_transfer(
         ) from exc
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="User not found") from exc
-    refreshed = store.accrue_investment_interest(user["id"]) or store.find_user_by_id(user["id"])
+    refreshed = store.prepare_dashboard_user(user["id"])
     wallets = store._user_mlm_wallets(refreshed)
     return {
         "success": True,
@@ -910,8 +1009,11 @@ def user_wallet_transfer(
 
 
 @app.get("/api/user/activate")
-def user_activate_status(user: dict = Depends(require_user)):
-    dash = build_dashboard_payload(user)
+def user_activate_status(
+    user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
+):
+    user = store.prepare_dashboard_user(user["id"])
+    dash = build_dashboard_payload(user, store=store)
     active = float(dash.get("package_amount", 0) or 0) > 0
     return {
         "active": active,
@@ -925,8 +1027,8 @@ def user_activate_status(user: dict = Depends(require_user)):
 def user_incomes(
     user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
 ):
-    user = store.accrue_investment_interest(user["id"]) or user
-    dash = build_dashboard_payload(user)
+    user = store.prepare_dashboard_user(user["id"])
+    dash = build_dashboard_payload(user, store=store)
     return {
         "incomes": dash["incomes"],
         "today_incomes": dash["today_incomes"],
@@ -934,6 +1036,7 @@ def user_incomes(
         "quarterly_earnings": dash["quarterly_earnings"],
         "earning_limits": dash["earning_limits"],
         "investment": dash.get("investment"),
+        "daily_log": dash.get("daily_log"),
     }
 
 
@@ -992,7 +1095,7 @@ def user_create_help_ticket(
 
 @app.get("/api/user/referral-info")
 def user_referral_info(user: dict = Depends(require_user)):
-    dash = build_dashboard_payload(user)
+    dash = build_dashboard_payload(user, store=store)
     return {
         "member_id": dash["member_id"],
         "referral_link": dash["referral_link"],

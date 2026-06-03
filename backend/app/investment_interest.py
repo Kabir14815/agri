@@ -1,8 +1,11 @@
-"""Daily investment return: 10% per month gross, 1% TDS on interest."""
+"""Daily investment return: 10% per month gross, 1% TDS on interest.
+
+Missing daily crop photo → that day's interest is not credited (penalty tracked separately).
+"""
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 MONTHLY_GROSS_RATE = 0.10
 TDS_ON_INTEREST_RATE = 0.01
@@ -49,14 +52,40 @@ def initialize_accrual_fields(stats: dict, principal: float, on_date: Optional[d
     stats.setdefault("investment_interest_gross_total", 0.0)
     stats.setdefault("investment_interest_today", 0.0)
     stats.setdefault("investment_tds_today", 0.0)
+    stats.setdefault("interest_penalty_total", 0.0)
+    stats.setdefault("interest_penalty_today", 0.0)
+    stats.setdefault("interest_missed_days_total", 0)
+    return stats
+
+
+def _apply_today_display(
+    stats: dict,
+    principal: float,
+    today: date,
+    daily_log_checker: Optional[Callable[[date], bool]],
+) -> dict:
+    daily = daily_interest_breakdown(principal)
+    compliant = daily_log_checker is None or daily_log_checker(today)
+    if compliant:
+        stats["investment_interest_today"] = round(daily["net"], 2)
+        stats["investment_tds_today"] = round(daily["tds"], 2)
+        stats["interest_penalty_today"] = 0.0
+    else:
+        stats["investment_interest_today"] = 0.0
+        stats["investment_tds_today"] = 0.0
+        stats["interest_penalty_today"] = round(daily["net"], 2)
     return stats
 
 
 def accrue_through_today(
-    stats: dict, user_amount: float = 0, today: Optional[date] = None
+    stats: dict,
+    user_amount: float = 0,
+    today: Optional[date] = None,
+    daily_log_checker: Optional[Callable[[date], bool]] = None,
 ) -> tuple[dict, Optional[Dict[str, Any]]]:
     """
     Accrue missing daily interest up to today (UTC).
+    Each day requires a daily crop photo or that day's net interest is penalized (not credited).
     Returns (updated_stats, accrual_summary or None if nothing accrued).
     """
     today = today or datetime.utcnow().date()
@@ -64,6 +93,7 @@ def accrue_through_today(
     stats = initialize_accrual_fields(stats, principal, today)
 
     if principal <= 0:
+        stats["interest_penalty_today"] = 0.0
         return stats, None
 
     last = _parse_date(stats.get("interest_last_accrual_date"))
@@ -73,21 +103,59 @@ def accrue_through_today(
         stats["interest_last_accrual_date"] = last.isoformat()
 
     if last >= today:
-        daily = daily_interest_breakdown(principal)
-        stats["investment_interest_today"] = daily["net"]
-        stats["investment_tds_today"] = daily["tds"]
+        stats = _apply_today_display(stats, principal, today, daily_log_checker)
         return stats, None
 
-    days = min((today - last).days, MAX_CATCHUP_DAYS)
+    # Finalize through yesterday only — members have all of today to upload a photo.
+    accrual_end = today - timedelta(days=1)
+    if last >= accrual_end:
+        stats = _apply_today_display(stats, principal, today, daily_log_checker)
+        return stats, None
+
+    days = min((accrual_end - last).days, MAX_CATCHUP_DAYS)
     if days <= 0:
+        stats = _apply_today_display(stats, principal, today, daily_log_checker)
         return stats, None
 
     daily = daily_interest_breakdown(principal)
-    total_gross = round(daily["gross"] * days, 2)
-    total_tds = round(daily["tds"] * days, 2)
-    total_net = round(daily["net"] * days, 2)
+    total_gross = 0.0
+    total_tds = 0.0
+    total_net = 0.0
+    penalty_gross = 0.0
+    penalty_tds = 0.0
+    penalty_net = 0.0
+    missed_days = 0
+    penalty_days: list[dict] = []
 
-    stats["interest_last_accrual_date"] = today.isoformat()
+    for offset in range(1, days + 1):
+        accrual_date = last + timedelta(days=offset)
+        compliant = daily_log_checker is None or daily_log_checker(accrual_date)
+        if compliant:
+            total_gross += daily["gross"]
+            total_tds += daily["tds"]
+            total_net += daily["net"]
+        else:
+            missed_days += 1
+            penalty_gross += daily["gross"]
+            penalty_tds += daily["tds"]
+            penalty_net += daily["net"]
+            penalty_days.append(
+                {
+                    "log_date": accrual_date.isoformat(),
+                    "gross": round(daily["gross"], 4),
+                    "tds": round(daily["tds"], 4),
+                    "net": round(daily["net"], 4),
+                }
+            )
+
+    total_gross = round(total_gross, 2)
+    total_tds = round(total_tds, 2)
+    total_net = round(total_net, 2)
+    penalty_gross = round(penalty_gross, 2)
+    penalty_tds = round(penalty_tds, 2)
+    penalty_net = round(penalty_net, 2)
+
+    stats["interest_last_accrual_date"] = accrual_end.isoformat()
     stats["investment_principal"] = principal
     stats["investment_interest_gross_total"] = round(
         float(stats.get("investment_interest_gross_total", 0)) + total_gross, 2
@@ -99,8 +167,14 @@ def accrue_through_today(
         float(stats.get("investment_interest_total", 0)) + total_net, 2
     )
     stats["investment_return_income"] = stats["investment_interest_total"]
-    stats["investment_interest_today"] = round(daily["net"], 2)
-    stats["investment_tds_today"] = round(daily["tds"], 2)
+    stats["interest_penalty_total"] = round(
+        float(stats.get("interest_penalty_total", 0)) + penalty_net, 2
+    )
+    stats["interest_missed_days_total"] = int(
+        stats.get("interest_missed_days_total", 0) or 0
+    ) + missed_days
+
+    stats = _apply_today_display(stats, principal, today, daily_log_checker)
 
     income_wallet = float(stats.get("income_wallet", 0) or 0)
     stats["income_wallet"] = round(income_wallet + total_net, 2)
@@ -108,10 +182,16 @@ def accrue_through_today(
 
     return stats, {
         "days": days,
+        "credited_days": days - missed_days,
+        "missed_days": missed_days,
         "principal": principal,
         "gross": total_gross,
         "tds": total_tds,
         "net": total_net,
+        "penalty_gross": penalty_gross,
+        "penalty_tds": penalty_tds,
+        "penalty_net": penalty_net,
+        "penalty_days": penalty_days,
         "daily_gross": daily["gross"],
         "daily_tds": daily["tds"],
         "daily_net": daily["net"],
@@ -138,5 +218,8 @@ def investment_summary(stats: dict, user_amount: float = 0) -> Dict[str, Any]:
         "total_tds": float(stats.get("investment_tds_total", 0) or 0),
         "interest_today_net": float(stats.get("investment_interest_today", 0) or 0),
         "tds_today": float(stats.get("investment_tds_today", 0) or 0),
+        "penalty_total": float(stats.get("interest_penalty_total", 0) or 0),
+        "penalty_today": float(stats.get("interest_penalty_today", 0) or 0),
+        "missed_days_total": int(stats.get("interest_missed_days_total", 0) or 0),
         "last_accrual_date": stats.get("interest_last_accrual_date"),
     }

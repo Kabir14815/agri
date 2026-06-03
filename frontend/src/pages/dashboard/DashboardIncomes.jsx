@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api } from '../../api.js'
+import { Link } from 'react-router-dom'
+import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 import { formatInr } from '../../utils/format.js'
 
 function ProgressBar({ percent }) {
@@ -11,13 +11,9 @@ function ProgressBar({ percent }) {
 }
 
 export default function DashboardIncomes() {
-  const [data, setData] = useState(null)
+  const { data, loading } = useLiveDashboard()
 
-  useEffect(() => {
-    api.getIncomes().then(setData).catch(() => {})
-  }, [])
-
-  if (!data) return <div className="mlm-loading">Loading incomes…</div>
+  if (loading || !data) return <div className="mlm-loading">Loading incomes…</div>
 
   return (
     <>
@@ -66,10 +62,24 @@ export default function DashboardIncomes() {
               <small>Total TDS deducted</small>
               <h2>{formatInr(data.investment.total_tds, 2)}</h2>
             </article>
+            <article className="mlm-card mlm-card-warn">
+              <small>Interest cut today (no photo)</small>
+              <h2>{formatInr(data.investment.penalty_today || 0, 2)}</h2>
+            </article>
+            <article className="mlm-card mlm-card-warn">
+              <small>Total interest lost (missed photos)</small>
+              <h2>{formatInr(data.investment.penalty_total || 0, 2)}</h2>
+            </article>
+            <article className="mlm-card">
+              <small>Missed upload days</small>
+              <h2>{data.investment.missed_days_total || 0}</h2>
+            </article>
           </div>
           <p className="mlm-hint">
             Interest is calculated daily (10% ÷ 30 days per month). 1% TDS is deducted from
-            each day&apos;s gross interest before crediting your income wallet.
+            each day&apos;s gross interest before crediting your income wallet. Upload a daily crop
+            photo on <Link to="/dashboard/daily-log">Daily Crop Log</Link> — missing a day cuts
+            that day&apos;s interest only.
           </p>
         </>
       )}
