@@ -34,7 +34,7 @@ export default function DashboardRegister() {
       <div className="mlm-card mlm-card-green" style={{ maxWidth: 480, marginBottom: 20 }}>
         <small>Your member ID</small>
         <h2>{info.member_id}</h2>
-        <small>Sponsor name</small>
+        <small>Your name</small>
         <p>{info.full_name}</p>
       </div>
 

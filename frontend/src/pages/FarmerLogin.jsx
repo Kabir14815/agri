@@ -73,7 +73,7 @@ export default function FarmerLogin() {
               onChange={(e) => onMemberIdChange(e.target.value)}
               required
               autoComplete="username"
-              placeholder="KGF870013 or farmer@kgffarming.com"
+              placeholder="Member ID or farmer@kgffarming.com"
             />
           </div>
           <div className="form-group">
@@ -104,9 +104,9 @@ export default function FarmerLogin() {
         <div className="demo-creds" style={{ marginTop: 20 }}>
           <strong>Demo farmer</strong>
           <br />
-          Member ID: <strong>KGF870013</strong> / password: farmer1234
+          Email: <strong>farmer@kgffarming.com</strong> / password: <strong>farmer1234</strong>
           <br />
-          or email: farmer@kgffarming.com / farmer1234
+          (Member ID is shown after login)
         </div>
       </div>
     </div>

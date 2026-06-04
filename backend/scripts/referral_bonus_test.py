@@ -121,9 +121,15 @@ def main():
     print(f"OK  sponsor direct bonus Rs {gained} (expected ~Rs {expected})")
 
     tree = req("GET", f"/user/referral-tree?member_id={sponsor_mid}", token=token_s)
-    if tree.get("max_depth") != 24:
-        fail(f"tree max_depth should be 24, got {tree.get('max_depth')}")
-    print("OK  referral tree reports 24 levels")
+    if tree.get("tree_levels_max") != 24:
+        fail(f"tree_levels_max should be 24, got {tree.get('tree_levels_max')}")
+    levels_open = int(tree.get("levels_open") or 0)
+    if tree.get("max_depth") != max(1, levels_open):
+        fail(
+            f"tree max_depth should match levels_open ({levels_open}), "
+            f"got {tree.get('max_depth')}"
+        )
+    print(f"OK  referral tree ({tree.get('max_depth')} levels open, 24 max)")
 
     print("\nAll referral bonus tests passed.\n")
 

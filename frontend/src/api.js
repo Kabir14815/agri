@@ -98,7 +98,7 @@ export const api = {
     request('/user/deposits', { auth: 'user' }).then((d) =>
       Array.isArray(d) ? d : d.deposits || [],
     ),
-  getDepositModes: () => request('/user/deposit-modes', { auth: 'user' }),
+  getDepositModes: () => request('/user/deposit-modes'),
   createDeposit: (formData) => {
     const headers = userAuthHeader()
     return fetch(`${BASE}/user/deposits`, {

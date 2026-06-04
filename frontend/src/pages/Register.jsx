@@ -308,13 +308,9 @@ export default function Register() {
             <button
               className="btn btn-accent"
               style={{ width: '100%' }}
-              disabled={loading || referralInvalid || (Boolean(activeCode) && !sponsorLookupDone)}
+              disabled={loading || referralInvalid}
             >
-              {loading
-                ? 'Creating profile…'
-                : Boolean(activeCode) && !sponsorLookupDone
-                  ? 'Checking referral code…'
-                  : 'Create account'}
+              {loading ? 'Creating profile…' : 'Create account'}
             </button>
           </form>
 

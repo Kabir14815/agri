@@ -293,6 +293,8 @@ def _user_dashboard_payload(u: dict, store: MongoStore) -> dict:
 
 
 def _login_user_payload(u: dict, store: MongoStore) -> dict:
+    from .referral import member_id_from_user
+
     role = u.get("role", "customer")
     if role == "admin":
         return {
@@ -300,6 +302,15 @@ def _login_user_payload(u: dict, store: MongoStore) -> dict:
             "full_name": u["full_name"],
             "email": u["email"],
             "role": "admin",
+        }
+    if role == "farmer":
+        return {
+            "id": u["id"],
+            "full_name": u["full_name"],
+            "email": u.get("email"),
+            "phone": u.get("phone"),
+            "role": "farmer",
+            "member_id": member_id_from_user(u),
         }
     return _user_dashboard_payload(u, store)
 

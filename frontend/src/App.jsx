@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { Routes, Route, useLocation, Outlet } from 'react-router-dom'
 import TopBar from './components/TopBar.jsx'
 import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
@@ -23,6 +23,7 @@ import { UserAuthProvider, RequireUser } from './user/UserAuth.jsx'
 import { CompanyProvider } from './context/CompanyContext.jsx'
 import ReferralLanding from './pages/ReferralLanding.jsx'
 import ReferralTracker from './components/ReferralTracker.jsx'
+import { FarmerAuthProvider, RequireFarmer } from './farmer/FarmerAuth.jsx'
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const AdminLayout = lazy(() => import('./admin/AdminLayout.jsx'))
@@ -42,16 +43,27 @@ const ExchangePage = lazy(() => import('./admin/pages/ExchangePage.jsx'))
 const WalletTransfersPage = lazy(() => import('./admin/pages/WalletTransfersPage.jsx'))
 const ReferralsPage = lazy(() => import('./admin/pages/ReferralsPage.jsx'))
 const FarmerLogsPage = lazy(() => import('./admin/pages/FarmerLogsPage.jsx'))
+const FarmerLogin = lazy(() => import('./pages/FarmerLogin.jsx'))
+const FarmerDashboard = lazy(() => import('./pages/FarmerDashboard.jsx'))
 
 function RouteFallback() {
   return <div className="route-loading">Loading…</div>
+}
+
+function FarmerRoutes() {
+  return (
+    <FarmerAuthProvider>
+      <Outlet />
+    </FarmerAuthProvider>
+  )
 }
 
 export default function App() {
   const { pathname } = useLocation()
   const isAdmin = pathname.startsWith('/admin')
   const isMemberDash = pathname.startsWith('/dashboard')
-  const hideChrome = isAdmin || isMemberDash
+  const isFarmer = pathname.startsWith('/farmer')
+  const hideChrome = isAdmin || isMemberDash || isFarmer
 
   return (
     <AdminAuthProvider>
@@ -85,8 +97,17 @@ export default function App() {
           <Route path="/register/ref/:code" element={<Register />} />
           <Route path="/register" element={<Register />} />
           <Route path="/franchisee-login" element={<FranchiseeLogin />} />
-          <Route path="/farmer-login" element={<Navigate to="/login" replace />} />
-          <Route path="/farmer" element={<Navigate to="/dashboard/daily-log" replace />} />
+          <Route element={<FarmerRoutes />}>
+            <Route path="/farmer-login" element={<FarmerLogin />} />
+            <Route
+              path="/farmer"
+              element={
+                <RequireFarmer>
+                  <FarmerDashboard />
+                </RequireFarmer>
+              }
+            />
+          </Route>
           <Route
             path="/dashboard/*"
             element={

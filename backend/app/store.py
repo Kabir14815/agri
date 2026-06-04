@@ -69,7 +69,7 @@ DEMO_USERS = [
         "email": "farmer@kgffarming.com",
         "phone": "9876543210",
         "password": "farmer1234",
-        "role": "customer",
+        "role": "farmer",
         "address": "Village plot, Jind",
         "city": "Jind",
         "state": "Haryana",
@@ -184,6 +184,8 @@ class MongoStore:
                         },
                     )
 
+        self._repair_demo_accounts()
+
         self.db.users.create_index([("email", ASCENDING)], unique=True)
         self.db.users.create_index([("id", ASCENDING)], unique=True)
         for name in list(COLLECTIONS.values()) + [
@@ -219,6 +221,45 @@ class MongoStore:
         self.db.wallet_ledger.create_index([("user_id", ASCENDING), ("wallet", ASCENDING)])
         self.db.deposits.create_index([("user_id", ASCENDING)])
         self.db.deposits.create_index([("status", ASCENDING)])
+
+    def _seed_demo_ledger_if_empty(self, user: dict, demo_mlm: dict) -> None:
+        """Seed wallet_ledger from demo MLM snapshot when ledger is empty (fresh DB)."""
+        uid = int(user["id"])
+        if self.db.wallet_ledger.count_documents({"user_id": uid}) > 0:
+            return
+        for wallet, amount, desc in (
+            ("income", demo_mlm.get("income_wallet"), "Opening income wallet (demo)"),
+            (
+                "repurchase",
+                demo_mlm.get("repurchase_wallet"),
+                "Opening repurchase wallet (demo)",
+            ),
+            ("topup", demo_mlm.get("topup_wallet"), "Opening topup wallet (demo)"),
+        ):
+            amt = float(amount or 0)
+            if amt > 0:
+                self.add_wallet_entry(uid, wallet, amt, desc, "credit")
+
+    def _repair_demo_accounts(self) -> None:
+        """Align demo roles and ledger balances with DEMO_USERS / DEMO_MLM_BY_EMAIL."""
+        for demo in DEMO_USERS:
+            existing = self.db.users.find_one({"email": demo["email"]})
+            if not existing:
+                continue
+            expected_role = demo.get("role")
+            if expected_role and existing.get("role") != expected_role:
+                self.db.users.update_one(
+                    {"email": demo["email"]}, {"$set": {"role": expected_role}}
+                )
+                existing = dict(existing)
+                existing["role"] = expected_role
+            demo_mlm = DEMO_MLM_BY_EMAIL.get(demo["email"])
+            if demo_mlm:
+                self._seed_demo_ledger_if_empty(existing, demo_mlm)
+                try:
+                    self.sync_live_mlm_stats(existing["id"])
+                except KeyError:
+                    pass
 
     # ----------------------------- Referral tracking -----------------------
 
@@ -370,6 +411,19 @@ class MongoStore:
                 queue.append((cid, depth + 1))
         return False
 
+    def _ledger_has_income_breakdown(self, user_id: int) -> bool:
+        for entry in self.list_wallet_ledger(user_id, "income"):
+            if entry.get("direction") != "credit":
+                continue
+            desc = (entry.get("description") or "").lower()
+            if (
+                "direct bonus" in desc
+                or ("level" in desc and "bonus" in desc)
+                or "investment return" in desc
+            ):
+                return True
+        return False
+
     def _income_totals_from_ledger(self, user_id: int) -> dict:
         direct = 0.0
         level = 0.0
@@ -481,10 +535,24 @@ class MongoStore:
         stats["level_open"] = level_open_for_package(amount)
 
         ledger = self._income_totals_from_ledger(user_id)
-        stats["direct_income"] = ledger["direct_income"]
-        stats["level_income"] = ledger["level_income"]
-        stats["investment_interest_total"] = ledger["investment_interest_total"]
-        stats["investment_return_income"] = ledger["investment_return_income"]
+        demo_mlm = DEMO_MLM_BY_EMAIL.get((user.get("email") or "").lower())
+        if demo_mlm and not self._ledger_has_income_breakdown(user_id):
+            stats["direct_income"] = float(demo_mlm.get("direct_income", 0) or 0)
+            stats["level_income"] = float(demo_mlm.get("level_income", 0) or 0)
+            stats["investment_interest_total"] = float(
+                demo_mlm.get("investment_interest_total")
+                or demo_mlm.get("investment_return_income")
+                or 0
+            )
+            stats["investment_return_income"] = stats["investment_interest_total"]
+            stats["reward_bonus"] = float(demo_mlm.get("reward_bonus", 0) or 0)
+            stats["salary_bonus"] = float(demo_mlm.get("salary_bonus", 0) or 0)
+            stats["self_unit_profit"] = float(demo_mlm.get("self_unit_profit", 0) or 0)
+        else:
+            stats["direct_income"] = ledger["direct_income"]
+            stats["level_income"] = ledger["level_income"]
+            stats["investment_interest_total"] = ledger["investment_interest_total"]
+            stats["investment_return_income"] = ledger["investment_return_income"]
 
         stats["income_wallet"] = self._wallet_balance_from_ledger(user_id, "income")
         stats["repurchase_wallet"] = self._wallet_balance_from_ledger(user_id, "repurchase")
@@ -730,14 +798,7 @@ class MongoStore:
         return users
 
     def update_user_amount(self, user_id: int, amount: float) -> dict:
-        result = self.db.users.find_one_and_update(
-            {"id": user_id},
-            {"$set": {"amount": float(amount)}},
-            return_document=True,
-        )
-        if not result:
-            raise KeyError("not_found")
-        return self._serialize(result)
+        return self.update_user_mlm(user_id, amount=float(amount))
 
     def delete_user(self, user_id: int) -> None:
         result = self.db.users.delete_one({"id": user_id})
@@ -1306,15 +1367,11 @@ class MongoStore:
         from_w = ex["from_wallet"]
         to_w = ex["to_wallet"]
         amount = float(ex["amount"])
-        wallets = self._user_mlm_wallets(user)
-        if wallets[from_w] < amount:
+        if from_w not in self.WALLET_FIELDS or to_w not in self.WALLET_FIELDS:
+            raise ValueError("invalid_wallet")
+        balance = self._wallet_balance_from_ledger(user["id"], from_w)
+        if balance < amount:
             raise ValueError("insufficient_balance")
-        stats = wallets["_stats"]
-        from_field = self.WALLET_FIELDS[from_w]
-        to_field = self.WALLET_FIELDS[to_w]
-        stats[from_field] = round(wallets[from_w] - amount, 2)
-        stats[to_field] = round(wallets[to_w] + amount, 2)
-        self._set_user_mlm_stats(user["id"], stats)
         self.add_wallet_entry(
             user["id"],
             from_w,
@@ -1329,6 +1386,7 @@ class MongoStore:
             f"Exchange from {from_w} #{exchange_id}",
             "credit",
         )
+        self.sync_live_mlm_stats(user["id"])
         return self.set_exchange_status(exchange_id, "approved")
 
     # ----------------------------- Farmer daily logs -----------------------
