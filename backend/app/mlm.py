@@ -214,7 +214,7 @@ def default_mlm_stats(user_id: int, package_amount: float = 0) -> Dict[str, Any]
         "reward_bonus_today": 0,
         "salary_bonus_today": 0,
         "repurchase_income_today": 0,
-        "earning_limit_total": max(20_000, pkg * 2) if pkg else 20_000,
+        "earning_limit_total": max(20_000, pkg * 10) if pkg else 20_000,
         "earning_limit_pending": max(0, pkg * 0.3) if pkg else 15_000,
         "earning_limit_cross": 0,
         "team_business": base * 2 if base else 0,

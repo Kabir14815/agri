@@ -450,9 +450,11 @@ def submit_contact(payload: ContactMessage, store: MongoStore = Depends(get_stor
 
 @app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterPayload, store: MongoStore = Depends(get_store)):
-    if store.find_user_by_email(payload.email):
+    email = str(payload.email).strip().lower()
+    if store.find_user_by_email(email):
         raise HTTPException(status_code=400, detail="Email already registered")
     data = payload.model_dump()
+    data["email"] = email
     if data.get("role") not in ("customer", "franchisee", "farmer"):
         data["role"] = "customer"
     if data.get("sponsor_member_id"):
@@ -1094,7 +1096,10 @@ def user_create_help_ticket(
 
 
 @app.get("/api/user/referral-info")
-def user_referral_info(user: dict = Depends(require_user)):
+def user_referral_info(
+    user: dict = Depends(require_user), store: MongoStore = Depends(get_store)
+):
+    user = store.prepare_dashboard_user(user["id"]) or user
     dash = build_dashboard_payload(user, store=store)
     return {
         "member_id": dash["member_id"],

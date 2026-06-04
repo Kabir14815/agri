@@ -32,6 +32,7 @@ export default function Register() {
   })
   const [sponsorName, setSponsorName] = useState(null)
   const [codeStatus, setCodeStatus] = useState(null)
+  const [sponsorLookupDone, setSponsorLookupDone] = useState(!initialCode)
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -46,8 +47,10 @@ export default function Register() {
     if (!activeCode || activeCode.length < 3) {
       setSponsorName(null)
       setCodeStatus(null)
+      setSponsorLookupDone(true)
       return
     }
+    setSponsorLookupDone(false)
     const t = setTimeout(() => {
       api
         .lookupReferral(activeCode)
@@ -59,6 +62,7 @@ export default function Register() {
           setSponsorName(null)
           setCodeStatus({ type: 'error', text: 'Invalid referral code' })
         })
+        .finally(() => setSponsorLookupDone(true))
     }, 400)
     return () => clearTimeout(t)
   }, [activeCode])
@@ -72,7 +76,7 @@ export default function Register() {
   }
 
   const referralInvalid =
-    Boolean(activeCode) && (codeStatus?.type === 'error' || !sponsorName)
+    Boolean(activeCode) && sponsorLookupDone && codeStatus?.type === 'error'
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -88,9 +92,18 @@ export default function Register() {
     try {
       const sponsor = normalizeReferralCode(form.sponsor_member_id)
       const payload = {
-        ...form,
+        full_name: form.full_name.trim(),
+        email: form.email.trim().toLowerCase(),
+        phone: form.phone.trim(),
+        password: form.password,
+        role: form.role,
         sponsor_member_id: sponsor || undefined,
       }
+      if (form.address?.trim()) payload.address = form.address.trim()
+      if (form.city?.trim()) payload.city = form.city.trim()
+      if (form.state?.trim()) payload.state = form.state.trim()
+      if (form.pincode?.trim()) payload.pincode = form.pincode.trim()
+      if (form.country?.trim()) payload.country = form.country.trim()
       const res = await api.register(payload)
       clearStoredReferralCode()
       const mid = res.user?.member_id || ''
@@ -295,9 +308,13 @@ export default function Register() {
             <button
               className="btn btn-accent"
               style={{ width: '100%' }}
-              disabled={loading || referralInvalid}
+              disabled={loading || referralInvalid || (Boolean(activeCode) && !sponsorLookupDone)}
             >
-              {loading ? 'Creating profile…' : 'Create account'}
+              {loading
+                ? 'Creating profile…'
+                : Boolean(activeCode) && !sponsorLookupDone
+                  ? 'Checking referral code…'
+                  : 'Create account'}
             </button>
           </form>
 

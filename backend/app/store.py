@@ -566,6 +566,8 @@ class MongoStore:
         coll = self.db.users
         user = dict(data)
         user["id"] = self._next_id(coll)
+        if user.get("email"):
+            user["email"] = str(user["email"]).strip().lower()
         user["amount"] = float(user.get("amount", 0) or 0)
         user["password"] = hash_password(data.get("password", ""))
         user["registered_at"] = datetime.utcnow().isoformat() + "Z"

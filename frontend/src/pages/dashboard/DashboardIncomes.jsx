@@ -57,6 +57,14 @@ export default function DashboardIncomes() {
             <article className="mlm-card">
               <small>Total interest earned</small>
               <h2>{formatInr(data.investment.total_interest_net, 2)}</h2>
+              {data.investment.interest_cap_net > 0 && (
+                <p className="mlm-hint" style={{ marginTop: 8, marginBottom: 0 }}>
+                  Cap: {formatInr(data.investment.interest_cap_net, 2)} (10× investment)
+                  {data.investment.interest_cap_reached
+                    ? ' — limit reached'
+                    : ` · ${formatInr(data.investment.interest_remaining_net, 2)} remaining`}
+                </p>
+              )}
             </article>
             <article className="mlm-card">
               <small>Total TDS deducted</small>
@@ -76,8 +84,9 @@ export default function DashboardIncomes() {
             </article>
           </div>
           <p className="mlm-hint">
-            Interest is calculated daily (10% ÷ 30 days per month). 1% TDS is deducted from
-            each day&apos;s gross interest before crediting your income wallet. Upload a daily crop
+            Interest is calculated daily (10% ÷ 30 days per month), up to 10× your invested
+            amount. 1% TDS is deducted from each day&apos;s gross interest before crediting your
+            income wallet. Upload a daily crop
             photo on <Link to="/dashboard/daily-log">Daily Crop Log</Link> — missing a day cuts
             that day&apos;s interest only.
           </p>

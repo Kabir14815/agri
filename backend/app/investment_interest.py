@@ -11,6 +11,38 @@ MONTHLY_GROSS_RATE = 0.10
 TDS_ON_INTEREST_RATE = 0.01
 DAYS_PER_MONTH = 30
 MAX_CATCHUP_DAYS = 90
+INTEREST_CAP_MULTIPLIER = 10  # max lifetime net interest = 10× principal (e.g. ₹2.5L → ₹25L)
+
+
+def interest_earning_cap(principal: float) -> float:
+    if principal <= 0:
+        return 0.0
+    return round(principal * INTEREST_CAP_MULTIPLIER, 2)
+
+
+def interest_earned_so_far(stats: dict) -> float:
+    return float(stats.get("investment_interest_total", 0) or 0)
+
+
+def interest_remaining_cap(stats: dict, principal: float) -> float:
+    return max(0.0, interest_earning_cap(principal) - interest_earned_so_far(stats))
+
+
+def _cap_daily_credit(
+    stats: dict, principal: float, gross: float, tds: float, net: float
+) -> tuple[float, float, float]:
+    """Scale a day's interest so lifetime net never exceeds 10× principal."""
+    remaining = interest_remaining_cap(stats, principal)
+    if remaining <= 0 or net <= 0:
+        return 0.0, 0.0, 0.0
+    if net <= remaining:
+        return gross, tds, net
+    ratio = remaining / net
+    return (
+        round(gross * ratio, 4),
+        round(tds * ratio, 4),
+        round(remaining, 4),
+    )
 
 
 def investment_principal(stats: dict, user_amount: float = 0) -> float:
@@ -66,14 +98,19 @@ def _apply_today_display(
 ) -> dict:
     daily = daily_interest_breakdown(principal)
     compliant = daily_log_checker is None or daily_log_checker(today)
-    if compliant:
-        stats["investment_interest_today"] = round(daily["net"], 2)
-        stats["investment_tds_today"] = round(daily["tds"], 2)
+    if compliant and interest_remaining_cap(stats, principal) > 0:
+        gross, tds, net = _cap_daily_credit(
+            stats, principal, daily["gross"], daily["tds"], daily["net"]
+        )
+        stats["investment_interest_today"] = round(net, 2)
+        stats["investment_tds_today"] = round(tds, 2)
         stats["interest_penalty_today"] = 0.0
     else:
         stats["investment_interest_today"] = 0.0
         stats["investment_tds_today"] = 0.0
-        stats["interest_penalty_today"] = round(daily["net"], 2)
+        stats["interest_penalty_today"] = (
+            round(daily["net"], 2) if not compliant else 0.0
+        )
     return stats
 
 
@@ -126,14 +163,25 @@ def accrue_through_today(
     penalty_net = 0.0
     missed_days = 0
     penalty_days: list[dict] = []
+    base_earned = interest_earned_so_far(stats)
 
+    cap_reached = False
     for offset in range(1, days + 1):
+        if cap_reached:
+            break
         accrual_date = last + timedelta(days=offset)
         compliant = daily_log_checker is None or daily_log_checker(accrual_date)
         if compliant:
-            total_gross += daily["gross"]
-            total_tds += daily["tds"]
-            total_net += daily["net"]
+            scratch = {**stats, "investment_interest_total": base_earned + total_net}
+            gross, tds, net = _cap_daily_credit(
+                scratch, principal, daily["gross"], daily["tds"], daily["net"]
+            )
+            if net <= 0:
+                cap_reached = True
+                break
+            total_gross += gross
+            total_tds += tds
+            total_net += net
         else:
             missed_days += 1
             penalty_gross += daily["gross"]
@@ -204,17 +252,24 @@ def investment_summary(stats: dict, user_amount: float = 0) -> Dict[str, Any]:
     monthly_gross = round(principal * MONTHLY_GROSS_RATE, 2)
     monthly_tds = round(monthly_gross * TDS_ON_INTEREST_RATE, 2)
     monthly_net = round(monthly_gross - monthly_tds, 2)
+    cap = interest_earning_cap(principal)
+    earned = interest_earned_so_far(stats)
+    remaining = interest_remaining_cap(stats, principal)
     return {
         "principal": principal,
         "monthly_gross_rate_percent": round(MONTHLY_GROSS_RATE * 100, 2),
         "tds_on_interest_percent": round(TDS_ON_INTEREST_RATE * 100, 2),
+        "interest_cap_net": cap,
+        "interest_remaining_net": round(remaining, 2),
+        "interest_cap_reached": remaining <= 0 and principal > 0,
+        "interest_cap_multiplier": INTEREST_CAP_MULTIPLIER,
         "monthly_gross": monthly_gross,
         "monthly_tds": monthly_tds,
         "monthly_net": monthly_net,
         "daily_gross": daily["gross"],
         "daily_tds": daily["tds"],
         "daily_net": daily["net"],
-        "total_interest_net": float(stats.get("investment_interest_total", 0) or 0),
+        "total_interest_net": earned,
         "total_tds": float(stats.get("investment_tds_total", 0) or 0),
         "interest_today_net": float(stats.get("investment_interest_today", 0) or 0),
         "tds_today": float(stats.get("investment_tds_today", 0) or 0),
