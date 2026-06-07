@@ -112,6 +112,10 @@ class AdminUserMlmUpdate(BaseModel):
     amount: Optional[float] = Field(default=None, ge=0)
 
 
+class AdminUserRoleUpdate(BaseModel):
+    role: str = Field(..., pattern="^(customer|franchisee|farmer)$")
+
+
 class AdminRecordDepositIn(BaseModel):
     amount: float = Field(..., gt=0)
     note: str = Field(default="", max_length=200)
@@ -253,11 +257,6 @@ def _user_from_token(store: MongoStore, token: str) -> Optional[dict]:
     from .auth_tokens import parse_session_token
 
     uid = parse_session_token(token)
-    if uid is None and token.startswith("demo-token-"):
-        try:
-            uid = int(token.rsplit("-", 1)[1])
-        except (ValueError, IndexError):
-            return None
     if uid is None:
         return None
     return store.find_user_by_id(uid)
@@ -466,7 +465,7 @@ def register(payload: RegisterPayload, store: MongoStore = Depends(get_store)):
         raise HTTPException(status_code=400, detail="Email already registered")
     data = payload.model_dump()
     data["email"] = email
-    if data.get("role") not in ("customer", "franchisee", "farmer"):
+    if data.get("role") not in ("customer", "franchisee"):
         data["role"] = "customer"
     if data.get("sponsor_member_id"):
         from .referral import normalize_member_id
@@ -803,7 +802,10 @@ def user_referral_tree(
     if target and not can_view_tree(user, target, store):
         raise HTTPException(status_code=403, detail="You cannot view this member's tree")
     user = store.prepare_dashboard_user(user["id"])
-    tree = build_referral_tree(store, user, target)
+    try:
+        tree = build_referral_tree(store, user, target)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Member not found") from None
     tree["viewer_member_id"] = member_id_from_user(user)
     return tree
 
@@ -1217,6 +1219,24 @@ def admin_update_user_amount(
     return _public_user(updated)
 
 
+@app.patch("/api/admin/users/{user_id}/role")
+def admin_update_user_role(
+    user_id: int,
+    payload: AdminUserRoleUpdate,
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    try:
+        updated = store.admin_set_user_role(user_id, payload.role)
+    except KeyError:
+        raise _not_found() from None
+    except ValueError as exc:
+        if str(exc) == "cannot_change_admin":
+            raise HTTPException(status_code=400, detail="Cannot change admin role") from exc
+        raise HTTPException(status_code=400, detail="Invalid role") from exc
+    return _public_user(updated)
+
+
 @app.get("/api/admin/deposits")
 def admin_list_deposits(admin: dict = Depends(require_admin), store: MongoStore = Depends(get_store)):
     items = store.list_all_deposits()
@@ -1318,7 +1338,10 @@ def admin_user_referral_tree(
     from .referral import build_referral_tree
 
     target = member_id or member_id_from_user(u)
-    return build_referral_tree(store, u, target)
+    try:
+        return build_referral_tree(store, u, target)
+    except ValueError:
+        raise _not_found() from None
 
 
 @app.patch("/api/admin/users/{user_id}/mlm")

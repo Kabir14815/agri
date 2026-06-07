@@ -2,9 +2,9 @@
 """Smoke test farmer login, dashboard, and daily log upload."""
 from __future__ import annotations
 
-import io
 import json
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -16,9 +16,12 @@ try:
 except ImportError:
     pass
 
+from _test_env import require_admin_creds
+
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8000/api"
-FARMER_EMAIL = "farmer@kgffarming.com"
-FARMER_PASSWORD = "farmer1234"
+TS = int(time.time())
+PASSWORD = "testpass123"
+FARMER_EMAIL = f"farmer.test.{TS}@example.com"
 
 
 def fail(msg: str) -> None:
@@ -105,6 +108,7 @@ def multipart_log(token: str, watered: bool) -> dict:
 
 
 def main() -> None:
+    admin_email, admin_password = require_admin_creds()
     print(f"\n=== Farmer smoke test: {BASE} ===\n")
 
     health = json_req("GET", "/health")
@@ -112,10 +116,35 @@ def main() -> None:
         fail(f"health: {health}")
     print("OK  health")
 
+    reg = json_req(
+        "POST",
+        "/auth/register",
+        {
+            "full_name": f"Farmer Test {TS}",
+            "email": FARMER_EMAIL,
+            "phone": "9876512600",
+            "password": PASSWORD,
+            "role": "customer",
+        },
+    )
+    farmer_id = reg["user"]["id"]
+
+    admin = json_req(
+        "POST",
+        "/auth/login",
+        {"member_id": admin_email, "password": admin_password},
+    )
+    json_req(
+        "PATCH",
+        f"/admin/users/{farmer_id}/role",
+        {"role": "farmer"},
+        token=admin["token"],
+    )
+
     login = json_req(
         "POST",
         "/auth/login",
-        {"member_id": FARMER_EMAIL, "password": FARMER_PASSWORD},
+        {"member_id": FARMER_EMAIL, "password": PASSWORD},
     )
     if login.get("user", {}).get("role") != "farmer":
         fail(f"expected farmer role, got: {login.get('user')}")
@@ -140,7 +169,7 @@ def main() -> None:
     member_login = json_req(
         "POST",
         "/auth/login",
-        {"member_id": FARMER_EMAIL, "password": FARMER_PASSWORD},
+        {"member_id": FARMER_EMAIL, "password": PASSWORD},
     )
     if member_login.get("user", {}).get("role") != "farmer":
         fail("login role mismatch")

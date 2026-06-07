@@ -51,20 +51,6 @@ export default function FranchiseeLogin() {
         <h2>Franchisee Login</h2>
         <p className="sub">Sign in with your partner Member ID and password.</p>
 
-        <div className="demo-creds">
-          <strong>Demo partner</strong>
-          <div>
-            Member ID: <code>KGF870366</code> / Password: <code>partner1234</code>
-          </div>
-          <button
-            type="button"
-            className="demo-fill"
-            onClick={() => setForm({ member_id: 'KGF870366', password: 'partner1234' })}
-          >
-            Fill demo credentials
-          </button>
-        </div>
-
         {status && <div className={`form-message ${status.type}`}>{status.text}</div>}
 
         <form onSubmit={onSubmit}>
@@ -75,7 +61,7 @@ export default function FranchiseeLogin() {
               name="member_id"
               value={form.member_id}
               onChange={onChange}
-              placeholder="e.g. KGF870366"
+              placeholder="Your member ID"
               autoComplete="username"
               required
             />

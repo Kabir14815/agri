@@ -46,24 +46,3 @@ def user_profile_payload(user: dict) -> Dict[str, Any]:
     }
 
 
-DEMO_PROFILE_OVERRIDES: Dict[str, Dict[str, Any]] = {
-    "demo@kgffarming.com": {
-        "full_name": "SUBHASH JANGRA",
-        "email": "subhash.jangra1983@gmail.com",
-        "phone": "9251892518",
-        "state": "Haryana",
-        "country": "India",
-        "city": "Jind",
-        "address": "Sheetal Puri Colony, Jind",
-        "pincode": "126102",
-        "gst_no": "",
-        "nominee_name": "",
-        "nominee_relation": "",
-        "bank": {
-            "account_holder": "SUBHASH JANGRA",
-            "bank_name": "State Bank of India",
-            "account_number": "",
-            "ifsc": "",
-        },
-    },
-}

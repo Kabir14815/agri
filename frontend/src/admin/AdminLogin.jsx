@@ -34,21 +34,6 @@ export default function AdminLogin() {
         <h2>Admin Portal</h2>
         <p className="sub">Sign in to manage KGF Farming.</p>
 
-        <div className="demo-creds">
-          <strong>Admin demo</strong>
-          <div>Email: <code>admin@kgffarming.com</code></div>
-          <div>Password: <code>admin1234</code></div>
-          <button
-            type="button"
-            className="demo-fill"
-            onClick={() =>
-              setForm({ email: 'admin@kgffarming.com', password: 'admin1234' })
-            }
-          >
-            Fill demo credentials
-          </button>
-        </div>
-
         {status && (
           <div className={`form-message ${status.type}`}>{status.text}</div>
         )}

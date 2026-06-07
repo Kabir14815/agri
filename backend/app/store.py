@@ -1,11 +1,12 @@
 """MongoDB data access layer."""
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from pymongo import ASCENDING, DESCENDING, ReturnDocument
 from pymongo.database import Database
 
-from .mlm import DEMO_MLM_BY_EMAIL, default_mlm_stats
+from .mlm import default_mlm_stats
 from .data import (
     ACHIEVERS,
     BLOG_POSTS,
@@ -27,56 +28,12 @@ COLLECTIONS = {
     "achievers": "achievers",
 }
 
-DEMO_USERS = [
-    {
-        "full_name": "Demo Customer",
-        "email": "demo@kgffarming.com",
-        "phone": "9999999999",
-        "password": "demo1234",
-        "role": "customer",
-        "address": "Demo address, Jind",
-        "city": "Jind",
-        "state": "Haryana",
-        "pincode": "126102",
-        "amount": 250_000.0,
-    },
-    {
-        "full_name": "Demo Franchisee",
-        "email": "partner@kgffarming.com",
-        "phone": "9888888888",
-        "password": "partner1234",
-        "role": "franchisee",
-        "address": "Demo address, Jind",
-        "city": "Jind",
-        "state": "Haryana",
-        "pincode": "126102",
-        "amount": 45800.0,
-    },
-    {
-        "full_name": "Admin",
-        "email": "admin@kgffarming.com",
-        "phone": "9000000000",
-        "password": "admin1234",
-        "role": "admin",
-        "address": "Head office, Jind",
-        "city": "Jind",
-        "state": "Haryana",
-        "pincode": "126102",
-        "amount": 0.0,
-    },
-    {
-        "full_name": "Demo Farmer",
-        "email": "farmer@kgffarming.com",
-        "phone": "9876543210",
-        "password": "farmer1234",
-        "role": "farmer",
-        "address": "Village plot, Jind",
-        "city": "Jind",
-        "state": "Haryana",
-        "pincode": "126102",
-        "amount": 0.0,
-    },
-]
+LEGACY_DEMO_EMAILS = (
+    "demo@kgffarming.com",
+    "partner@kgffarming.com",
+    "farmer@kgffarming.com",
+    "admin@kgffarming.com",
+)
 
 
 class MongoStore:
@@ -104,8 +61,6 @@ class MongoStore:
     # ----------------------------- Seed ------------------------------------
 
     def seed(self) -> None:
-        now = datetime.utcnow().isoformat() + "Z"
-
         if self.db.products.count_documents({}) == 0:
             self.db.products.insert_many(PRODUCTS)
 
@@ -138,53 +93,8 @@ class MongoStore:
             upsert=True,
         )
 
-        from .mlm import member_id_for
-        from .passwords import hash_password
-
-        for demo in DEMO_USERS:
-            existing = self.db.users.find_one({"email": demo["email"]})
-            demo_mlm = DEMO_MLM_BY_EMAIL.get(demo["email"])
-            if existing is None:
-                user = {**demo, "registered_at": now}
-                user["password"] = hash_password(demo["password"])
-                user["id"] = self._next_id(self.db.users)
-                if demo_mlm:
-                    user["mlm"] = dict(demo_mlm)
-                    user["mlm"].setdefault(
-                        "member_id",
-                        user["mlm"].get("member_id") or member_id_for(user["id"]),
-                    )
-                    if demo_mlm.get("package_amount"):
-                        user["amount"] = float(demo_mlm["package_amount"])
-                elif demo.get("role") != "admin":
-                    user["mlm"] = default_mlm_stats(user["id"], user.get("amount", 0))
-                self.db.users.insert_one(user)
-            elif not existing.get("mlm"):
-                if demo_mlm:
-                    seeded = dict(demo_mlm)
-                    seeded.setdefault(
-                        "member_id",
-                        seeded.get("member_id") or member_id_for(existing["id"]),
-                    )
-                    patch = {"mlm": seeded}
-                    if seeded.get("package_amount"):
-                        patch["amount"] = float(
-                            existing.get("amount") or seeded["package_amount"]
-                        )
-                    self.db.users.update_one({"email": demo["email"]}, {"$set": patch})
-                elif demo.get("role") != "admin":
-                    self.db.users.update_one(
-                        {"email": demo["email"]},
-                        {
-                            "$set": {
-                                "mlm": default_mlm_stats(
-                                    existing["id"], existing.get("amount", 0)
-                                )
-                            }
-                        },
-                    )
-
-        self._repair_demo_accounts()
+        self._purge_legacy_demo_accounts()
+        self._ensure_admin_from_env()
 
         self.db.users.create_index([("email", ASCENDING)], unique=True)
         self.db.users.create_index([("id", ASCENDING)], unique=True)
@@ -222,44 +132,82 @@ class MongoStore:
         self.db.deposits.create_index([("user_id", ASCENDING)])
         self.db.deposits.create_index([("status", ASCENDING)])
 
-    def _seed_demo_ledger_if_empty(self, user: dict, demo_mlm: dict) -> None:
-        """Seed wallet_ledger from demo MLM snapshot when ledger is empty (fresh DB)."""
-        uid = int(user["id"])
-        if self.db.wallet_ledger.count_documents({"user_id": uid}) > 0:
-            return
-        for wallet, amount, desc in (
-            ("income", demo_mlm.get("income_wallet"), "Opening income wallet (demo)"),
-            (
-                "repurchase",
-                demo_mlm.get("repurchase_wallet"),
-                "Opening repurchase wallet (demo)",
-            ),
-            ("topup", demo_mlm.get("topup_wallet"), "Opening topup wallet (demo)"),
-        ):
-            amt = float(amount or 0)
-            if amt > 0:
-                self.add_wallet_entry(uid, wallet, amt, desc, "credit")
+    def _purge_legacy_demo_accounts(self) -> None:
+        """Remove hardcoded demo accounts from prior deployments."""
+        emails = list(LEGACY_DEMO_EMAILS)
+        env_admin = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+        if env_admin in emails:
+            emails.remove(env_admin)
 
-    def _repair_demo_accounts(self) -> None:
-        """Align demo roles and ledger balances with DEMO_USERS / DEMO_MLM_BY_EMAIL."""
-        for demo in DEMO_USERS:
-            existing = self.db.users.find_one({"email": demo["email"]})
-            if not existing:
-                continue
-            expected_role = demo.get("role")
-            if expected_role and existing.get("role") != expected_role:
-                self.db.users.update_one(
-                    {"email": demo["email"]}, {"$set": {"role": expected_role}}
-                )
-                existing = dict(existing)
-                existing["role"] = expected_role
-            demo_mlm = DEMO_MLM_BY_EMAIL.get(demo["email"])
-            if demo_mlm:
-                self._seed_demo_ledger_if_empty(existing, demo_mlm)
-                try:
-                    self.sync_live_mlm_stats(existing["id"])
-                except KeyError:
-                    pass
+        demo_users = list(
+            self.db.users.find({"email": {"$in": emails}}, {"id": 1, "email": 1})
+        )
+        if not demo_users:
+            return
+
+        user_ids = [int(u["id"]) for u in demo_users]
+        self.db.users.delete_many({"email": {"$in": emails}})
+
+        for coll, query in (
+            (self.db.wallet_ledger, {"user_id": {"$in": user_ids}}),
+            (self.db.deposits, {"user_id": {"$in": user_ids}}),
+            (self.db.help_tickets, {"user_id": {"$in": user_ids}}),
+            (self.db.farm_daily_logs, {"user_id": {"$in": user_ids}}),
+            (self.db.exchange_requests, {"user_id": {"$in": user_ids}}),
+            (self.db.interest_penalties, {"user_id": {"$in": user_ids}}),
+            (
+                self.db.wallet_transfers,
+                {
+                    "$or": [
+                        {"from_user_id": {"$in": user_ids}},
+                        {"to_user_id": {"$in": user_ids}},
+                    ]
+                },
+            ),
+        ):
+            coll.delete_many(query)
+
+        print(f"[seed] Removed {len(user_ids)} legacy demo account(s)")
+
+    def _ensure_admin_from_env(self) -> None:
+        """Create or update the production admin from ADMIN_EMAIL + ADMIN_PASSWORD."""
+        from .passwords import hash_password, needs_rehash
+
+        email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+        password = os.environ.get("ADMIN_PASSWORD", "").strip()
+        if not email or not password:
+            return
+
+        if len(password) < 12:
+            print("[seed] WARN: ADMIN_PASSWORD should be at least 12 characters")
+
+        existing = self.db.users.find_one({"email": email})
+        now = datetime.utcnow().isoformat() + "Z"
+        hashed = hash_password(password)
+
+        if existing is None:
+            user_id = self._next_id(self.db.users)
+            self.db.users.insert_one(
+                {
+                    "id": user_id,
+                    "full_name": os.environ.get("ADMIN_NAME", "Administrator").strip()
+                    or "Administrator",
+                    "email": email,
+                    "phone": os.environ.get("ADMIN_PHONE", "").strip(),
+                    "password": hashed,
+                    "role": "admin",
+                    "registered_at": now,
+                    "amount": 0.0,
+                    "country": "India",
+                }
+            )
+            print(f"[seed] Created admin account ({email})")
+            return
+
+        patch: Dict[str, Any] = {"role": "admin"}
+        if needs_rehash(existing.get("password", "")) or existing.get("role") != "admin":
+            patch["password"] = hashed
+        self.db.users.update_one({"email": email}, {"$set": patch})
 
     # ----------------------------- Referral tracking -----------------------
 
@@ -535,24 +483,10 @@ class MongoStore:
         stats["level_open"] = level_open_for_package(amount)
 
         ledger = self._income_totals_from_ledger(user_id)
-        demo_mlm = DEMO_MLM_BY_EMAIL.get((user.get("email") or "").lower())
-        if demo_mlm and not self._ledger_has_income_breakdown(user_id):
-            stats["direct_income"] = float(demo_mlm.get("direct_income", 0) or 0)
-            stats["level_income"] = float(demo_mlm.get("level_income", 0) or 0)
-            stats["investment_interest_total"] = float(
-                demo_mlm.get("investment_interest_total")
-                or demo_mlm.get("investment_return_income")
-                or 0
-            )
-            stats["investment_return_income"] = stats["investment_interest_total"]
-            stats["reward_bonus"] = float(demo_mlm.get("reward_bonus", 0) or 0)
-            stats["salary_bonus"] = float(demo_mlm.get("salary_bonus", 0) or 0)
-            stats["self_unit_profit"] = float(demo_mlm.get("self_unit_profit", 0) or 0)
-        else:
-            stats["direct_income"] = ledger["direct_income"]
-            stats["level_income"] = ledger["level_income"]
-            stats["investment_interest_total"] = ledger["investment_interest_total"]
-            stats["investment_return_income"] = ledger["investment_return_income"]
+        stats["direct_income"] = ledger["direct_income"]
+        stats["level_income"] = ledger["level_income"]
+        stats["investment_interest_total"] = ledger["investment_interest_total"]
+        stats["investment_return_income"] = ledger["investment_return_income"]
 
         stats["income_wallet"] = self._wallet_balance_from_ledger(user_id, "income")
         stats["repurchase_wallet"] = self._wallet_balance_from_ledger(user_id, "repurchase")
@@ -777,6 +711,21 @@ class MongoStore:
         )
         if not result:
             raise KeyError("not_found")
+        return self._serialize(result)
+
+    def admin_set_user_role(self, user_id: int, role: str) -> dict:
+        if role not in ("customer", "franchisee", "farmer"):
+            raise ValueError("invalid_role")
+        user = self.find_user_by_id(user_id)
+        if not user:
+            raise KeyError("not_found")
+        if user.get("role") == "admin":
+            raise ValueError("cannot_change_admin")
+        result = self.db.users.find_one_and_update(
+            {"id": user_id},
+            {"$set": {"role": role}},
+            return_document=True,
+        )
         return self._serialize(result)
 
     def list_users_public(self) -> List[dict]:

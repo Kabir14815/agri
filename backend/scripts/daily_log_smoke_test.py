@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -15,9 +16,12 @@ try:
 except ImportError:
     pass
 
+from _test_env import require_admin_creds
+
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8000/api"
-DEMO_EMAIL = "demo@kgffarming.com"
-DEMO_PASSWORD = "demo1234"
+TS = int(time.time())
+PASSWORD = "testpass123"
+INVEST = 250_000
 
 
 def fail(msg: str) -> None:
@@ -104,6 +108,7 @@ def multipart_log(token: str, watered: bool) -> dict:
 
 
 def main() -> None:
+    admin_email, admin_password = require_admin_creds()
     print(f"\n=== Daily log smoke test: {BASE} ===\n")
 
     health = json_req("GET", "/health")
@@ -111,24 +116,47 @@ def main() -> None:
         fail(f"health: {health}")
     print("OK  health")
 
+    reg = json_req(
+        "POST",
+        "/auth/register",
+        {
+            "full_name": f"Daily Log Member {TS}",
+            "email": f"dailylog.{TS}@example.com",
+            "phone": "9876512500",
+            "password": PASSWORD,
+            "role": "customer",
+        },
+    )
+    member_mid = reg["user"]["member_id"]
+    member_uid = reg["user"]["id"]
+
+    admin = json_req(
+        "POST",
+        "/auth/login",
+        {"member_id": admin_email, "password": admin_password},
+    )
+    json_req(
+        "PATCH",
+        f"/admin/users/{member_uid}/mlm",
+        {"amount": INVEST},
+        token=admin["token"],
+    )
+
     login = json_req(
         "POST",
         "/auth/login",
-        {"member_id": DEMO_EMAIL, "password": DEMO_PASSWORD},
+        {"member_id": member_mid, "password": PASSWORD},
     )
     token = login.get("token")
     user = login.get("user") or {}
     if not token or not user.get("member_id"):
         fail(f"login failed: {login}")
-    if token.startswith("demo-token-"):
-        print("WARN  legacy demo-token returned (deploy signed auth for production)")
-    else:
-        print("OK  signed session token")
+    print("OK  signed session token")
     print(f"OK  member login ({user.get('member_id')})")
 
     dash = json_req("GET", "/user/dashboard", token=token)
     if not dash.get("computed_at"):
-        print("WARN  dashboard missing computed_at (deploy latest backend)")
+        print("WARN  dashboard missing computed_at")
     if "daily_log" not in dash:
         fail(f"dashboard missing daily_log: {list(dash.keys())}")
     print("OK  dashboard with daily_log section")

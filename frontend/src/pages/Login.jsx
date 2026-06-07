@@ -105,8 +105,7 @@ export default function Login() {
       <div className="auth-card auth-card-premium" style={{ maxWidth: 480 }}>
         <h2>Member Login</h2>
         <p className="sub">
-          Sign in with your <strong>Member ID</strong> (e.g. KGF870365) and password from
-          registration.
+          Sign in with your <strong>Member ID</strong> and password from registration.
         </p>
 
         {ref && (
@@ -128,20 +127,6 @@ export default function Login() {
           </div>
         )}
 
-        <div className="demo-creds">
-          <strong>Demo member</strong>
-          <div>
-            Member ID: <code>KGF870365</code> / Password: <code>demo1234</code>
-          </div>
-          <button
-            type="button"
-            className="demo-fill"
-            onClick={() => setForm({ member_id: 'KGF870365', password: 'demo1234' })}
-          >
-            Fill demo credentials
-          </button>
-        </div>
-
         {status && <div className={`form-message ${status.type}`}>{status.text}</div>}
 
         <form onSubmit={onSubmit}>
@@ -152,7 +137,7 @@ export default function Login() {
               name="member_id"
               value={form.member_id}
               onChange={onChange}
-              placeholder="e.g. KGF870365"
+              placeholder="Your member ID or email"
               autoComplete="username"
               required
             />

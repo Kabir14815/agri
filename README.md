@@ -107,8 +107,19 @@ npm run build
 npm run preview
 ```
 
-## Notes & Next Steps
+## Production setup
 
-- Data is stored in **MongoDB Atlas** (`MONGODB_URI`). Default catalogue is seeded from `backend/app/data.py` on first run.
-- The auth flow stores plaintext credentials in memory — **do not use as-is in production**. Replace with hashed passwords (e.g. `passlib[bcrypt]`) and proper JWTs.
-- Images are pulled from Unsplash for the demo; replace with your own assets when deploying.
+- Data is stored in **MongoDB Atlas** (`MONGODB_URI`). The product catalogue is seeded from `backend/app/data.py` on first run.
+- Passwords are hashed with **PBKDF2**; session tokens are **HMAC-signed** (`AUTH_SECRET`).
+- **No demo accounts** are seeded. Set these in `backend/.env` (or Render env vars):
+
+| Variable | Purpose |
+|----------|---------|
+| `AUTH_SECRET` | Long random string for signed login tokens (`openssl rand -hex 32`) |
+| `ADMIN_EMAIL` | Production admin login email |
+| `ADMIN_PASSWORD` | Strong admin password (min 12 characters) |
+
+On startup the API removes legacy demo users (`demo@`, `partner@`, `farmer@`, hardcoded admin) and creates/updates the admin from `ADMIN_EMAIL` + `ADMIN_PASSWORD`.
+
+- Farmer accounts are assigned by an admin via **Admin → Users → role** (not public registration).
+- Replace Unsplash/blog placeholder images with your own assets when deploying.

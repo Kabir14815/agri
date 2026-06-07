@@ -1,4 +1,4 @@
-"""Signed session tokens — prevents forging user IDs via predictable demo-token-{id}."""
+"""Signed session tokens for authenticated API access."""
 from __future__ import annotations
 
 import base64
@@ -9,11 +9,28 @@ import time
 
 DEFAULT_TTL_DAYS = 30
 
+_INSECURE_SECRETS = frozenset(
+    {
+        "",
+        "change-me-in-production",
+        "change-me-to-a-long-random-secret",
+        "kgf-dev-auth-secret-set-AUTH_SECRET-in-env",
+    }
+)
+
+
+def _is_production() -> bool:
+    return os.getenv("RENDER") == "true" or os.getenv("ENV", "").lower() == "production"
+
 
 def _secret() -> bytes:
     key = os.getenv("AUTH_SECRET") or os.getenv("JWT_SECRET") or ""
-    if not key or key == "change-me-in-production":
-        # Dev fallback only — set AUTH_SECRET on Render for production.
+    if key in _INSECURE_SECRETS:
+        if _is_production():
+            raise RuntimeError(
+                "AUTH_SECRET must be set to a long random value in production "
+                "(openssl rand -hex 32)."
+            )
         key = "kgf-dev-auth-secret-set-AUTH_SECRET-in-env"
     return key.encode()
 

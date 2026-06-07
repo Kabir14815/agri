@@ -9,7 +9,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# Load .env when run directly
 try:
     from dotenv import load_dotenv
 
@@ -17,14 +16,15 @@ try:
 except ImportError:
     pass
 
+from _test_env import require_admin_creds
+
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8000/api"
 TS = int(time.time())
 USER_A_EMAIL = f"e2e.member.a.{TS}@example.com"
 USER_B_EMAIL = f"e2e.member.b.{TS}@example.com"
+SPONSOR_EMAIL = f"e2e.sponsor.{TS}@example.com"
 PASSWORD = "testpass123"
-DEMO_EMAIL = "demo@kgffarming.com"
-DEMO_PASSWORD = "demo1234"
-SPONSOR_CODE = "KGF870365"
+INVEST = 250_000
 
 
 class TestFailure(Exception):
@@ -59,6 +59,7 @@ def ok(label: str) -> None:
 
 
 def run() -> None:
+    admin_email, admin_password = require_admin_creds()
     print(f"\n=== E2E tests against {BASE} ===\n")
 
     health = req("GET", "/health")
@@ -66,15 +67,58 @@ def run() -> None:
         raise TestFailure(f"Health check failed: {health}")
     ok("Health")
 
-    sponsor = req("GET", f"/referral/lookup?code={SPONSOR_CODE}")
+    reg_s = req(
+        "POST",
+        "/auth/register",
+        {
+            "full_name": f"E2E Sponsor {TS}",
+            "email": SPONSOR_EMAIL,
+            "phone": "9876500000",
+            "password": PASSWORD,
+            "role": "customer",
+        },
+    )
+    sponsor_mid = reg_s["user"]["member_id"]
+    ok(f"Registered sponsor ({sponsor_mid})")
+
+    admin = req(
+        "POST",
+        "/auth/login",
+        {"member_id": admin_email, "password": admin_password},
+    )
+    admin_token = admin["token"]
+    ok("Admin login")
+
+    sponsor_login = req(
+        "POST",
+        "/auth/login",
+        {"member_id": sponsor_mid, "password": PASSWORD},
+    )
+    token_sponsor = sponsor_login["token"]
+
+    dep = req(
+        "POST",
+        "/user/deposits/json",
+        {
+            "payment_mode": "UPI",
+            "amount": INVEST,
+            "transaction_number": f"E2E{TS}",
+        },
+        token=token_sponsor,
+    )
+    dep_id = dep["deposit"]["id"]
+    req("PATCH", f"/admin/deposits/{dep_id}", {"status": "approved"}, token=admin_token)
+    ok(f"Sponsor deposit approved (Rs {INVEST:,})")
+
+    sponsor = req("GET", f"/referral/lookup?code={sponsor_mid}")
     if not sponsor.get("valid"):
         raise TestFailure(f"Sponsor lookup failed: {sponsor}")
-    ok(f"Referral lookup ({SPONSOR_CODE} -> {sponsor.get('sponsor_name')})")
+    ok(f"Referral lookup ({sponsor_mid} -> {sponsor.get('sponsor_name')})")
 
     req(
         "POST",
         "/referral/track-visit",
-        {"code": SPONSOR_CODE, "path": f"/ref/{SPONSOR_CODE}"},
+        {"code": sponsor_mid, "path": f"/ref/{sponsor_mid}"},
     )
     ok("Referral visit tracked")
 
@@ -87,7 +131,7 @@ def run() -> None:
             "phone": "9876500001",
             "password": PASSWORD,
             "role": "customer",
-            "sponsor_member_id": SPONSOR_CODE,
+            "sponsor_member_id": sponsor_mid,
         },
     )
     ok(f"Registered user A ({USER_A_EMAIL})")
@@ -97,7 +141,6 @@ def run() -> None:
     token_a = login_a["token"]
     ok(f"Login user A with member_id {member_a}")
 
-    dash_a = req("GET", "/user/dashboard", token=token_a)
     ref_info = req("GET", "/user/referral-info", token=token_a)
     if ref_info.get("member_id") != member_a:
         raise TestFailure("Referral info member_id mismatch")
@@ -122,14 +165,10 @@ def run() -> None:
     token_b = login_b["token"]
     ok(f"Login user B with member_id {member_b}")
 
-    demo = req("POST", "/auth/login", {"member_id": SPONSOR_CODE, "password": DEMO_PASSWORD})
-    token_demo = demo["token"]
-    ok("Login demo sponsor")
-
     lookup_b = req(
         "GET",
         f"/user/wallet/transfer/lookup?member_id={member_b}",
-        token=token_demo,
+        token=token_sponsor,
     )
     if lookup_b.get("member_id") != member_b:
         raise TestFailure(f"Transfer lookup failed: {lookup_b}")
@@ -138,12 +177,12 @@ def run() -> None:
     transfer = req(
         "POST",
         "/user/wallet/transfer",
-        {"to_member_id": member_b, "amount": 150},
-        token=token_demo,
+        {"to_member_id": member_b, "amount": 150, "wallet": "topup"},
+        token=token_sponsor,
     )
     if transfer.get("available_fund") is None:
         raise TestFailure(f"Transfer response missing balance: {transfer}")
-    ok(f"Demo transferred Rs 150 to {member_b}")
+    ok(f"Sponsor transferred Rs 150 to {member_b}")
 
     wallet_b = req("GET", "/user/wallet/transfer", token=token_b)
     if float(wallet_b.get("available_fund", 0)) < 150:
@@ -157,10 +196,10 @@ def run() -> None:
     )
     ok(f"User B lookup sponsor {member_a} -> {lookup_a.get('full_name')}")
 
-    transfer_back = req(
+    req(
         "POST",
         "/user/wallet/transfer",
-        {"to_member_id": member_a, "amount": 100},
+        {"to_member_id": member_a, "amount": 100, "wallet": "topup"},
         token=token_b,
     )
     ok("User B transferred Rs 100 back to user A")
@@ -175,7 +214,7 @@ def run() -> None:
         req(
             "POST",
             "/user/wallet/transfer",
-            {"to_member_id": member_b, "amount": 50},
+            {"to_member_id": member_b, "amount": 50, "wallet": "topup"},
             token=token_b,
         )
         raise TestFailure("Expected min amount error for ₹50")
@@ -199,7 +238,7 @@ def run() -> None:
     print("\n=== All E2E tests passed ===\n")
     print(f"  User A: {USER_A_EMAIL} / {PASSWORD}  ({member_a})")
     print(f"  User B: {USER_B_EMAIL} / {PASSWORD}  ({member_b})")
-    print(f"  Sponsor: {SPONSOR_CODE}\n")
+    print(f"  Sponsor: {sponsor_mid}\n")
 
 
 if __name__ == "__main__":

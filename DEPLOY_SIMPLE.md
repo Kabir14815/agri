@@ -72,14 +72,17 @@ Follow these steps **in order**. Copy-paste the values below.
 
 ---
 
-## Part 4 — Test login
+## Part 4 — Set production secrets on Render
 
-| Email | Password |
-|-------|----------|
-| demo@kgffarming.com | demo1234 |
-| admin@kgffarming.com | admin1234 |
+In Render → **Environment**, add:
 
-After login you should see **My Dashboard** with name, email, and amount.
+| Key | Value |
+|-----|--------|
+| `AUTH_SECRET` | Run `openssl rand -hex 32` locally |
+| `ADMIN_EMAIL` | Your admin email |
+| `ADMIN_PASSWORD` | Strong password (12+ characters) |
+
+Redeploy the API. Legacy demo logins are removed on startup. Use **Admin login** at `/admin/login` with your `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
 ---
 

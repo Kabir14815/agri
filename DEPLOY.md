@@ -39,6 +39,9 @@ Database name used by the app: **`kgf_farming`**
 |-----|--------|
 | `MONGODB_URI` | Your Atlas connection string |
 | `MONGODB_DB_NAME` | `kgf_farming` |
+| `AUTH_SECRET` | Long random string (`openssl rand -hex 32`) |
+| `ADMIN_EMAIL` | Production admin email |
+| `ADMIN_PASSWORD` | Strong admin password (min 12 chars) |
 | `CORS_ORIGINS` | `https://agriit.netlify.app,http://localhost:5173` |
 | `PYTHON_VERSION` | `3.12.8` (**required** — avoids Python 3.14 build failures with pydantic) |
 
@@ -108,10 +111,16 @@ npm run dev
 
 ---
 
-## Demo logins (seeded on first API start)
+## Production admin (required)
 
-| Role | Email | Password |
-|------|--------|----------|
-| Admin | admin@kgffarming.com | admin1234 |
-| Customer | demo@kgffarming.com | demo1234 |
-| Franchisee | partner@kgffarming.com | partner1234 |
+Set on Render **before** the first deploy after this update:
+
+| Variable | Example |
+|----------|---------|
+| `AUTH_SECRET` | output of `openssl rand -hex 32` |
+| `ADMIN_EMAIL` | your admin email |
+| `ADMIN_PASSWORD` | strong password (12+ chars) |
+
+Legacy demo accounts (`demo@kgffarming.com`, `admin@kgffarming.com`, etc.) are **removed automatically** on API startup. The admin account is created from your env vars.
+
+Sign in at `/admin/login` with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
