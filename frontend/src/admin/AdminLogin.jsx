@@ -19,7 +19,7 @@ export default function AdminLogin() {
     setLoading(true)
     setStatus(null)
     try {
-      await login(form.email, form.password)
+      await login(form.email.trim(), form.password)
       navigate(from, { replace: true })
     } catch (err) {
       setStatus({ type: 'error', text: err.message })
@@ -47,6 +47,8 @@ export default function AdminLogin() {
               name="email"
               value={form.email}
               onChange={onChange}
+              placeholder="admin@kgffarming.com"
+              autoComplete="username"
               required
             />
           </div>

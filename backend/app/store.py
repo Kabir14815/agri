@@ -97,7 +97,8 @@ class MongoStore:
         )
 
         self._purge_legacy_demo_accounts()
-        self._ensure_admin_from_env()
+        self._ensure_default_admin()
+        self._ensure_env_admin()
 
         self.db.users.create_index([("email", ASCENDING)], unique=True)
         self.db.users.create_index([("id", ASCENDING)], unique=True)
@@ -172,24 +173,20 @@ class MongoStore:
 
         print(f"[seed] Removed {len(user_ids)} legacy demo account(s)")
 
-    def _ensure_admin_from_env(self) -> None:
-        """Create or update the admin account from env vars or code defaults."""
+    def _upsert_admin(
+        self,
+        email: str,
+        password: str,
+        *,
+        full_name: str = "Administrator",
+        sync_password: bool = False,
+    ) -> None:
         from .passwords import hash_password, needs_rehash
 
-        env_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
-        env_password = os.environ.get("ADMIN_PASSWORD", "").strip()
-        using_defaults = not env_email or not env_password
-
-        email = env_email or DEFAULT_ADMIN_EMAIL
-        password = env_password or DEFAULT_ADMIN_PASSWORD
-
-        if using_defaults:
-            print(
-                f"[seed] ADMIN_EMAIL/ADMIN_PASSWORD not set — using default admin ({email}). "
-                "Set env vars in production for a custom admin account."
-            )
-        elif len(password) < 12:
-            print("[seed] WARN: ADMIN_PASSWORD should be at least 12 characters")
+        email = (email or "").strip().lower()
+        password = (password or "").strip()
+        if not email or not password:
+            return
 
         existing = self.db.users.find_one({"email": email})
         now = datetime.utcnow().isoformat() + "Z"
@@ -200,8 +197,7 @@ class MongoStore:
             self.db.users.insert_one(
                 {
                     "id": user_id,
-                    "full_name": os.environ.get("ADMIN_NAME", "Administrator").strip()
-                    or "Administrator",
+                    "full_name": full_name,
                     "email": email,
                     "phone": os.environ.get("ADMIN_PHONE", "").strip(),
                     "password": hashed,
@@ -214,14 +210,45 @@ class MongoStore:
             print(f"[seed] Created admin account ({email})")
             return
 
-        patch: Dict[str, Any] = {"role": "admin"}
+        patch: Dict[str, Any] = {"role": "admin", "full_name": full_name}
         if (
-            using_defaults
+            sync_password
             or needs_rehash(existing.get("password", ""))
             or existing.get("role") != "admin"
         ):
             patch["password"] = hashed
         self.db.users.update_one({"email": email}, {"$set": patch})
+
+    def _ensure_default_admin(self) -> None:
+        """Always keep the built-in admin account ready for /admin/login."""
+        self._upsert_admin(
+            DEFAULT_ADMIN_EMAIL,
+            DEFAULT_ADMIN_PASSWORD,
+            full_name=os.environ.get("ADMIN_NAME", "Administrator").strip() or "Administrator",
+            sync_password=True,
+        )
+
+    def _ensure_env_admin(self) -> None:
+        """Optional second admin when both ADMIN_EMAIL and ADMIN_PASSWORD are set."""
+        email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+        password = os.environ.get("ADMIN_PASSWORD", "").strip()
+        if not email or not password:
+            return
+        if email == DEFAULT_ADMIN_EMAIL:
+            return
+        if len(password) < 12:
+            print("[seed] WARN: ADMIN_PASSWORD should be at least 12 characters")
+        self._upsert_admin(
+            email,
+            password,
+            full_name=os.environ.get("ADMIN_NAME", "Administrator").strip() or "Administrator",
+            sync_password=False,
+        )
+
+    def _ensure_admin_from_env(self) -> None:
+        """Backward-compatible alias — prefer _ensure_default_admin + _ensure_env_admin."""
+        self._ensure_default_admin()
+        self._ensure_env_admin()
 
     # ----------------------------- Referral tracking -----------------------
 
