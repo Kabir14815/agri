@@ -153,7 +153,7 @@ export default function WalletTransfer() {
       <h3 className="mlm-section-label" style={{ marginTop: 32 }}>
         Transfer history
       </h3>
-      {data.transfers?.length === 0 ? (
+      {!data.transfers || data.transfers.length === 0 ? (
         <p className="mlm-hint">No wallet transfers yet.</p>
       ) : (
         <div className="mlm-table-wrap">

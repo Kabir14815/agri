@@ -227,9 +227,8 @@ export default function UserDashboardLayout() {
             Home &gt; {pageTitle}
           </div>
           <div className="mlm-topbar-right">
-            <button type="button" className="mlm-icon-btn" aria-label="Notifications">
+            <button type="button" className="mlm-icon-btn" aria-label="Help desk" title="Help Desk" onClick={() => navigate('/dashboard/help-desk')}>
               <FiBell />
-              <span className="mlm-badge">0</span>
             </button>
             <div className="mlm-user-chip">
               <span>{user?.full_name?.split(' ')[0] || 'Member'}…</span>

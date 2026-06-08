@@ -8,7 +8,10 @@ export default function ProfileEdit() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
+  const [loadError, setLoadError] = useState(null)
+
+  const loadProfile = () => {
+    setLoadError(null)
     api.getProfile().then((p) =>
       setForm({
         full_name: p.full_name || '',
@@ -22,8 +25,10 @@ export default function ProfileEdit() {
         nominee_name: p.nominee_name || '',
         nominee_relation: p.nominee_relation || '',
       }),
-    )
-  }, [])
+    ).catch((e) => setLoadError(e.message))
+  }
+
+  useEffect(() => { loadProfile() }, [])
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -42,6 +47,14 @@ export default function ProfileEdit() {
     }
   }
 
+  if (loadError) {
+    return (
+      <div className="mlm-loading">
+        <p className="form-message error">{loadError}</p>
+        <button type="button" className="btn btn-primary" onClick={loadProfile}>Retry</button>
+      </div>
+    )
+  }
   if (!form) return <div className="mlm-loading">Loading…</div>
 
   return (

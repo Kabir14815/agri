@@ -15,6 +15,7 @@ export default function DashboardDailyLog() {
   const [photo, setPhoto] = useState(null)
   const [preview, setPreview] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [payloadLoading, setPayloadLoading] = useState(true)
   const [status, setStatus] = useState(null)
 
   const today = payload?.today
@@ -23,7 +24,11 @@ export default function DashboardDailyLog() {
   const logDate = payload?.log_date || compliance?.log_date || new Date().toISOString().slice(0, 10)
 
   const load = useCallback(() => {
-    return api.getDailyLog().then(setPayload).catch(() => {})
+    setPayloadLoading(true)
+    return api.getDailyLog()
+      .then(setPayload)
+      .catch(() => {})
+      .finally(() => setPayloadLoading(false))
   }, [])
 
   useEffect(() => {
@@ -85,6 +90,10 @@ export default function DashboardDailyLog() {
   const submitted = compliance?.submitted_today
   const penaltyToday = compliance?.penalty_today || 0
   const penaltyTotal = compliance?.penalty_total || 0
+
+  if (payloadLoading && !payload) {
+    return <div className="mlm-loading">Loading daily log…</div>
+  }
 
   return (
     <>

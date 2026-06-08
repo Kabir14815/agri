@@ -8,7 +8,10 @@ export default function ProfileBank() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
+  const [loadError, setLoadError] = useState(null)
+
+  const loadProfile = () => {
+    setLoadError(null)
     api.getProfile().then((p) =>
       setForm({
         account_holder: p.bank?.account_holder || p.full_name || '',
@@ -16,8 +19,10 @@ export default function ProfileBank() {
         account_number: p.bank?.account_number || '',
         ifsc: p.bank?.ifsc || '',
       }),
-    )
-  }, [])
+    ).catch((e) => setLoadError(e.message))
+  }
+
+  useEffect(() => { loadProfile() }, [])
 
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -36,6 +41,14 @@ export default function ProfileBank() {
     }
   }
 
+  if (loadError) {
+    return (
+      <div className="mlm-loading">
+        <p className="form-message error">{loadError}</p>
+        <button type="button" className="btn btn-primary" onClick={loadProfile}>Retry</button>
+      </div>
+    )
+  }
   if (!form) return <div className="mlm-loading">Loading…</div>
 
   return (

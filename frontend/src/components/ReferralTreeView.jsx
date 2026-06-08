@@ -8,9 +8,11 @@ export function ReferralTreeNode({ node, onView, isRoot }) {
       <p className="mlm-tree-name">{node.full_name}</p>
       <p className="mlm-tree-stat">{node.referral_count}</p>
       <p className="mlm-tree-amount">{formatInrPlain(node.amount)}</p>
-      <button type="button" className="mlm-tree-view-btn" onClick={() => onView(node.member_id)}>
-        View
-      </button>
+      {node.member_id && (
+        <button type="button" className="mlm-tree-view-btn" onClick={() => onView(node.member_id)}>
+          View
+        </button>
+      )}
     </div>
   )
 }
@@ -21,8 +23,8 @@ function TreeBranch({ nodes, onView, depth = 1 }) {
     <>
       <div className="mlm-tree-connector" />
       <div className={`mlm-tree-level children-level mlm-tree-depth-${depth}`}>
-        {nodes.map((child) => (
-          <div key={child.member_id} className="mlm-tree-child-wrap">
+        {nodes.map((child, idx) => (
+          <div key={child.member_id || child.id || idx} className="mlm-tree-child-wrap">
             <ReferralTreeNode node={child} onView={onView} />
             <TreeBranch nodes={child.children} onView={onView} depth={depth + 1} />
           </div>
@@ -33,7 +35,10 @@ function TreeBranch({ nodes, onView, depth = 1 }) {
 }
 
 export default function ReferralTreeView({ tree, onView }) {
-  if (!tree?.root) return null
+  if (!tree) return null
+  if (!tree.root) {
+    return <p className="mlm-hint" style={{ marginTop: 16 }}>No referral tree data found for this member ID.</p>
+  }
   return (
     <div className="mlm-tree-canvas mlm-tree-canvas-nested">
       {tree.levels_open != null && (

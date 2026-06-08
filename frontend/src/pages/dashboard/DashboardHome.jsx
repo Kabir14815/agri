@@ -74,6 +74,19 @@ export default function DashboardHome() {
     }
   }
 
+  const shareReferral = async () => {
+    if (!d?.referral_link) return
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Join KGF Group', url: d.referral_link })
+      } catch {
+        // user cancelled or share unsupported — silently ignore
+      }
+    } else {
+      await copyReferral()
+    }
+  }
+
   if (loading && !d) {
     return <div className="mlm-loading">Loading dashboard…</div>
   }
@@ -124,13 +137,13 @@ export default function DashboardHome() {
         <label>Copy Referral Link</label>
         <div className="mlm-referral-actions">
           <input readOnly value={d.referral_link} />
-          <button type="button" onClick={copyReferral} title="Copy">
+          <button type="button" onClick={copyReferral} title="Copy link">
             <FiCopy />
           </button>
-          <button type="button" title="Invite">
+          <button type="button" title="Invite a member" onClick={() => navigate('/dashboard/register-member')}>
             <FiUserPlus />
           </button>
-          <button type="button" title="Share">
+          <button type="button" title="Share referral link" onClick={shareReferral}>
             <FiShare2 />
           </button>
         </div>

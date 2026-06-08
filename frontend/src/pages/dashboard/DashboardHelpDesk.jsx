@@ -8,15 +8,18 @@ export default function DashboardHelpDesk() {
   const [message, setMessage] = useState('')
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(null)
 
-  const load = () =>
-    api.getHelpDesk().then((r) => {
+  const load = () => {
+    setLoadError(null)
+    return api.getHelpDesk().then((r) => {
       setTickets(r.tickets || [])
       setFaqs(r.faqs || [])
-    })
+    }).catch((e) => setLoadError(e.message))
+  }
 
   useEffect(() => {
-    load().catch(() => {})
+    load()
   }, [])
 
   const onSubmit = async (e) => {
@@ -39,6 +42,12 @@ export default function DashboardHelpDesk() {
   return (
     <>
       <h2 className="mlm-page-title">Help Desk</h2>
+      {loadError && (
+        <div className="form-message error" style={{ marginBottom: 12 }}>
+          {loadError}
+          <button type="button" className="btn btn-sm btn-outline" style={{ marginLeft: 12 }} onClick={load}>Retry</button>
+        </div>
+      )}
       {status && <div className={`form-message ${status.type}`}>{status.text}</div>}
 
       <form className="mlm-profile-form narrow" onSubmit={onSubmit} style={{ marginBottom: 32 }}>

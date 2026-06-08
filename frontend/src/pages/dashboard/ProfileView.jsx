@@ -12,10 +12,23 @@ function Field({ label, value }) {
 
 export default function ProfileView() {
   const [profile, setProfile] = useState(null)
+  const [error, setError] = useState(null)
 
-  useEffect(() => {
-    api.getProfile().then(setProfile).catch(() => {})
-  }, [])
+  const load = () => {
+    setError(null)
+    api.getProfile().then(setProfile).catch((e) => setError(e.message))
+  }
+
+  useEffect(() => { load() }, [])
+
+  if (error) {
+    return (
+      <div className="mlm-loading">
+        <p className="form-message error">{error}</p>
+        <button type="button" className="btn btn-primary" onClick={load}>Retry</button>
+      </div>
+    )
+  }
 
   if (!profile) return <div className="mlm-loading">Loading profile…</div>
 
