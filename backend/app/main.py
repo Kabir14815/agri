@@ -576,7 +576,7 @@ async def farmer_submit_daily_log(
     except ValueError as exc:
         if str(exc) == "photo_required":
             raise HTTPException(status_code=400, detail="Photo is required") from exc
-        raise
+        raise HTTPException(status_code=500, detail="Unexpected error saving log") from exc
     return {
         "success": True,
         "log": log_public(record, include_image=True),
@@ -635,7 +635,7 @@ async def _submit_daily_log_for_user(
     except ValueError as exc:
         if str(exc) == "photo_required":
             raise HTTPException(status_code=400, detail="Photo is required") from exc
-        raise
+        raise HTTPException(status_code=500, detail="Unexpected error saving log") from exc
     return {
         "success": True,
         "log": log_public(record, include_image=True),
@@ -869,17 +869,17 @@ async def user_create_deposit(
                 status_code=400,
                 detail="Minimum investment is ₹2,50,000 for your first package",
             ) from exc
-        raise
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     filename, data = await _read_receipt_upload(receipt)
     try:
         dep = store.create_deposit_request(
-        user["id"],
-        float(amount),
-        payment_mode=mode,
-        transaction_number=txn,
-        note=txn,
-        receipt_filename=filename,
-        receipt_data=data,
+            user["id"],
+            float(amount),
+            payment_mode=mode,
+            transaction_number=txn,
+            note=txn,
+            receipt_filename=filename,
+            receipt_data=data,
         )
     except ValueError as exc:
         if str(exc) == "min_investment":
@@ -887,7 +887,7 @@ async def user_create_deposit(
                 status_code=400,
                 detail="Minimum investment is ₹2,50,000 for your first package",
             ) from exc
-        raise
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"success": True, "deposit": dep}
 
 
@@ -909,7 +909,7 @@ def user_create_deposit_json(
                 status_code=400,
                 detail="Minimum investment is ₹2,50,000 for your first package",
             ) from exc
-        raise
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     try:
         dep = store.create_deposit_request(
             user["id"],
@@ -924,7 +924,7 @@ def user_create_deposit_json(
                 status_code=400,
                 detail="Minimum investment is ₹2,50,000 for your first package",
             ) from exc
-        raise
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"success": True, "deposit": dep}
 
 

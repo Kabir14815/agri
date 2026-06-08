@@ -922,11 +922,20 @@ class MongoStore:
         return self.deposit_public(result)
 
     def approve_deposit(self, deposit_id: int) -> dict:
-        dep = self.find_deposit(deposit_id)
-        if not dep:
-            raise KeyError("not_found")
-        if dep["status"] != "pending":
+        # Atomically claim the pending deposit — prevents double-approval.
+        claimed = self.db.deposits.find_one_and_update(
+            {"id": deposit_id, "status": "pending"},
+            {"$set": {"status": "processing", "reviewed_at": datetime.utcnow().isoformat() + "Z"}},
+            return_document=ReturnDocument.AFTER,
+        )
+        if not claimed:
+            dep = self.find_deposit(deposit_id)
+            if not dep:
+                raise KeyError("not_found")
+            # Already approved/rejected — return current state.
             return self.deposit_public(dep)
+
+        dep = self._serialize(claimed)
         user = self.find_user_by_id(dep["user_id"])
         if not user:
             raise KeyError("not_found")
@@ -1105,7 +1114,12 @@ class MongoStore:
         )
 
     def has_compliant_daily_log(self, user_id: int, log_date) -> bool:
-        """True when member uploaded a crop photo for this UTC date."""
+        """True when member uploaded a crop photo for this UTC date.
+
+        A purged image (image_purged_at set) is still considered compliant because
+        the photo was genuinely uploaded on that day — purging is a scheduled cleanup.
+        An empty/missing image is non-compliant.
+        """
         from datetime import date as date_cls
 
         if isinstance(log_date, date_cls):
@@ -1115,10 +1129,13 @@ class MongoStore:
         record = self.get_farm_log_for_date(user_id, key)
         if not record:
             return False
-        return bool(
-            record.get("image_data")
-            or int(record.get("image_size_bytes", 0) or 0) > 0
-        )
+        # Photo is present (not yet purged)
+        if record.get("image_data"):
+            return True
+        # Photo was uploaded and later purged by retention policy — still compliant
+        if record.get("image_purged_at") and int(record.get("image_size_bytes", 0) or 0) > 0:
+            return True
+        return False
 
     def record_interest_penalties(
         self, user: dict, penalty_days: list, batch_id: str
@@ -1358,11 +1375,19 @@ class MongoStore:
         )
 
     def approve_exchange(self, exchange_id: int) -> dict:
-        ex = self.find_exchange(exchange_id)
-        if not ex:
-            raise KeyError("not_found")
-        if ex["status"] != "pending":
+        # Atomically claim the pending request — prevents double-approval.
+        claimed = self.db.exchange_requests.find_one_and_update(
+            {"id": exchange_id, "status": "pending"},
+            {"$set": {"status": "processing", "reviewed_at": datetime.utcnow().isoformat() + "Z"}},
+            return_document=ReturnDocument.AFTER,
+        )
+        if not claimed:
+            ex = self.find_exchange(exchange_id)
+            if not ex:
+                raise KeyError("not_found")
             return ex
+
+        ex = self._serialize(claimed)
         user = self.find_user_by_id(ex["user_id"])
         if not user:
             raise KeyError("not_found")
@@ -1370,9 +1395,11 @@ class MongoStore:
         to_w = ex["to_wallet"]
         amount = float(ex["amount"])
         if from_w not in self.WALLET_FIELDS or to_w not in self.WALLET_FIELDS:
+            self.set_exchange_status(exchange_id, "rejected")
             raise ValueError("invalid_wallet")
         balance = self._wallet_balance_from_ledger(user["id"], from_w)
         if balance < amount:
+            self.set_exchange_status(exchange_id, "rejected")
             raise ValueError("insufficient_balance")
         self.add_wallet_entry(
             user["id"],

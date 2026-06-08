@@ -5,11 +5,15 @@ import { api } from '../../api.js'
 
 export default function DashboardRegister() {
   const [info, setInfo] = useState(null)
+  const [loadError, setLoadError] = useState(null)
   const [copyMsg, setCopyMsg] = useState('')
 
-  useEffect(() => {
-    api.getReferralInfo().then(setInfo).catch(() => {})
-  }, [])
+  const load = () => {
+    setLoadError(null)
+    api.getReferralInfo().then(setInfo).catch((e) => setLoadError(e.message))
+  }
+
+  useEffect(() => { load() }, [])
 
   const copyLink = async () => {
     if (!info?.referral_link) return
@@ -22,6 +26,14 @@ export default function DashboardRegister() {
     }
   }
 
+  if (loadError) {
+    return (
+      <div className="mlm-loading">
+        <p className="form-message error">{loadError}</p>
+        <button type="button" className="btn btn-primary" onClick={load}>Retry</button>
+      </div>
+    )
+  }
   if (!info) return <div className="mlm-loading">Loading…</div>
 
   return (
