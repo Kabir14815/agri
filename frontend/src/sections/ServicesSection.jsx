@@ -6,7 +6,7 @@ export default function ServicesSection() {
   const [services, setServices] = useState([])
 
   useEffect(() => {
-    api.getServices().then(setServices).catch(() => {})
+    api.getServices().then(setServices).catch(() => setServices([]))
   }, [])
 
   return (

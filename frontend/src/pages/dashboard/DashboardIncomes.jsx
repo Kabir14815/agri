@@ -11,9 +11,18 @@ function ProgressBar({ percent }) {
 }
 
 export default function DashboardIncomes() {
-  const { data, loading } = useLiveDashboard()
+  const { data, loading, error, refresh } = useLiveDashboard()
 
-  if (loading || !data) return <div className="mlm-loading">Loading incomes…</div>
+  if (loading && !data) return <div className="mlm-loading">Loading incomes…</div>
+  if (error && !data) {
+    return (
+      <div className="mlm-loading">
+        <p className="form-message error">{error}</p>
+        <button type="button" className="btn btn-primary" onClick={refresh}>Retry</button>
+      </div>
+    )
+  }
+  if (!data) return <div className="mlm-loading">Loading incomes…</div>
 
   return (
     <>

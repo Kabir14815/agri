@@ -7,14 +7,16 @@ export default function WalletStatement() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
 
   const wallet = searchParams.get('wallet') || ''
 
   const load = (w) => {
     setLoading(true)
+    setLoadError(null)
     api.getWalletStatement(w || undefined)
       .then((r) => { setEntries(r.entries || []) })
-      .catch(() => {})
+      .catch((e) => { setLoadError(e.message) })
       .finally(() => setLoading(false))
   }
 
@@ -49,11 +51,17 @@ export default function WalletStatement() {
         Approved deposits appear under <strong>Topup</strong>. Daily interest and referral bonuses appear under <strong>Income</strong>.
         Interest accrues each time you visit any dashboard page.
       </p>
+      {loadError && (
+        <div className="form-message error" style={{ marginBottom: 12 }}>
+          {loadError}
+          <button type="button" className="btn btn-sm btn-outline" style={{ marginLeft: 12 }} onClick={() => load(wallet)}>Retry</button>
+        </div>
+      )}
       {loading ? (
         <div className="mlm-loading">Loading…</div>
-      ) : entries.length === 0 ? (
+      ) : entries.length === 0 && !loadError ? (
         <p className="mlm-hint">No transactions yet. Approved deposits and interest credits appear here.</p>
-      ) : (
+      ) : !loadError ? (
         <div className="mlm-table-wrap">
           <table className="mlm-rewards-table">
             <thead>

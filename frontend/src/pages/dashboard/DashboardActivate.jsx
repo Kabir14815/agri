@@ -2,9 +2,18 @@ import { Link } from 'react-router-dom'
 import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 
 export default function DashboardActivate() {
-  const { data: d, loading } = useLiveDashboard()
+  const { data: d, loading, error, refresh } = useLiveDashboard()
 
-  if (loading || !d) return <div className="mlm-loading">Loading…</div>
+  if (loading && !d) return <div className="mlm-loading">Loading…</div>
+  if (error && !d) {
+    return (
+      <div className="mlm-loading">
+        <p className="form-message error">{error}</p>
+        <button type="button" className="btn btn-primary" onClick={refresh}>Retry</button>
+      </div>
+    )
+  }
+  if (!d) return <div className="mlm-loading">Loading…</div>
 
   const active = d.package_amount > 0
   const minL = d.referral_plan?.min_investment || 250000

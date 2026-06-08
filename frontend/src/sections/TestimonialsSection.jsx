@@ -5,7 +5,7 @@ export default function TestimonialsSection() {
   const [items, setItems] = useState([])
 
   useEffect(() => {
-    api.getTestimonials().then(setItems).catch(() => {})
+    api.getTestimonials().then(setItems).catch(() => setItems([]))
   }, [])
 
   return (

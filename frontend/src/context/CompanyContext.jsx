@@ -11,6 +11,11 @@ const FALLBACK = {
   address:
     '1133/3, Sheetal Puri Colony, Apollo Road, Jind 126102 — Near Madhur Milan Hotel, Gali No. 03',
   tagline: 'Agriculture & Pure Eco Farming',
+  facebook: '',
+  twitter: '',
+  instagram: '',
+  youtube: '',
+  whatsapp: '+919355240503',
 }
 
 export function CompanyProvider({ children }) {

@@ -8,6 +8,7 @@ const SLIDES = [
     text: "Nutrient-rich organic fertilizer and soil conditioner made from decomposed organic matter — powered by Kamauput Growth Farming.",
     cta: 'Join Now',
     ctaTo: '/register',
+    ctaIsAnchor: false,
   },
   {
     eyebrow: 'Organic Crop Protection',
@@ -15,6 +16,7 @@ const SLIDES = [
     text: 'Bio-insecticides, growth boosters and soil care solutions — safe for crops, farmers and the environment.',
     cta: 'View Products',
     ctaTo: '/#products',
+    ctaIsAnchor: true,
   },
 ]
 
@@ -37,9 +39,15 @@ export default function Hero() {
           <h1>{current.title}</h1>
           <p>{current.text}</p>
           <div className="hero-actions">
-            <Link to={current.ctaTo} className="btn btn-accent">
-              {current.cta}
-            </Link>
+            {current.ctaIsAnchor ? (
+              <a href={current.ctaTo} className="btn btn-accent">
+                {current.cta}
+              </a>
+            ) : (
+              <Link to={current.ctaTo} className="btn btn-accent">
+                {current.cta}
+              </Link>
+            )}
             <Link to="/contact" className="btn btn-light">
               Contact Us
             </Link>

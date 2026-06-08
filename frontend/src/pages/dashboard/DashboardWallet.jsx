@@ -2,9 +2,18 @@ import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 import { formatInr } from '../../utils/format.js'
 
 export default function DashboardWallet() {
-  const { data: d, loading } = useLiveDashboard()
+  const { data: d, loading, error, refresh } = useLiveDashboard()
 
-  if (loading || !d) return <div className="mlm-loading">Loading wallet…</div>
+  if (loading && !d) return <div className="mlm-loading">Loading wallet…</div>
+  if (error && !d) {
+    return (
+      <div className="mlm-loading">
+        <p className="form-message error">{error}</p>
+        <button type="button" className="btn btn-primary" onClick={refresh}>Retry</button>
+      </div>
+    )
+  }
+  if (!d) return <div className="mlm-loading">Loading wallet…</div>
 
   const wallets = [
     { title: 'Income Wallet', amount: d.income_wallet, progress: d.income_wallet_progress },

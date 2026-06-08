@@ -4,10 +4,16 @@ import { api } from '../api.js'
 
 export default function Achievers() {
   const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  useEffect(() => {
-    api.getAchievers().then(setItems).catch(() => {})
-  }, [])
+  const load = () => {
+    setLoading(true)
+    setError(null)
+    api.getAchievers().then(setItems).catch((e) => setError(e.message)).finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
 
   return (
     <>
@@ -23,6 +29,16 @@ export default function Achievers() {
             </p>
           </div>
 
+          {loading ? (
+            <p className="text-center">Loading achievers…</p>
+          ) : error ? (
+            <div className="text-center">
+              <p style={{ color: '#ef4444', marginBottom: 12 }}>{error}</p>
+              <button type="button" className="btn btn-outline" onClick={load}>Try again</button>
+            </div>
+          ) : items.length === 0 ? (
+            <p className="text-center" style={{ color: 'var(--color-muted)' }}>No achievers to display yet.</p>
+          ) : (
           <div className="grid grid-3">
             {items.map((a) => (
               <article key={a.id} className="achiever-card">
@@ -35,6 +51,7 @@ export default function Achievers() {
               </article>
             ))}
           </div>
+          )}
         </div>
       </section>
     </>

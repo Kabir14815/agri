@@ -6,15 +6,27 @@ import { formatInr } from '../../utils/format.js'
 export default function WalletIncome() {
   const [w, setW] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   const load = () => {
     setLoading(true)
-    api.getWallet().then((d) => { setW(d); setLoading(false) }).catch(() => setLoading(false))
+    setError(null)
+    api.getWallet()
+      .then((d) => { setW(d); setLoading(false) })
+      .catch((e) => { setError(e.message); setLoading(false) })
   }
 
   useEffect(() => { load() }, [])
 
   if (loading && !w) return <div className="mlm-loading">Loading wallets…</div>
+  if (error && !w) {
+    return (
+      <div className="mlm-loading">
+        <p className="form-message error">{error}</p>
+        <button type="button" className="btn btn-primary" onClick={load}>Retry</button>
+      </div>
+    )
+  }
 
   return (
     <>

@@ -7,6 +7,7 @@ import {
   FiTwitter,
   FiInstagram,
   FiYoutube,
+  FiMessageCircle,
 } from 'react-icons/fi'
 import { useCompany } from '../context/CompanyContext.jsx'
 
@@ -14,6 +15,16 @@ export default function Footer() {
   const { company } = useCompany()
   const phone = company.phone?.replace(/\s/g, '') || '+919355240503'
   const tel = phone.startsWith('+') ? phone : `+${phone}`
+  const wa = company.whatsapp?.replace(/\D/g, '') || phone.replace(/\D/g, '')
+  const waUrl = `https://wa.me/${wa}`
+
+  const socials = [
+    { icon: FiFacebook, href: company.facebook, label: 'Facebook' },
+    { icon: FiTwitter, href: company.twitter, label: 'Twitter' },
+    { icon: FiInstagram, href: company.instagram, label: 'Instagram' },
+    { icon: FiYoutube, href: company.youtube, label: 'YouTube' },
+    { icon: FiMessageCircle, href: waUrl, label: 'WhatsApp' },
+  ].filter((s) => s.href)
 
   return (
     <footer>
@@ -41,12 +52,21 @@ export default function Footer() {
               Leading provider of vermicompost, organic fertilizers and natural crop protection
               solutions across India.
             </p>
-            <div className="social-icons">
-              <a href="#" aria-label="Facebook"><FiFacebook /></a>
-              <a href="#" aria-label="Twitter"><FiTwitter /></a>
-              <a href="#" aria-label="Instagram"><FiInstagram /></a>
-              <a href="#" aria-label="YouTube"><FiYoutube /></a>
-            </div>
+            {socials.length > 0 && (
+              <div className="social-icons">
+                {socials.map(({ icon: Icon, href, label }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    aria-label={label}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Icon />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>

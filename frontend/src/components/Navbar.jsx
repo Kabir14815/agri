@@ -59,9 +59,9 @@ export default function Navbar() {
               </ul>
             </li>
             <li>
-              <NavLink to="/#products" onClick={close}>
+              <a href="/#products" onClick={close}>
                 Products
-              </NavLink>
+              </a>
             </li>
             <li>
               <NavLink to="/services" onClick={close}>

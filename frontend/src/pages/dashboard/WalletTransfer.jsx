@@ -13,7 +13,12 @@ export default function WalletTransfer() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const load = () => api.getWalletTransfer().then(setData).catch(() => {})
+  const [loadError, setLoadError] = useState(null)
+
+  const load = () => {
+    setLoadError(null)
+    return api.getWalletTransfer().then(setData).catch((e) => setLoadError(e.message))
+  }
 
   useEffect(() => {
     load()
@@ -76,6 +81,14 @@ export default function WalletTransfer() {
     }
   }
 
+  if (loadError && !data) {
+    return (
+      <div className="mlm-loading">
+        <p className="form-message error">{loadError}</p>
+        <button type="button" className="btn btn-primary" onClick={load}>Retry</button>
+      </div>
+    )
+  }
   if (!data) return <div className="mlm-loading">Loading wallet transfer…</div>
 
   const minAmount = data.min_amount ?? 100
