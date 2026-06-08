@@ -9,6 +9,8 @@ import time
 
 DEFAULT_TTL_DAYS = 30
 
+DEFAULT_AUTH_SECRET = "kgf-farm-auth-7f3a9c2e1b8d4f6a0e5c9d2b7a1f4e8c"
+
 _INSECURE_SECRETS = frozenset(
     {
         "",
@@ -18,20 +20,27 @@ _INSECURE_SECRETS = frozenset(
     }
 )
 
+_warned_default_secret = False
+
 
 def _is_production() -> bool:
     return os.getenv("RENDER") == "true" or os.getenv("ENV", "").lower() == "production"
 
 
 def _secret() -> bytes:
+    global _warned_default_secret
     key = os.getenv("AUTH_SECRET") or os.getenv("JWT_SECRET") or ""
     if key in _INSECURE_SECRETS:
         if _is_production():
-            raise RuntimeError(
-                "AUTH_SECRET must be set to a long random value in production "
-                "(openssl rand -hex 32)."
-            )
-        key = "kgf-dev-auth-secret-set-AUTH_SECRET-in-env"
+            key = DEFAULT_AUTH_SECRET
+            if not _warned_default_secret:
+                print(
+                    "[auth] AUTH_SECRET not set — using built-in default. "
+                    "Set AUTH_SECRET in production for stronger security."
+                )
+                _warned_default_secret = True
+        else:
+            key = "kgf-dev-auth-secret-set-AUTH_SECRET-in-env"
     return key.encode()
 
 

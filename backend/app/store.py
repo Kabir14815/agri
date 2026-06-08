@@ -32,8 +32,11 @@ LEGACY_DEMO_EMAILS = (
     "demo@kgffarming.com",
     "partner@kgffarming.com",
     "farmer@kgffarming.com",
-    "admin@kgffarming.com",
 )
+
+# Used when ADMIN_EMAIL / ADMIN_PASSWORD env vars are not set.
+DEFAULT_ADMIN_EMAIL = "admin@kgffarming.com"
+DEFAULT_ADMIN_PASSWORD = "KgfAdmin@2026"
 
 
 class MongoStore:
@@ -170,15 +173,22 @@ class MongoStore:
         print(f"[seed] Removed {len(user_ids)} legacy demo account(s)")
 
     def _ensure_admin_from_env(self) -> None:
-        """Create or update the production admin from ADMIN_EMAIL + ADMIN_PASSWORD."""
+        """Create or update the admin account from env vars or code defaults."""
         from .passwords import hash_password, needs_rehash
 
-        email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
-        password = os.environ.get("ADMIN_PASSWORD", "").strip()
-        if not email or not password:
-            return
+        env_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+        env_password = os.environ.get("ADMIN_PASSWORD", "").strip()
+        using_defaults = not env_email or not env_password
 
-        if len(password) < 12:
+        email = env_email or DEFAULT_ADMIN_EMAIL
+        password = env_password or DEFAULT_ADMIN_PASSWORD
+
+        if using_defaults:
+            print(
+                f"[seed] ADMIN_EMAIL/ADMIN_PASSWORD not set — using default admin ({email}). "
+                "Set env vars in production for a custom admin account."
+            )
+        elif len(password) < 12:
             print("[seed] WARN: ADMIN_PASSWORD should be at least 12 characters")
 
         existing = self.db.users.find_one({"email": email})
@@ -205,7 +215,11 @@ class MongoStore:
             return
 
         patch: Dict[str, Any] = {"role": "admin"}
-        if needs_rehash(existing.get("password", "")) or existing.get("role") != "admin":
+        if (
+            using_defaults
+            or needs_rehash(existing.get("password", ""))
+            or existing.get("role") != "admin"
+        ):
             patch["password"] = hashed
         self.db.users.update_one({"email": email}, {"$set": patch})
 
