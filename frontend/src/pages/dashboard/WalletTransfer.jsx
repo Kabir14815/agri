@@ -107,7 +107,7 @@ export default function WalletTransfer() {
             className="form-control"
             value={toMemberId}
             onChange={(e) => setToMemberId(e.target.value.toUpperCase())}
-            placeholder="e.g. KGF870366"
+            placeholder="Recipient member ID"
             autoComplete="off"
             required
           />

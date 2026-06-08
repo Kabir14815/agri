@@ -310,7 +310,7 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
                     className="form-control"
                     value={sponsorId}
                     onChange={(e) => setSponsorId(e.target.value.toUpperCase())}
-                    placeholder="KGF870365"
+                    placeholder="Member ID"
                   />
                 </div>
               </div>

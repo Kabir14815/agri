@@ -1488,25 +1488,6 @@ textarea.form-control {
   font-weight: 600;
 }
 
-.demo-creds {
-  background: var(--color-bg-soft);
-  border: 1px dashed var(--color-primary-light);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  margin-bottom: 18px;
-  font-size: 13px;
-  color: var(--color-dark);
-}
-
-.demo-creds strong {
-  display: block;
-  color: var(--color-primary);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  margin-bottom: 6px;
-}
-
 /* Referral URL / code flows */
 .referral-landing-card {
   text-align: center;
@@ -1593,26 +1574,6 @@ textarea.form-control {
 .referral-code-hint.error {
   color: #b91c1c;
   font-weight: 600;
-}
-
-.demo-creds code {
-  background: #fff;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid var(--color-border);
-  font-size: 12px;
-}
-
-.demo-fill {
-  margin-top: 8px;
-  color: var(--color-primary);
-  font-weight: 600;
-  font-size: 12px;
-  text-decoration: underline;
-}
-
-.demo-fill:hover {
-  color: var(--color-primary-dark);
 }
 
 /* Contact page */
