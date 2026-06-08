@@ -12,7 +12,12 @@ export default function DashboardExchange() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const load = () => api.getExchange().then(setData).catch(() => {})
+  const [loadError, setLoadError] = useState(null)
+
+  const load = () => {
+    setLoadError(null)
+    return api.getExchange().then(setData).catch((e) => setLoadError(e.message))
+  }
 
   useEffect(() => {
     load()
@@ -38,6 +43,14 @@ export default function DashboardExchange() {
     }
   }
 
+  if (loadError && !data) {
+    return (
+      <div className="mlm-loading">
+        <p className="form-message error">{loadError}</p>
+        <button type="button" className="btn btn-primary" onClick={load}>Retry</button>
+      </div>
+    )
+  }
   if (!data) return <div className="mlm-loading">Loading exchange fund…</div>
 
   const w = data.wallets || {}

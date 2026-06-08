@@ -6,7 +6,7 @@ import { formatInrPlain } from '../../utils/format.js'
 const STATUS_CLASS = {
   pending: 'pending',
   approved: 'achieved',
-  rejected: 'pending',
+  rejected: 'rejected',
 }
 
 export default function DepositHistory() {
@@ -38,7 +38,9 @@ export default function DepositHistory() {
           Once admin approves your deposit your <strong>Topup Wallet</strong> and package amount update automatically — visit the dashboard or refresh this page to see the latest status.
         </p>
 
-        {items.length === 0 ? (
+        {loading ? (
+          <div className="mlm-loading" style={{ minHeight: 60 }}>Loading…</div>
+        ) : items.length === 0 ? (
           <p className="mlm-hint">No deposit requests yet.</p>
         ) : (
           <div className="mlm-table-wrap">
