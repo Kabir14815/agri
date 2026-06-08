@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   FiCopy,
   FiUserPlus,
   FiShare2,
-  FiDownload,
+  FiBarChart2,
   FiPhone,
   FiMapPin,
   FiCamera,
@@ -60,6 +60,7 @@ function DonutChart({ total, pending, cross }) {
 
 export default function DashboardHome() {
   const { data: d, loading, error, refresh } = useLiveDashboard()
+  const navigate = useNavigate()
   const [copyMsg, setCopyMsg] = useState('')
 
   const copyReferral = async () => {
@@ -183,8 +184,14 @@ export default function DashboardHome() {
               <small>Total Earning</small>
               <h2>{formatInr(d.total_earning, 3)}</h2>
             </div>
-            <button type="button" className="mlm-dl-btn" aria-label="Download">
-              <FiDownload />
+            <button
+              type="button"
+              className="mlm-dl-btn"
+              aria-label="View statement"
+              title="View wallet statement"
+              onClick={() => navigate('/dashboard/wallet/statement')}
+            >
+              <FiBarChart2 />
             </button>
           </div>
           <QuarterlyChart data={d.quarterly_earnings || [0, 0, 0, 0]} />
@@ -221,7 +228,9 @@ export default function DashboardHome() {
           <div>
             <small>Income Wallet</small>
             <h2>{formatInr(d.income_wallet, 2)}</h2>
-            <button type="button" className="mlm-btn-sm light">View Statement</button>
+            <Link to="/dashboard/wallet/statement?wallet=income" className="mlm-btn-sm light" style={{ display: 'inline-block', marginTop: 8 }}>
+              View Statement
+            </Link>
           </div>
           <div className="mlm-radial" style={{ '--p': d.income_wallet_progress }}>
             <span>{d.income_wallet_progress}%</span>
@@ -234,14 +243,15 @@ export default function DashboardHome() {
               <small>Repurchase Wallet</small>
               <h2>{formatInr(d.repurchase_wallet, 2)}</h2>
             </div>
-            <button type="button" className="mlm-dl-btn" aria-label="Download">
-              <FiDownload />
-            </button>
+            <Link to="/dashboard/wallet/repurchase" className="mlm-dl-btn" aria-label="View repurchase wallet" title="View repurchase wallet">
+              <FiBarChart2 />
+            </Link>
           </div>
           <div className="mlm-line-chart">
-            {[40, 55, 45, 70, 60, 80, 75].map((h, i) => (
-              <div key={i} className="mlm-line-bar" style={{ height: `${h}%` }} />
-            ))}
+            {(d.quarterly_earnings || [0, 0, 0, 0]).map((v, i) => {
+              const max = Math.max(...(d.quarterly_earnings || [1]), 1)
+              return <div key={i} className="mlm-line-bar" style={{ height: `${Math.max(8, (v / max) * 100)}%` }} />
+            })}
           </div>
         </article>
 
@@ -249,7 +259,9 @@ export default function DashboardHome() {
           <div className="mlm-wallet-block">
             <small>Topup Wallet</small>
             <h3>{formatInr(d.topup_wallet, 2)}</h3>
-            <button type="button" className="mlm-btn-sm light">View Statement</button>
+            <Link to="/dashboard/wallet/topup" className="mlm-btn-sm light" style={{ display: 'inline-block', marginTop: 8 }}>
+              View Statement
+            </Link>
           </div>
         </article>
 
@@ -278,27 +290,33 @@ export default function DashboardHome() {
         <article className="mlm-card mlm-card-business yellow">
           <small>Team Business</small>
           <h2>{formatInrPlain(d.team_business)}</h2>
-          <ProgressBar percent={72} color="#eab308" />
+          <ProgressBar
+            percent={Math.min(100, d.earning_limits?.total > 0 ? Math.round((d.team_business / d.earning_limits.total) * 100) : 0)}
+            color="#eab308"
+          />
+          <small style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>vs earning limit</small>
         </article>
 
         <article className="mlm-card mlm-card-business blue">
           <small>Direct Business</small>
           <h2>{formatInrPlain(d.direct_business)}</h2>
           <div className="mlm-line-chart mini">
-            {[30, 50, 40, 65, 55].map((h, i) => (
-              <div key={i} className="mlm-line-bar" style={{ height: `${h}%` }} />
-            ))}
+            {(d.quarterly_earnings || [0, 0, 0, 0]).map((v, i) => {
+              const max = Math.max(...(d.quarterly_earnings || [1]), 1)
+              return <div key={i} className="mlm-line-bar" style={{ height: `${Math.max(8, (v / max) * 100)}%` }} />
+            })}
           </div>
+          <small style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>Q1–Q4 earnings</small>
         </article>
 
         <article className="mlm-card mlm-card-business blue">
           <small>Direct Active Users</small>
           <h2>{d.direct_active_users}</h2>
-          <div className="mlm-line-chart mini">
-            {[20, 35, 45, 50, 48].map((h, i) => (
-              <div key={i} className="mlm-line-bar" style={{ height: `${h}%` }} />
-            ))}
-          </div>
+          <ProgressBar
+            percent={d.subscribers_count > 0 ? Math.round((d.direct_active_users / d.subscribers_count) * 100) : 0}
+            color="#3b82f6"
+          />
+          <small style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{d.subscribers_count} total subscribers</small>
         </article>
 
         <article className="mlm-card mlm-card-upgrade">

@@ -417,6 +417,8 @@ class MongoStore:
         direct = 0.0
         level = 0.0
         investment = 0.0
+        quarters = [0.0, 0.0, 0.0, 0.0]
+        year = datetime.utcnow().year
         for entry in self.list_wallet_ledger(user_id):
             if entry.get("direction") != "credit" or entry.get("wallet") != "income":
                 continue
@@ -428,11 +430,20 @@ class MongoStore:
                 level += amt
             elif "investment return" in desc:
                 investment += amt
+            try:
+                ts = entry.get("created_at") or ""
+                if ts[:4] == str(year):
+                    month = int(ts[5:7])
+                    q = (month - 1) // 3
+                    quarters[q] = round(quarters[q] + amt, 2)
+            except (ValueError, IndexError):
+                pass
         return {
             "direct_income": round(direct, 2),
             "level_income": round(level, 2),
             "investment_interest_total": round(investment, 2),
             "investment_return_income": round(investment, 2),
+            "quarterly_earnings": quarters,
         }
 
     def _wallet_balance_from_ledger(self, user_id: int, wallet: str) -> float:
@@ -528,6 +539,7 @@ class MongoStore:
         stats["level_income"] = ledger["level_income"]
         stats["investment_interest_total"] = ledger["investment_interest_total"]
         stats["investment_return_income"] = ledger["investment_return_income"]
+        stats["quarterly_earnings"] = ledger["quarterly_earnings"]
 
         stats["income_wallet"] = self._wallet_balance_from_ledger(user_id, "income")
         stats["repurchase_wallet"] = self._wallet_balance_from_ledger(user_id, "repurchase")
