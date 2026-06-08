@@ -37,6 +37,9 @@ export default function WalletStatement() {
           refresh
         </button>
       </div>
+      <p className="mlm-hint" style={{ marginBottom: 12 }}>
+        Approved deposits appear under <strong>Topup</strong>. Daily interest credits appear under <strong>Income</strong>. Interest accrues each time you visit any dashboard page.
+      </p>
       {entries.length === 0 ? (
         <p className="mlm-hint">No transactions yet. Approved deposits appear here.</p>
       ) : (

@@ -105,7 +105,7 @@ export default function Login() {
       <div className="auth-card auth-card-premium" style={{ maxWidth: 480 }}>
         <h2>Member Login</h2>
         <p className="sub">
-          Sign in with your <strong>Member ID</strong> and password from registration.
+          Sign in with your <strong>Member ID</strong> or email and password from registration.
         </p>
 
         {ref && (

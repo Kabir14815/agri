@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, Component } from 'react'
 import { Routes, Route, useLocation, Outlet } from 'react-router-dom'
 import TopBar from './components/TopBar.jsx'
 import Navbar from './components/Navbar.jsx'
@@ -50,6 +50,38 @@ function RouteFallback() {
   return <div className="route-loading">Loading…</div>
 }
 
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { error: null }
+  }
+  static getDerivedStateFromError(error) {
+    return { error }
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 48, textAlign: 'center', maxWidth: 480, margin: '0 auto' }}>
+          <h2 style={{ color: '#ef4444', marginBottom: 12 }}>Something went wrong</h2>
+          <p style={{ color: '#6b7280', marginBottom: 24 }}>
+            {this.state.error?.message || 'An unexpected error occurred.'}
+          </p>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              this.setState({ error: null })
+              window.location.reload()
+            }}
+          >
+            Reload page
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 function FarmerRoutes() {
   return (
     <FarmerAuthProvider>
@@ -80,6 +112,7 @@ export default function App() {
       <main
         className={`site-main${isMemberDash ? ' site-main--dash' : ''}${isAdmin ? ' site-main--admin' : ''}`}
       >
+        <ErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -146,6 +179,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>
+        </ErrorBoundary>
       </main>
       {!hideChrome && <Footer />}
       </CompanyProvider>

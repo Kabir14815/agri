@@ -11,20 +11,32 @@ const STATUS_CLASS = {
 
 export default function DepositHistory() {
   const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    api.listDeposits().then(setItems).catch(() => {})
-  }, [])
+  const load = () => {
+    setLoading(true)
+    api.listDeposits().then((d) => { setItems(d); setLoading(false) }).catch(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
 
   return (
     <div className="mlm-deposit-page">
       <div className="mlm-deposit-card" style={{ display: 'block' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 12 }}>
           <h1 className="mlm-deposit-title">Deposit History</h1>
-          <Link to="/dashboard/deposit" className="btn btn-outline btn-sm">
-            New deposit request
-          </Link>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="btn btn-outline btn-sm" onClick={load} disabled={loading}>
+              {loading ? 'Refreshing…' : 'Refresh'}
+            </button>
+            <Link to="/dashboard/deposit" className="btn btn-outline btn-sm">
+              New request
+            </Link>
+          </div>
         </div>
+        <p className="mlm-hint" style={{ marginBottom: 16 }}>
+          Once admin approves your deposit your <strong>Topup Wallet</strong> and package amount update automatically — visit the dashboard or refresh this page to see the latest status.
+        </p>
 
         {items.length === 0 ? (
           <p className="mlm-hint">No deposit requests yet.</p>

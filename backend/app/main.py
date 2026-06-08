@@ -812,6 +812,7 @@ def user_referral_tree(
 
 @app.get("/api/user/deposits")
 def user_deposits(user: dict = Depends(require_user), store: MongoStore = Depends(get_store)):
+    store.prepare_dashboard_user(user["id"])
     return {"deposits": store.list_deposits_for_user(user["id"])}
 
 
@@ -950,6 +951,7 @@ def user_wallet_statement(
     user: dict = Depends(require_user),
     store: MongoStore = Depends(get_store),
 ):
+    store.prepare_dashboard_user(user["id"])
     entries = store.list_wallet_ledger(user["id"], wallet)
     return {"entries": entries}
 
@@ -1057,12 +1059,14 @@ def user_incomes(
 
 @app.get("/api/user/transactions")
 def user_transactions(user: dict = Depends(require_user), store: MongoStore = Depends(get_store)):
+    store.prepare_dashboard_user(user["id"])
     return {"transactions": store.list_user_transactions(user["id"])}
 
 
 @app.get("/api/user/exchange")
 def user_list_exchange(user: dict = Depends(require_user), store: MongoStore = Depends(get_store)):
-    wallets = store._user_mlm_wallets(user)
+    refreshed = store.prepare_dashboard_user(user["id"])
+    wallets = store._user_mlm_wallets(refreshed)
     return {
         "wallets": {
             "income": wallets["income"],
