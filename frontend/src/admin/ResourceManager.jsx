@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
-import { FiEdit2, FiTrash2, FiPlus, FiX } from 'react-icons/fi'
+import { useRef, useState, useEffect } from 'react'
+import { FiEdit2, FiTrash2, FiPlus, FiX, FiUpload, FiLink } from 'react-icons/fi'
 import { adminApi } from '../api.js'
 import { useAdminDialog } from './AdminDialog.jsx'
+import { compressImageToDataUrl } from '../utils/compressImage.js'
 
 function emptyFromFields(fields) {
   const obj = {}
@@ -9,6 +10,117 @@ function emptyFromFields(fields) {
     obj[f.name] = f.default ?? (f.type === 'number' ? 0 : '')
   })
   return obj
+}
+
+/** Image upload + preview field for admin forms. */
+function ImageUploadField({ name, label, value, onChange }) {
+  const inputRef = useRef(null)
+  const [mode, setMode] = useState('upload') // 'upload' | 'url'
+  const [compressing, setCompressing] = useState(false)
+  const [error, setError] = useState(null)
+
+  const isDataUrl = value && value.startsWith('data:')
+  const hasImage = Boolean(value)
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setError(null)
+    setCompressing(true)
+    try {
+      const dataUrl = await compressImageToDataUrl(file)
+      onChange(name, dataUrl)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setCompressing(false)
+      // Reset file input so the same file can be re-selected
+      e.target.value = ''
+    }
+  }
+
+  const handleUrlInput = (e) => {
+    onChange(name, e.target.value)
+  }
+
+  const clear = () => {
+    onChange(name, '')
+    setError(null)
+  }
+
+  return (
+    <div className="admin-image-field">
+      {/* Current image preview */}
+      {hasImage && (
+        <div className="admin-image-preview-wrap">
+          <img
+            src={value}
+            alt="Preview"
+            className="admin-image-preview"
+            onError={(e) => { e.target.style.display = 'none' }}
+          />
+          <button type="button" className="admin-image-clear" onClick={clear} title="Remove image">
+            <FiX />
+          </button>
+        </div>
+      )}
+
+      {/* Mode toggle */}
+      <div className="admin-image-mode-tabs">
+        <button
+          type="button"
+          className={`admin-image-mode-tab ${mode === 'upload' ? 'active' : ''}`}
+          onClick={() => setMode('upload')}
+        >
+          <FiUpload size={13} /> Upload file
+        </button>
+        <button
+          type="button"
+          className={`admin-image-mode-tab ${mode === 'url' ? 'active' : ''}`}
+          onClick={() => setMode('url')}
+        >
+          <FiLink size={13} /> Paste URL
+        </button>
+      </div>
+
+      {mode === 'upload' ? (
+        <div>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleFile}
+          />
+          <button
+            type="button"
+            className="btn btn-outline"
+            style={{ width: '100%', justifyContent: 'center', gap: 8 }}
+            onClick={() => inputRef.current?.click()}
+            disabled={compressing}
+          >
+            <FiUpload />
+            {compressing ? 'Compressing…' : hasImage ? 'Replace image' : 'Choose image…'}
+          </button>
+          {isDataUrl && (
+            <p style={{ fontSize: 11, color: 'var(--color-muted)', marginTop: 4 }}>
+              Image stored as compressed file (~{Math.round(value.length / 1024)}KB)
+            </p>
+          )}
+        </div>
+      ) : (
+        <input
+          type="url"
+          className="form-control"
+          placeholder="https://example.com/image.jpg"
+          value={isDataUrl ? '' : (value || '')}
+          onChange={handleUrlInput}
+        />
+      )}
+
+      {error && <p style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}>{error}</p>}
+    </div>
+  )
 }
 
 export default function ResourceManager({
@@ -54,7 +166,12 @@ export default function ResourceManager({
 
   const onChange = (e) => {
     const { name, value, type } = e.target
-    setForm({ ...form, [name]: type === 'number' ? Number(value) : value })
+    setForm((prev) => ({ ...prev, [name]: type === 'number' ? Number(value) : value }))
+  }
+
+  // Called from ImageUploadField
+  const onImageChange = (name, value) => {
+    setForm((prev) => ({ ...prev, [name]: value }))
   }
 
   const save = async (e) => {
@@ -138,12 +255,24 @@ export default function ResourceManager({
                   <tr key={it.id}>
                     {imageField && (
                       <td>
-                        {it[imageField] && (
+                        {it[imageField] ? (
                           <img
                             src={it[imageField]}
                             alt=""
                             className="admin-thumb"
+                            loading="lazy"
                           />
+                        ) : (
+                          <div
+                            style={{
+                              width: 56, height: 56, borderRadius: 6,
+                              background: '#f3f4f6', display: 'flex',
+                              alignItems: 'center', justifyContent: 'center',
+                              fontSize: 11, color: '#9ca3af',
+                            }}
+                          >
+                            No img
+                          </div>
                         )}
                       </td>
                     )}
@@ -188,13 +317,21 @@ export default function ResourceManager({
                 {fields.map((f) => (
                   <div className="form-group" key={f.name}>
                     <label>{f.label}{f.required && ' *'}</label>
-                    {f.type === 'textarea' ? (
+                    {f.type === 'image' ? (
+                      <ImageUploadField
+                        name={f.name}
+                        label={f.label}
+                        value={form[f.name] ?? ''}
+                        onChange={onImageChange}
+                      />
+                    ) : f.type === 'textarea' ? (
                       <textarea
                         className="form-control"
                         name={f.name}
                         value={form[f.name] ?? ''}
                         onChange={onChange}
                         required={f.required}
+                        rows={4}
                       />
                     ) : (
                       <input

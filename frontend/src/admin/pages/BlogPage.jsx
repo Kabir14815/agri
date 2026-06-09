@@ -16,7 +16,7 @@ export default function BlogPage() {
       fields={[
         { name: 'title', label: 'Title', required: true },
         { name: 'excerpt', label: 'Excerpt', type: 'textarea', required: true },
-        { name: 'image', label: 'Image URL' },
+        { name: 'image', label: 'Cover image', type: 'image' },
         { name: 'date', label: 'Date (YYYY-MM-DD)' },
         { name: 'author', label: 'Author', default: 'KGF Team' },
       ]}

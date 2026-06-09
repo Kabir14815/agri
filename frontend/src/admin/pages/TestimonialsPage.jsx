@@ -16,7 +16,7 @@ export default function TestimonialsPage() {
         { name: 'name', label: 'Name', required: true },
         { name: 'role', label: 'Role', required: true },
         { name: 'message', label: 'Message', type: 'textarea', required: true },
-        { name: 'avatar', label: 'Avatar URL' },
+        { name: 'avatar', label: 'Avatar / photo', type: 'image' },
       ]}
     />
   )

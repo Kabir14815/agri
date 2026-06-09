@@ -20,7 +20,7 @@ export default function ProductsPage() {
         { name: 'price', label: 'Price (₹)', type: 'number', required: true },
         { name: 'original_price', label: 'Original price / MRP (₹)', type: 'number', required: true },
         { name: 'discount', label: 'Discount (%)', type: 'number' },
-        { name: 'image', label: 'Image URL' },
+        { name: 'image', label: 'Product image', type: 'image' },
         { name: 'description', label: 'Description', type: 'textarea' },
       ]}
     />

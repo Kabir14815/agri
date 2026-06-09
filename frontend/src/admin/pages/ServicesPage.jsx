@@ -18,7 +18,7 @@ export default function ServicesPage() {
         { name: 'title', label: 'Title', required: true },
         { name: 'subtitle', label: 'Subtitle', required: true },
         { name: 'description', label: 'Description', type: 'textarea', required: true },
-        { name: 'image', label: 'Image URL' },
+        { name: 'image', label: 'Service image', type: 'image' },
       ]}
     />
   )

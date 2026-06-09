@@ -16,7 +16,7 @@ export default function AchieversPage() {
         { name: 'name', label: 'Name', required: true },
         { name: 'title', label: 'Title / Rank', required: true },
         { name: 'location', label: 'Location', required: true },
-        { name: 'avatar', label: 'Avatar URL' },
+        { name: 'avatar', label: 'Avatar / photo', type: 'image' },
       ]}
     />
   )
