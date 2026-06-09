@@ -100,8 +100,21 @@ class MongoStore:
         self._ensure_default_admin()
         self._ensure_env_admin()
 
-        self.db.users.create_index([("email", ASCENDING)], unique=True)
-        self.db.users.create_index([("id", ASCENDING)], unique=True)
+        self._safe_ensure_indexes()
+
+    def _safe_ensure_indexes(self) -> None:
+        """Create indexes idempotently — silently skip any that already exist with the same specs."""
+        from pymongo.errors import OperationFailure
+
+        def idx(collection, keys, **kwargs):
+            try:
+                collection.create_index(keys, **kwargs)
+            except OperationFailure:
+                # Index with a conflicting name or different options already exists — leave it.
+                pass
+
+        idx(self.db.users, [("email", ASCENDING)], unique=True)
+        idx(self.db.users, [("id", ASCENDING)], unique=True)
         for name in list(COLLECTIONS.values()) + [
             "projects",
             "contacts",
@@ -114,33 +127,28 @@ class MongoStore:
             "farm_daily_logs",
             "interest_penalties",
         ]:
-            self.db[name].create_index([("id", ASCENDING)], unique=True)
-        self.db.farm_daily_logs.create_index(
-            [("user_id", ASCENDING), ("log_date", ASCENDING)], unique=True
-        )
-        self.db.farm_daily_logs.create_index([("log_date", DESCENDING)])
-        self.db.farm_daily_logs.create_index([("created_at", ASCENDING)])
-        self.db.interest_penalties.create_index(
-            [("user_id", ASCENDING), ("log_date", ASCENDING)], unique=True
-        )
-        self.db.interest_penalties.create_index([("log_date", DESCENDING)])
-        self.db.referral_visits.create_index([("code", ASCENDING)])
-        self.db.referral_visits.create_index([("visited_at", DESCENDING)])
-        self.db.users.create_index([("sponsor_member_id", ASCENDING)])
-        self.db.users.create_index([("mlm.member_id", ASCENDING)])
-        self.db.wallet_transfers.create_index([("from_user_id", ASCENDING)])
-        self.db.wallet_transfers.create_index([("to_user_id", ASCENDING)])
-        self.db.wallet_transfers.create_index([("created_at", DESCENDING)])
-        self.db.wallet_ledger.create_index([("user_id", ASCENDING), ("id", DESCENDING)])
-        self.db.wallet_ledger.create_index([("user_id", ASCENDING), ("wallet", ASCENDING)])
-        self.db.deposits.create_index([("user_id", ASCENDING)])
-        self.db.deposits.create_index([("status", ASCENDING)])
-        self.db.deposits.create_index([("created_at", DESCENDING)])
-        self.db.users.create_index([("email", ASCENDING)], unique=True, sparse=True)
-        self.db.users.create_index([("registered_at", DESCENDING)])
-        self.db.contacts.create_index([("submitted_at", DESCENDING)])
-        self.db.help_tickets.create_index([("user_id", ASCENDING), ("status", ASCENDING)])
-        self.db.exchange_requests.create_index([("user_id", ASCENDING), ("status", ASCENDING)])
+            idx(self.db[name], [("id", ASCENDING)], unique=True)
+        idx(self.db.farm_daily_logs, [("user_id", ASCENDING), ("log_date", ASCENDING)], unique=True)
+        idx(self.db.farm_daily_logs, [("log_date", DESCENDING)])
+        idx(self.db.farm_daily_logs, [("created_at", ASCENDING)])
+        idx(self.db.interest_penalties, [("user_id", ASCENDING), ("log_date", ASCENDING)], unique=True)
+        idx(self.db.interest_penalties, [("log_date", DESCENDING)])
+        idx(self.db.referral_visits, [("code", ASCENDING)])
+        idx(self.db.referral_visits, [("visited_at", DESCENDING)])
+        idx(self.db.users, [("sponsor_member_id", ASCENDING)])
+        idx(self.db.users, [("mlm.member_id", ASCENDING)])
+        idx(self.db.users, [("registered_at", DESCENDING)])
+        idx(self.db.wallet_transfers, [("from_user_id", ASCENDING)])
+        idx(self.db.wallet_transfers, [("to_user_id", ASCENDING)])
+        idx(self.db.wallet_transfers, [("created_at", DESCENDING)])
+        idx(self.db.wallet_ledger, [("user_id", ASCENDING), ("id", DESCENDING)])
+        idx(self.db.wallet_ledger, [("user_id", ASCENDING), ("wallet", ASCENDING)])
+        idx(self.db.deposits, [("user_id", ASCENDING)])
+        idx(self.db.deposits, [("status", ASCENDING)])
+        idx(self.db.deposits, [("created_at", DESCENDING)])
+        idx(self.db.contacts, [("submitted_at", DESCENDING)])
+        idx(self.db.help_tickets, [("user_id", ASCENDING), ("status", ASCENDING)])
+        idx(self.db.exchange_requests, [("user_id", ASCENDING), ("status", ASCENDING)])
 
     def _purge_legacy_demo_accounts(self) -> None:
         """Remove hardcoded demo accounts from prior deployments."""
