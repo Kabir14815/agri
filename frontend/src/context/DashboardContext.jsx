@@ -1,26 +1,12 @@
-/**
- * useLiveDashboard — reads from the shared DashboardContext when mounted inside
- * UserDashboardLayout (which wraps everything with DashboardProvider). Falls back
- * to an independent fetch if used outside the provider (e.g. tests or standalone).
- */
-import { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { DashboardContext } from '../context/DashboardContext.jsx'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
 import { useUserAuth } from '../user/UserAuth.jsx'
 
+export const DashboardContext = createContext(null)
+
 const REFRESH_MS = 5 * 60 * 1000
 
-export function useLiveDashboard() {
-  const ctx = useContext(DashboardContext)
-  // If inside DashboardProvider, use shared data — no extra fetch needed.
-  if (ctx) return ctx
-
-  // Standalone fallback (outside provider)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  return useStandaloneDashboard()
-}
-
-function useStandaloneDashboard() {
+export function DashboardProvider({ children }) {
   const { refreshUser } = useUserAuth()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -40,7 +26,6 @@ function useStandaloneDashboard() {
       })
       .catch((e) => {
         setError(e?.message || 'Could not load dashboard')
-        setData(null)
         throw e
       })
       .finally(() => setLoading(false))
@@ -66,5 +51,15 @@ function useStandaloneDashboard() {
     }
   }, [refresh])
 
-  return { data, loading, error, refresh }
+  return (
+    <DashboardContext.Provider value={{ data, loading, error, refresh }}>
+      {children}
+    </DashboardContext.Provider>
+  )
+}
+
+export function useDashboard() {
+  const ctx = useContext(DashboardContext)
+  if (!ctx) throw new Error('useDashboard must be used within DashboardProvider')
+  return ctx
 }

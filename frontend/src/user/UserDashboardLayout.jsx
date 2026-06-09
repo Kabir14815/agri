@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { DashboardProvider } from '../context/DashboardContext.jsx'
 import {
   FiHome,
   FiUser,
@@ -131,6 +132,7 @@ export default function UserDashboardLayout() {
   const pageTitle = TITLES[pathname] || 'Dashboard'
 
   return (
+    <DashboardProvider>
     <div className="mlm-dash">
       <aside className="mlm-sidebar">
         <div className="mlm-logo">
@@ -247,5 +249,6 @@ export default function UserDashboardLayout() {
         <footer className="mlm-footer">© KGF FARMING {new Date().getFullYear()}</footer>
       </div>
     </div>
+    </DashboardProvider>
   )
 }

@@ -104,7 +104,7 @@ DEPOSIT_PAYMENT_MODES = (
 
 
 class DepositStatusUpdate(BaseModel):
-    status: str = Field(..., pattern="^(approved|rejected)$")
+    status: str = Field(..., pattern="^(approved|rejected|cancelled)$")
 
 
 class AdminUserMlmUpdate(BaseModel):
@@ -1311,10 +1311,37 @@ def admin_update_deposit(
         if payload.status == "approved":
             dep = store.approve_deposit(deposit_id)
         else:
-            dep = store.set_deposit_status(deposit_id, "rejected")
+            dep = store.set_deposit_status(deposit_id, payload.status)
     except KeyError:
         raise _not_found() from None
     return {"success": True, "deposit": dep}
+
+
+@app.get("/api/admin/users/{user_id}/dashboard")
+def admin_user_dashboard(
+    user_id: int,
+    admin: dict = Depends(require_admin),
+    store: MongoStore = Depends(get_store),
+):
+    """Return full dashboard payload for a user — wallets, interest, daily log status."""
+    u = store.find_user_by_id(user_id)
+    if not u:
+        raise _not_found()
+    try:
+        refreshed = store.prepare_dashboard_user(user_id)
+    except Exception:
+        refreshed = u
+    dash = build_dashboard_payload(refreshed, store=store)
+    # Include recent daily logs (last 7) with image status
+    from .farmer_logs import log_public, today_utc
+    today = today_utc()
+    today_log = store.get_farm_log_for_date(user_id, today)
+    history = store.list_farm_logs_for_user(user_id, limit=7)
+    deposits = store.list_deposits_for_user(user_id)
+    dash["recent_logs"] = [log_public(h) for h in history]
+    dash["today_log"] = log_public(today_log, include_image=True) if today_log else None
+    dash["deposits"] = deposits
+    return dash
 
 
 @app.get("/api/admin/users/{user_id}/referrals")

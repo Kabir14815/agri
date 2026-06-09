@@ -218,6 +218,8 @@ export const adminApi = {
       body: JSON.stringify({ status }),
     }),
   getDepositReceipt: (id) => request(`/admin/deposits/${id}/receipt`, { auth: true }),
+  getUserDashboard: (userId) =>
+    request(`/admin/users/${userId}/dashboard`, { auth: true }),
   getUserReferrals: (userId) =>
     request(`/admin/users/${userId}/referrals`, { auth: true }),
   getUserReferralTree: (userId, memberId) =>

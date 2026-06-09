@@ -11,6 +11,9 @@ import {
   FiUsers,
   FiGitBranch,
   FiCheck,
+  FiTrendingUp,
+  FiImage,
+  FiAlertTriangle,
 } from 'react-icons/fi'
 import { adminApi } from '../../api.js'
 import { useAdminAuth } from '../AdminAuth.jsx'
@@ -45,21 +48,36 @@ function formatInr(n) {
   }).format(n ?? 0)
 }
 
+function WalletRow({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--color-border,#e5e7eb)' }}>
+      <span style={{ fontSize: 13, color: 'var(--color-muted,#6b7280)' }}>{label}</span>
+      <strong style={{ fontSize: 13 }}>{formatInr(value ?? 0)}</strong>
+    </div>
+  )
+}
+
 function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onViewTree }) {
   const dialog = useAdminDialog()
   const [amount, setAmount] = useState('')
   const [sponsorId, setSponsorId] = useState('')
   const [referrals, setReferrals] = useState(null)
   const [deposits, setDeposits] = useState([])
+  const [dashData, setDashData] = useState(null)
   const [saving, setSaving] = useState(false)
   const [depositBusy, setDepositBusy] = useState(null)
 
-  const loadDeposits = (userId) => {
+  const loadDeposits = (userId) =>
     adminApi
       .deposits()
-      .then((all) => setDeposits((all || []).filter((d) => d.user_id === userId)))
+      .then((rows) => setDeposits((rows || []).filter((d) => d.user_id === userId)))
       .catch(() => setDeposits([]))
-  }
+
+  const loadDashData = (userId) =>
+    adminApi
+      .getUserDashboard(userId)
+      .then(setDashData)
+      .catch(() => setDashData(null))
 
   useEffect(() => {
     if (user) {
@@ -67,12 +85,15 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
       setSponsorId(user.sponsor_member_id || user.mlm?.sponsor_member_id || '')
       setReferrals(null)
       setDeposits([])
+      setDashData(null)
       adminApi
         .getUserReferrals(user.id)
         .then((r) => setReferrals(r))
         .catch(() => setReferrals({ direct_count: 0, referrals: [] }))
       loadDeposits(user.id)
+      if (user.role !== 'admin') loadDashData(user.id)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   if (!user) return null
@@ -109,11 +130,14 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
         amount: value,
         note: `Admin activation — ${user.member_id || user.id}`,
       })
+      // Reload deposits (pending ones are now auto-cancelled by the backend)
+      await loadDeposits(user.id)
+      await loadDashData(user.id)
       const refreshed = await adminApi.getUserReferrals(user.id)
       setReferrals(refreshed)
       onAmountSaved?.(value)
       await dialog.success(
-        'Member approved and activated. Daily interest (10% p.m., 1% TDS) will accrue to their income wallet.',
+        'Member approved and activated. Any pending deposit requests from this member have been cancelled. Daily interest (10% p.m., 1% TDS) will accrue to their income wallet.',
         'Member activated',
       )
     } catch (e) {
@@ -138,15 +162,12 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
 
     setDepositBusy(depositId)
     try {
-      await adminApi.updateDeposit(depositId, newStatus)
-      loadDeposits(user.id)
-      if (isApprove) {
-        const all = await adminApi.deposits()
-        const approved = all.find((d) => d.id === depositId)
-        if (approved) {
-          setAmount(String(approved.amount))
-          onAmountSaved?.(approved.amount)
-        }
+      const res = await adminApi.updateDeposit(depositId, newStatus)
+      await loadDeposits(user.id)
+      await loadDashData(user.id)
+      if (isApprove && res?.deposit?.amount) {
+        setAmount(String(res.deposit.amount))
+        onAmountSaved?.(res.deposit.amount)
       }
       await dialog.success(
         `Deposit #${depositId} has been ${newStatus}.`,
@@ -158,6 +179,9 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
       setDepositBusy(null)
     }
   }
+
+  const todayLog = dashData?.today_log
+  const recentLogs = dashData?.recent_logs || []
 
   return (
     <div className="admin-modal-backdrop admin-modal-backdrop--profile" onClick={onClose}>
@@ -211,6 +235,7 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
                     <div key={d.id} className="admin-pending-deposit-row">
                       <span>
                         #{d.id} — {formatInr(d.amount)} — {formatDate(d.created_at)}
+                        {d.transaction_number && <> — <em>{d.transaction_number}</em></>}
                       </span>
                       <div className="admin-pending-deposit-actions">
                         <button
@@ -255,6 +280,7 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
               <p className="user-id">{user.member_id || `KGF${870000 + user.id}`}</p>
             </div>
           </div>
+
           <div className="admin-profile-details">
             <div className="profile-detail-row">
               <FiMail />
@@ -342,6 +368,90 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
               </div>
             </div>
           </div>
+
+          {/* ── Financial summary ─────────────────────────────────────── */}
+          {dashData && user.role !== 'admin' && (
+            <div className="admin-profile-section">
+              <h4 style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <FiTrendingUp /> Wallets &amp; Interest
+              </h4>
+              <div style={{ display: 'grid', gap: 4 }}>
+                <WalletRow label="Income wallet" value={dashData.income_wallet} />
+                <WalletRow label="Repurchase wallet" value={dashData.repurchase_wallet} />
+                <WalletRow label="Top-up wallet" value={dashData.topup_wallet} />
+                <WalletRow label="Total earnings" value={dashData.total_earning} />
+                <WalletRow label="Investment return (net, earned)" value={dashData.investment?.total_interest_net} />
+                <WalletRow label="TDS deducted (1%)" value={dashData.investment?.total_tds} />
+                <WalletRow label="Daily net interest (expected)" value={dashData.investment?.daily_net} />
+                <WalletRow
+                  label="Interest penalty (missed days)"
+                  value={dashData.investment?.penalty_total ?? dashData.daily_log?.penalty_total}
+                />
+              </div>
+              {(dashData.daily_log?.missed_days_total ?? 0) > 0 && (
+                <p style={{ marginTop: 8, fontSize: 12, color: '#b45309', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <FiAlertTriangle size={13} />
+                  {dashData.daily_log.missed_days_total} day(s) missed — interest cut applied
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Daily log / crop photos ───────────────────────────────── */}
+          {user.role !== 'admin' && (
+            <div className="admin-profile-section">
+              <h4 style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <FiImage /> Daily crop logs
+              </h4>
+              {!dashData ? (
+                <p style={{ fontSize: 13, color: 'var(--color-muted)' }}>Loading…</p>
+              ) : recentLogs.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--color-muted)' }}>No logs submitted yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {recentLogs.map((log) => (
+                    <div key={log.id} style={{ textAlign: 'center' }}>
+                      {log.has_image && todayLog?.id === log.id && todayLog.image_data ? (
+                        <img
+                          src={todayLog.image_data}
+                          alt={`log ${log.date}`}
+                          style={{ width: 70, height: 70, objectFit: 'cover', borderRadius: 6, border: '2px solid #16a34a' }}
+                        />
+                      ) : log.has_image ? (
+                        <div
+                          style={{
+                            width: 70, height: 70, borderRadius: 6,
+                            background: '#d1fae5', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                            fontSize: 11, color: '#065f46',
+                          }}
+                        >
+                          <FiImage size={20} />
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            width: 70, height: 70, borderRadius: 6,
+                            background: '#fee2e2', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                            fontSize: 11, color: '#991b1b',
+                          }}
+                        >
+                          <FiAlertTriangle size={20} />
+                        </div>
+                      )}
+                      <div style={{ fontSize: 10, marginTop: 3, color: 'var(--color-muted)' }}>
+                        {log.date?.slice(5)}
+                      </div>
+                      <div style={{ fontSize: 10, color: log.watered ? '#16a34a' : '#dc2626' }}>
+                        {log.watered ? '✓ watered' : '✗ dry'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="admin-modal-foot">
           {user.role !== 'admin' && (

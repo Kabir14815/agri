@@ -67,6 +67,7 @@ export default function DepositsPage() {
     pending: items.filter((d) => d.status === 'pending').length,
     approved: items.filter((d) => d.status === 'approved').length,
     rejected: items.filter((d) => d.status === 'rejected').length,
+    cancelled: items.filter((d) => d.status === 'cancelled').length,
   }
 
   return (
@@ -81,7 +82,7 @@ export default function DepositsPage() {
       {status && <div className={`form-message ${status.type}`}>{status.text}</div>}
 
       <div className="admin-filter-tabs">
-        {['pending', 'approved', 'rejected', 'all'].map((f) => (
+        {['pending', 'approved', 'rejected', 'cancelled', 'all'].map((f) => (
           <button
             key={f}
             type="button"

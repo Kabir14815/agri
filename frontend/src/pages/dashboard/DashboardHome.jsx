@@ -9,6 +9,7 @@ import {
   FiMapPin,
   FiCamera,
   FiAlertTriangle,
+  FiRefreshCw,
 } from 'react-icons/fi'
 import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 import { formatInr, formatInrPlain } from '../../utils/format.js'
@@ -24,16 +25,22 @@ function ProgressBar({ percent, color = '#22c55e' }) {
 function QuarterlyChart({ data }) {
   const max = Math.max(...data, 1)
   const labels = ['Q1', 'Q2', 'Q3', 'Q4']
+  const hasData = data.some((v) => v > 0)
   return (
     <div className="mlm-bar-chart">
       {data.map((v, i) => (
         <div key={labels[i]} className="mlm-bar-col">
           <div
             className="mlm-bar"
-            style={{ height: `${(v / max) * 100}%` }}
+            style={{ height: hasData ? `${Math.max(4, (v / max) * 100)}%` : '4%' }}
             title={formatInr(v)}
           />
-          <small>{labels[i]}</small>
+          <small style={{ fontSize: 9 }}>{labels[i]}</small>
+          {v > 0 && (
+            <small style={{ fontSize: 8, opacity: 0.7 }}>
+              {v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v.toFixed(0)}
+            </small>
+          )}
         </div>
       ))}
     </div>
@@ -41,18 +48,20 @@ function QuarterlyChart({ data }) {
 }
 
 function DonutChart({ total, pending, cross }) {
-  const sum = total + pending + cross || 1
-  const t = (total / sum) * 100
-  const p = (pending / sum) * 100
-  const c = 100 - t - p
-  const grad = `conic-gradient(#3b82f6 0% ${t}%, #f97316 ${t}% ${t + p}%, #ef4444 ${t + p}% 100%)`
+  const used = Math.max(0, total - pending - cross)
+  const sum = total || 1
+  const usedPct = Math.min(100, (used / sum) * 100)
+  const pendingPct = Math.min(100 - usedPct, (pending / sum) * 100)
+  const crossPct = Math.min(100 - usedPct - pendingPct, (cross / sum) * 100)
+  const grad = `conic-gradient(#3b82f6 0% ${usedPct}%, #f97316 ${usedPct}% ${usedPct + pendingPct}%, #ef4444 ${usedPct + pendingPct}% ${usedPct + pendingPct + crossPct}%, #e5e7eb ${usedPct + pendingPct + crossPct}% 100%)`
   return (
     <div className="mlm-donut-wrap">
       <div className="mlm-donut" style={{ background: grad }} />
       <ul className="mlm-donut-legend">
-        <li><span className="dot blue" /> Total Limit</li>
-        <li><span className="dot orange" /> Pending Limit</li>
-        <li><span className="dot red" /> Cross Limit</li>
+        <li><span className="dot blue" /> Used {formatInr(used, 0)}</li>
+        <li><span className="dot orange" /> Pending {formatInr(pending, 0)}</li>
+        <li><span className="dot red" /> Capped {formatInr(cross, 0)}</li>
+        <li style={{ opacity: 0.6 }}><span className="dot" style={{ background: '#e5e7eb' }} /> Available {formatInr(Math.max(0, total - used - pending - cross), 0)}</li>
       </ul>
     </div>
   )
@@ -62,6 +71,12 @@ export default function DashboardHome() {
   const { data: d, loading, error, refresh } = useLiveDashboard()
   const navigate = useNavigate()
   const [copyMsg, setCopyMsg] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+
+  const handleRefresh = () => {
+    setRefreshing(true)
+    refresh().finally(() => setRefreshing(false))
+  }
 
   const copyReferral = async () => {
     if (!d?.referral_link) return
@@ -111,11 +126,24 @@ export default function DashboardHome() {
 
   return (
     <>
-      <div className="mlm-welcome">
-        <h1>
-          Welcome, {d.full_name} <span className="mlm-member-id">({d.member_id})</span>
-        </h1>
-        <span className="mlm-rank-badge">{d.rank}</span>
+      <div className="mlm-welcome" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <h1>
+            Welcome, {d.full_name} <span className="mlm-member-id">({d.member_id})</span>
+          </h1>
+          <span className="mlm-rank-badge">{d.rank}</span>
+        </div>
+        <button
+          type="button"
+          className="btn btn-outline"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '6px 14px' }}
+          onClick={handleRefresh}
+          disabled={refreshing || loading}
+          title="Refresh dashboard data"
+        >
+          <FiRefreshCw style={{ animation: (refreshing || loading) ? 'spin 1s linear infinite' : 'none' }} />
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
 
       <div className="mlm-summary-row">
@@ -342,9 +370,9 @@ export default function DashboardHome() {
       </div>
       {d.computed_at && (
         <p className="mlm-hint" style={{ marginTop: 24 }}>
-          Balances and incomes refresh on each visit (last updated{' '}
-          {new Date(d.computed_at).toLocaleString()} UTC). Investment interest accrues daily
-          when you open the dashboard.
+          Data last computed: {new Date(d.computed_at).toLocaleTimeString()} — refreshes on each
+          page visit and every 5 minutes. Investment interest accrues daily when you open the
+          dashboard.
         </p>
       )}
     </>

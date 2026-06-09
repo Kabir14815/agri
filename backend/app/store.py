@@ -567,6 +567,14 @@ class MongoStore:
             2,
         )
 
+        # income_wallet_progress: % of income wallet vs earning limit cap (dynamic)
+        limit_total = max(float(stats.get("earning_limit_total") or 0), amount * 10 if amount else 20_000)
+        income_bal = float(stats.get("income_wallet", 0) or 0)
+        if limit_total > 0:
+            stats["income_wallet_progress"] = min(100, int((income_bal / limit_total) * 100))
+        else:
+            stats["income_wallet_progress"] = 0
+
         parts = [user.get("city"), user.get("state")]
         if any(parts):
             stats["location"] = ", ".join(p for p in parts if p)
@@ -883,8 +891,14 @@ class MongoStore:
         note: str = "",
         payment_mode: str = "Admin activation",
     ) -> dict:
-        """Audit trail when admin sets investment directly (does not change balance again)."""
+        """Audit trail when admin sets investment directly (does not change balance again).
+        Also cancels any outstanding pending deposits so they don't clog the pending queue."""
         now = datetime.utcnow().isoformat() + "Z"
+        # Cancel all pending deposits for this user (they are superseded by this manual approval)
+        self.db.deposits.update_many(
+            {"user_id": user_id, "status": "pending"},
+            {"$set": {"status": "cancelled", "reviewed_at": now, "note": "Superseded by admin activation"}},
+        )
         dep_id = self._next_id(self.db.deposits)
         record = {
             "id": dep_id,
