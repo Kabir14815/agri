@@ -135,6 +135,12 @@ class MongoStore:
         self.db.wallet_ledger.create_index([("user_id", ASCENDING), ("wallet", ASCENDING)])
         self.db.deposits.create_index([("user_id", ASCENDING)])
         self.db.deposits.create_index([("status", ASCENDING)])
+        self.db.deposits.create_index([("created_at", DESCENDING)])
+        self.db.users.create_index([("email", ASCENDING)], unique=True, sparse=True)
+        self.db.users.create_index([("registered_at", DESCENDING)])
+        self.db.contacts.create_index([("submitted_at", DESCENDING)])
+        self.db.help_tickets.create_index([("user_id", ASCENDING), ("status", ASCENDING)])
+        self.db.exchange_requests.create_index([("user_id", ASCENDING), ("status", ASCENDING)])
 
     def _purge_legacy_demo_accounts(self) -> None:
         """Remove hardcoded demo accounts from prior deployments."""
@@ -645,6 +651,10 @@ class MongoStore:
             "ifsc": "",
         })
         user["mlm"] = default_mlm_stats(user["id"], user["amount"])
+        # Persist the member_id immediately so it's always queryable in the DB.
+        from .mlm import member_id_for as _mid_for
+        if not user["mlm"].get("member_id"):
+            user["mlm"]["member_id"] = _mid_for(user["id"])
         from .referral import member_id_from_user, normalize_member_id
 
         sponsor = normalize_member_id(data.get("sponsor_member_id"))
@@ -791,19 +801,28 @@ class MongoStore:
 
     def list_users_public(self) -> List[dict]:
         from .referral import member_id_from_user
+        from .mlm import member_id_for
 
+        # Single query — no N+1 per user.
         users = self._serialize_many(self.db.users.find())
         for u in users:
             u.pop("password", None)
-            mid = member_id_from_user(u)
-            u["member_id"] = mid
-            u["direct_referral_count"] = len(self.list_direct_referrals(mid))
+            u["member_id"] = member_id_from_user(u)
+
+        # Build lookup maps in one pass to resolve sponsor names and referral counts.
+        mid_to_name: dict = {u["member_id"]: u.get("full_name", "") for u in users}
+        referral_counts: dict = {}  # sponsor_member_id -> count
+        for u in users:
+            s = (u.get("sponsor_member_id") or "").strip().upper()
+            if s:
+                referral_counts[s] = referral_counts.get(s, 0) + 1
+
+        for u in users:
+            mid = u["member_id"]
+            u["direct_referral_count"] = referral_counts.get(mid, 0)
             sponsor_mid = (u.get("sponsor_member_id") or "").strip().upper()
-            if sponsor_mid:
-                sponsor = self.find_user_by_member_id(sponsor_mid)
-                u["sponsor_name"] = sponsor.get("full_name") if sponsor else None
-            else:
-                u["sponsor_name"] = None
+            u["sponsor_name"] = mid_to_name.get(sponsor_mid) if sponsor_mid else None
+
         users.sort(key=lambda x: x.get("registered_at") or "", reverse=True)
         return users
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   FiTrash2,
   FiMail,
@@ -367,6 +367,41 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
                 <p>{formatDate(user.registered_at)}</p>
               </div>
             </div>
+            {/* Bank details */}
+            {user.bank?.account_number && (
+              <div className="profile-detail-row" style={{ gridColumn: '1 / -1' }}>
+                <FiDollarSign />
+                <div>
+                  <small>Bank account</small>
+                  <p>
+                    <strong>{user.bank.bank_name || '—'}</strong>
+                    {' · '}A/C: {user.bank.account_number}
+                    {' · '}IFSC: {user.bank.ifsc || '—'}
+                    {user.bank.account_holder ? ` · Holder: ${user.bank.account_holder}` : ''}
+                  </p>
+                </div>
+              </div>
+            )}
+            {/* Nominee */}
+            {user.nominee_name && (
+              <div className="profile-detail-row">
+                <FiUser />
+                <div>
+                  <small>Nominee</small>
+                  <p>{user.nominee_name}{user.nominee_relation ? ` (${user.nominee_relation})` : ''}</p>
+                </div>
+              </div>
+            )}
+            {/* GST */}
+            {user.gst_no && (
+              <div className="profile-detail-row">
+                <FiUser />
+                <div>
+                  <small>GST No.</small>
+                  <p>{user.gst_no}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── Financial summary ─────────────────────────────────────── */}
@@ -481,6 +516,8 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
   )
 }
 
+const PAGE_SIZE = 20
+
 export default function UsersPage() {
   const { user: me } = useAdminAuth()
   const dialog = useAdminDialog()
@@ -488,6 +525,8 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState(null)
   const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(null)
   const [treeUser, setTreeUser] = useState(null)
 
@@ -514,15 +553,37 @@ export default function UsersPage() {
     }
   }
 
-  const filtered =
-    filter === 'all' ? items : items.filter((u) => u.role === filter)
-
-  const counts = {
+  const counts = useMemo(() => ({
     all: items.length,
     customer: items.filter((u) => u.role === 'customer').length,
     franchisee: items.filter((u) => u.role === 'franchisee').length,
     admin: items.filter((u) => u.role === 'admin').length,
-  }
+  }), [items])
+
+  const afterSearch = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const afterRole = filter === 'all' ? items : items.filter((u) => u.role === filter)
+    if (!q) return afterRole
+    return afterRole.filter(
+      (u) =>
+        (u.full_name || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.phone || '').includes(q) ||
+        (u.member_id || '').toLowerCase().includes(q) ||
+        (u.city || '').toLowerCase().includes(q),
+    )
+  }, [items, filter, search])
+
+  const totalPages = Math.max(1, Math.ceil(afterSearch.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const filtered = useMemo(
+    () => afterSearch.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [afterSearch, safePage],
+  )
+  const q = search.trim()
+
+  const handleFilter = (role) => { setFilter(role); setPage(1) }
+  const handleSearch = (e) => { setSearch(e.target.value); setPage(1) }
 
   return (
     <>
@@ -535,29 +596,40 @@ export default function UsersPage() {
 
       {status && <div className={`form-message ${status.type}`}>{status.text}</div>}
 
-      <div className="admin-filter-tabs">
-        {['all', 'customer', 'franchisee', 'admin'].map((role) => (
-          <button
-            key={role}
-            type="button"
-            className={`admin-filter-tab ${filter === role ? 'active' : ''}`}
-            onClick={() => setFilter(role)}
-          >
-            {role === 'all' ? 'All' : role.charAt(0).toUpperCase() + role.slice(1)}
-            <span className="tab-count">{counts[role]}</span>
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 4 }}>
+        <div className="admin-filter-tabs" style={{ margin: 0 }}>
+          {['all', 'customer', 'franchisee', 'admin'].map((role) => (
+            <button
+              key={role}
+              type="button"
+              className={`admin-filter-tab ${filter === role ? 'active' : ''}`}
+              onClick={() => handleFilter(role)}
+            >
+              {role === 'all' ? 'All' : role.charAt(0).toUpperCase() + role.slice(1)}
+              <span className="tab-count">{counts[role]}</span>
+            </button>
+          ))}
+        </div>
+        <input
+          type="search"
+          className="form-control"
+          placeholder="Search name, email, phone, member ID…"
+          value={search}
+          onChange={handleSearch}
+          style={{ maxWidth: 280, fontSize: 14 }}
+        />
       </div>
 
       {loading ? (
         <p>Loading profiles…</p>
-      ) : filtered.length === 0 ? (
+      ) : afterSearch.length === 0 ? (
         <section className="admin-panel admin-empty-state">
           <FiUser size={48} />
-          <h3>No members yet</h3>
-          <p>New registrations will appear here with full profile details.</p>
+          <h3>{q ? 'No members match your search' : 'No members yet'}</h3>
+          <p>{q ? 'Try a different search term.' : 'New registrations will appear here with full profile details.'}</p>
         </section>
       ) : (
+        <>
         <div className="admin-user-grid">
           {filtered.map((u) => (
             <article key={u.id} className="admin-user-card">
@@ -629,6 +701,48 @@ export default function UsersPage() {
             </article>
           ))}
         </div>
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 20, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={safePage === 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              ← Prev
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+              .reduce((acc, p, idx, arr) => {
+                if (idx > 0 && p - arr[idx - 1] > 1) acc.push('…')
+                acc.push(p)
+                return acc
+              }, [])
+              .map((p, i) =>
+                p === '…' ? (
+                  <span key={`ellipsis-${i}`} style={{ padding: '6px 4px', color: 'var(--color-muted)' }}>…</span>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`btn btn-sm ${safePage === p ? 'btn-primary' : 'btn-outline'}`}
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={safePage === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next →
+            </button>
+          </div>
+        )}
+        </>
       )}
 
       <ProfileModal

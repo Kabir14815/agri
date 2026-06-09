@@ -40,7 +40,7 @@ export default function BlogDetail() {
       <section className="section">
         <div className="container" style={{ maxWidth: 880 }}>
           <div className="blog-meta">{post.date} · {post.author}</div>
-          <img src={post.image} alt={post.title} style={{ borderRadius: 16, marginBottom: 24 }} />
+          <img src={post.image} alt={post.title} loading="lazy" style={{ borderRadius: 16, marginBottom: 24 }} />
           <p>{post.excerpt}</p>
           <p>
             At KGF Farming we believe that healthy soil makes healthy crops. Whether

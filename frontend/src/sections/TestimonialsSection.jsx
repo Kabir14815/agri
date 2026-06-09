@@ -19,7 +19,7 @@ export default function TestimonialsSection() {
             <div key={t.id} className="testimonial-card">
               <p>{t.message}</p>
               <div className="testimonial-person">
-                <img src={t.avatar} alt={t.name} />
+                <img src={t.avatar} alt={t.name} loading="lazy" />
                 <div>
                   <h4>{t.name}</h4>
                   <span>{t.role}</span>

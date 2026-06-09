@@ -7,6 +7,7 @@ const STATUS_CLASS = {
   pending: 'pending',
   approved: 'achieved',
   rejected: 'rejected',
+  cancelled: 'rejected',
 }
 
 export default function DepositHistory() {

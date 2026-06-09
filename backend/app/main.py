@@ -1244,9 +1244,15 @@ def admin_update_user_role(
 @app.get("/api/admin/deposits")
 def admin_list_deposits(admin: dict = Depends(require_admin), store: MongoStore = Depends(get_store)):
     items = store.list_all_deposits()
+    # Build user lookup in one query instead of N queries.
+    user_ids = list({d["user_id"] for d in items})
+    user_map = {}
+    if user_ids:
+        for u in store._serialize_many(store.db.users.find({"id": {"$in": user_ids}})):
+            user_map[u["id"]] = u
     out = []
     for d in items:
-        u = store.find_user_by_id(d["user_id"])
+        u = user_map.get(d["user_id"])
         out.append(
             {
                 **d,

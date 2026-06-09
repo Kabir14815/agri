@@ -1,68 +1,116 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import UserDashboardLayout from '../user/UserDashboardLayout.jsx'
-import DashboardHome from './dashboard/DashboardHome.jsx'
-import DashboardRewards from './dashboard/DashboardRewards.jsx'
-import ProfileLayout from './dashboard/ProfileLayout.jsx'
-import ProfileView from './dashboard/ProfileView.jsx'
-import ProfileEdit from './dashboard/ProfileEdit.jsx'
-import ProfileBank from './dashboard/ProfileBank.jsx'
-import ProfilePassword from './dashboard/ProfilePassword.jsx'
-import DepositLayout from './dashboard/DepositLayout.jsx'
-import DepositRequest from './dashboard/DepositRequest.jsx'
-import DepositHistory from './dashboard/DepositHistory.jsx'
-import WalletLayout from './dashboard/WalletLayout.jsx'
-import WalletIncome from './dashboard/WalletIncome.jsx'
-import WalletRepurchase from './dashboard/WalletRepurchase.jsx'
-import WalletTopup from './dashboard/WalletTopup.jsx'
-import WalletStatement from './dashboard/WalletStatement.jsx'
-import WalletTransfer from './dashboard/WalletTransfer.jsx'
-import TeamLayout from './dashboard/TeamLayout.jsx'
-import DashboardTeam from './dashboard/DashboardTeam.jsx'
-import DashboardReferralTree from './dashboard/DashboardReferralTree.jsx'
-import DashboardActivate from './dashboard/DashboardActivate.jsx'
-import DashboardIncomes from './dashboard/DashboardIncomes.jsx'
-import DashboardExchange from './dashboard/DashboardExchange.jsx'
-import DashboardTransactions from './dashboard/DashboardTransactions.jsx'
-import DashboardHelpDesk from './dashboard/DashboardHelpDesk.jsx'
-import DashboardRegister from './dashboard/DashboardRegister.jsx'
-import DashboardSecurity from './dashboard/DashboardSecurity.jsx'
-import DashboardDailyLog from './dashboard/DashboardDailyLog.jsx'
+
+const DashboardHome = lazy(() => import('./dashboard/DashboardHome.jsx'))
+const DashboardRewards = lazy(() => import('./dashboard/DashboardRewards.jsx'))
+const ProfileLayout = lazy(() => import('./dashboard/ProfileLayout.jsx'))
+const ProfileView = lazy(() => import('./dashboard/ProfileView.jsx'))
+const ProfileEdit = lazy(() => import('./dashboard/ProfileEdit.jsx'))
+const ProfileBank = lazy(() => import('./dashboard/ProfileBank.jsx'))
+const ProfilePassword = lazy(() => import('./dashboard/ProfilePassword.jsx'))
+const DepositLayout = lazy(() => import('./dashboard/DepositLayout.jsx'))
+const DepositRequest = lazy(() => import('./dashboard/DepositRequest.jsx'))
+const DepositHistory = lazy(() => import('./dashboard/DepositHistory.jsx'))
+const WalletLayout = lazy(() => import('./dashboard/WalletLayout.jsx'))
+const WalletIncome = lazy(() => import('./dashboard/WalletIncome.jsx'))
+const WalletRepurchase = lazy(() => import('./dashboard/WalletRepurchase.jsx'))
+const WalletTopup = lazy(() => import('./dashboard/WalletTopup.jsx'))
+const WalletStatement = lazy(() => import('./dashboard/WalletStatement.jsx'))
+const WalletTransfer = lazy(() => import('./dashboard/WalletTransfer.jsx'))
+const TeamLayout = lazy(() => import('./dashboard/TeamLayout.jsx'))
+const DashboardTeam = lazy(() => import('./dashboard/DashboardTeam.jsx'))
+const DashboardReferralTree = lazy(() => import('./dashboard/DashboardReferralTree.jsx'))
+const DashboardActivate = lazy(() => import('./dashboard/DashboardActivate.jsx'))
+const DashboardIncomes = lazy(() => import('./dashboard/DashboardIncomes.jsx'))
+const DashboardExchange = lazy(() => import('./dashboard/DashboardExchange.jsx'))
+const DashboardTransactions = lazy(() => import('./dashboard/DashboardTransactions.jsx'))
+const DashboardHelpDesk = lazy(() => import('./dashboard/DashboardHelpDesk.jsx'))
+const DashboardRegister = lazy(() => import('./dashboard/DashboardRegister.jsx'))
+const DashboardSecurity = lazy(() => import('./dashboard/DashboardSecurity.jsx'))
+const DashboardDailyLog = lazy(() => import('./dashboard/DashboardDailyLog.jsx'))
+
+function DashFallback() {
+  return <div className="mlm-loading">Loading…</div>
+}
 
 export default function Dashboard() {
   return (
     <Routes>
       <Route element={<UserDashboardLayout />}>
-        <Route index element={<DashboardHome />} />
-        <Route path="rewards" element={<DashboardRewards />} />
-        <Route path="profile" element={<ProfileLayout />}>
-          <Route index element={<ProfileView />} />
-          <Route path="edit" element={<ProfileEdit />} />
-          <Route path="bank" element={<ProfileBank />} />
-          <Route path="password" element={<ProfilePassword />} />
+        <Route
+          index
+          element={
+            <Suspense fallback={<DashFallback />}>
+              <DashboardHome />
+            </Suspense>
+          }
+        />
+        <Route
+          path="rewards"
+          element={
+            <Suspense fallback={<DashFallback />}>
+              <DashboardRewards />
+            </Suspense>
+          }
+        />
+        <Route
+          path="profile"
+          element={
+            <Suspense fallback={<DashFallback />}>
+              <ProfileLayout />
+            </Suspense>
+          }
+        >
+          <Route index element={<Suspense fallback={<DashFallback />}><ProfileView /></Suspense>} />
+          <Route path="edit" element={<Suspense fallback={<DashFallback />}><ProfileEdit /></Suspense>} />
+          <Route path="bank" element={<Suspense fallback={<DashFallback />}><ProfileBank /></Suspense>} />
+          <Route path="password" element={<Suspense fallback={<DashFallback />}><ProfilePassword /></Suspense>} />
         </Route>
-        <Route path="deposit" element={<DepositLayout />}>
-          <Route index element={<DepositRequest />} />
-          <Route path="history" element={<DepositHistory />} />
+        <Route
+          path="deposit"
+          element={
+            <Suspense fallback={<DashFallback />}>
+              <DepositLayout />
+            </Suspense>
+          }
+        >
+          <Route index element={<Suspense fallback={<DashFallback />}><DepositRequest /></Suspense>} />
+          <Route path="history" element={<Suspense fallback={<DashFallback />}><DepositHistory /></Suspense>} />
         </Route>
-        <Route path="team" element={<TeamLayout />}>
-          <Route index element={<DashboardTeam />} />
-          <Route path="referral-tree" element={<DashboardReferralTree />} />
+        <Route
+          path="team"
+          element={
+            <Suspense fallback={<DashFallback />}>
+              <TeamLayout />
+            </Suspense>
+          }
+        >
+          <Route index element={<Suspense fallback={<DashFallback />}><DashboardTeam /></Suspense>} />
+          <Route path="referral-tree" element={<Suspense fallback={<DashFallback />}><DashboardReferralTree /></Suspense>} />
         </Route>
-        <Route path="wallet" element={<WalletLayout />}>
-          <Route index element={<WalletIncome />} />
-          <Route path="transfer" element={<WalletTransfer />} />
-          <Route path="repurchase" element={<WalletRepurchase />} />
-          <Route path="topup" element={<WalletTopup />} />
-          <Route path="statement" element={<WalletStatement />} />
+        <Route
+          path="wallet"
+          element={
+            <Suspense fallback={<DashFallback />}>
+              <WalletLayout />
+            </Suspense>
+          }
+        >
+          <Route index element={<Suspense fallback={<DashFallback />}><WalletIncome /></Suspense>} />
+          <Route path="transfer" element={<Suspense fallback={<DashFallback />}><WalletTransfer /></Suspense>} />
+          <Route path="repurchase" element={<Suspense fallback={<DashFallback />}><WalletRepurchase /></Suspense>} />
+          <Route path="topup" element={<Suspense fallback={<DashFallback />}><WalletTopup /></Suspense>} />
+          <Route path="statement" element={<Suspense fallback={<DashFallback />}><WalletStatement /></Suspense>} />
         </Route>
-        <Route path="activate" element={<DashboardActivate />} />
-        <Route path="daily-log" element={<DashboardDailyLog />} />
-        <Route path="incomes" element={<DashboardIncomes />} />
-        <Route path="exchange" element={<DashboardExchange />} />
-        <Route path="transactions" element={<DashboardTransactions />} />
-        <Route path="help-desk" element={<DashboardHelpDesk />} />
-        <Route path="register-member" element={<DashboardRegister />} />
-        <Route path="security" element={<DashboardSecurity />} />
+        <Route path="activate" element={<Suspense fallback={<DashFallback />}><DashboardActivate /></Suspense>} />
+        <Route path="daily-log" element={<Suspense fallback={<DashFallback />}><DashboardDailyLog /></Suspense>} />
+        <Route path="incomes" element={<Suspense fallback={<DashFallback />}><DashboardIncomes /></Suspense>} />
+        <Route path="exchange" element={<Suspense fallback={<DashFallback />}><DashboardExchange /></Suspense>} />
+        <Route path="transactions" element={<Suspense fallback={<DashFallback />}><DashboardTransactions /></Suspense>} />
+        <Route path="help-desk" element={<Suspense fallback={<DashFallback />}><DashboardHelpDesk /></Suspense>} />
+        <Route path="register-member" element={<Suspense fallback={<DashFallback />}><DashboardRegister /></Suspense>} />
+        <Route path="security" element={<Suspense fallback={<DashFallback />}><DashboardSecurity /></Suspense>} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>
