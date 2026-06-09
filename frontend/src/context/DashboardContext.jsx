@@ -14,39 +14,43 @@ export function DashboardProvider({ children }) {
   const refreshUserRef = useRef(refreshUser)
   refreshUserRef.current = refreshUser
 
-  const refresh = useCallback(() => {
-    setLoading(true)
+  const refresh = useCallback((opts = {}) => {
+    // Only show the blocking spinner on the very first load (no data yet).
+    // Subsequent refreshes keep showing stale data until new data arrives.
+    if (!opts.silent) setLoading((prev) => prev || false)
     setError(null)
     return api
       .userDashboard()
       .then((d) => {
         setData(d)
+        setLoading(false)
         refreshUserRef.current(d)
         return d
       })
       .catch((e) => {
+        setLoading(false)
         setError(e?.message || 'Could not load dashboard')
         throw e
       })
-      .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
+    setLoading(true)
     refresh().catch(() => {})
   }, [refresh])
 
   useEffect(() => {
-    const onFocus = () => {
-      if (document.visibilityState === 'visible') refresh().catch(() => {})
+    const silentRefresh = () => {
+      if (document.visibilityState === 'visible') refresh({ silent: true }).catch(() => {})
     }
-    document.addEventListener('visibilitychange', onFocus)
-    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', silentRefresh)
+    window.addEventListener('focus', silentRefresh)
     const timer = setInterval(() => {
-      if (document.visibilityState === 'visible') refresh().catch(() => {})
+      if (document.visibilityState === 'visible') refresh({ silent: true }).catch(() => {})
     }, REFRESH_MS)
     return () => {
-      document.removeEventListener('visibilitychange', onFocus)
-      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', silentRefresh)
+      window.removeEventListener('focus', silentRefresh)
       clearInterval(timer)
     }
   }, [refresh])

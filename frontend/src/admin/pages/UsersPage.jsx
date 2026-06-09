@@ -199,65 +199,109 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
           {user.role !== 'admin' && (
             <div className="admin-activate-box">
               <span className={`admin-activate-status ${isActive ? 'active' : 'inactive'}`}>
-                {isActive ? 'Active member' : 'Not activated — pending approval'}
+                {isActive ? `✓ Active — ${formatInr(Number(amount))} package` : 'Not activated — pending approval'}
               </span>
-              <h4>Approve member</h4>
-              <p>
-                Set the investment amount below and click <strong>Approve &amp; Activate</strong>,
-                or approve a pending deposit request from this member.
-              </p>
-              <div className="admin-amount-edit">
-                <input
-                  type="number"
-                  className="form-control"
-                  min="0"
-                  step="1"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Investment amount"
-                  style={{ flex: '1 1 140px' }}
-                />
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={saving}
-                  onClick={approveActivate}
-                >
-                  <FiCheck /> {saving ? 'Saving…' : 'Approve & Activate'}
-                </button>
-              </div>
+
+              {/* Only show pending deposits section if there are actual pending deposits */}
               {pendingDeposits.length > 0 && (
-                <div className="admin-pending-deposits">
-                  <small style={{ fontWeight: 700, color: '#14532d' }}>
-                    Pending deposit requests
-                  </small>
-                  {pendingDeposits.map((d) => (
-                    <div key={d.id} className="admin-pending-deposit-row">
-                      <span>
-                        #{d.id} — {formatInr(d.amount)} — {formatDate(d.created_at)}
-                        {d.transaction_number && <> — <em>{d.transaction_number}</em></>}
-                      </span>
-                      <div className="admin-pending-deposit-actions">
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          disabled={depositBusy === d.id}
-                          onClick={() => reviewDeposit(d.id, 'approved')}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-sm"
-                          disabled={depositBusy === d.id}
-                          onClick={() => reviewDeposit(d.id, 'rejected')}
-                        >
-                          Reject
-                        </button>
+                <>
+                  <h4 style={{ marginTop: 10 }}>Pending deposit requests</h4>
+                  <p style={{ marginTop: 0, marginBottom: 8, fontSize: 13 }}>
+                    Approve or reject the member&apos;s deposit request below.
+                  </p>
+                  <div className="admin-pending-deposits" style={{ marginTop: 0 }}>
+                    {pendingDeposits.map((d) => (
+                      <div key={d.id} className="admin-pending-deposit-row">
+                        <span>
+                          #{d.id} — {formatInr(d.amount)} — {formatDate(d.created_at)}
+                          {d.transaction_number && <> — <em>{d.transaction_number}</em></>}
+                        </span>
+                        <div className="admin-pending-deposit-actions">
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            disabled={depositBusy === d.id}
+                            onClick={() => reviewDeposit(d.id, 'approved')}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            disabled={depositBusy === d.id}
+                            onClick={() => reviewDeposit(d.id, 'rejected')}
+                          >
+                            Reject
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Manual activation / amount update — show as collapsible for active members */}
+              {(!isActive || pendingDeposits.length > 0) ? (
+                <>
+                  {!isActive && (
+                    <>
+                      <h4 style={{ marginTop: pendingDeposits.length > 0 ? 12 : 10 }}>
+                        Manual activation
+                      </h4>
+                      <p>
+                        Set the investment amount below and click <strong>Approve &amp; Activate</strong>.
+                        Any pending deposit requests will be automatically cancelled.
+                      </p>
+                    </>
+                  )}
+                  <div className="admin-amount-edit" style={{ marginTop: !isActive ? 0 : 10 }}>
+                    <input
+                      type="number"
+                      className="form-control"
+                      min="0"
+                      step="1"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="Investment amount"
+                      style={{ flex: '1 1 140px' }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={saving}
+                      onClick={approveActivate}
+                    >
+                      <FiCheck /> {saving ? 'Saving…' : isActive ? 'Update amount' : 'Approve & Activate'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* Active + no pending deposits: show compact update row */
+                <details style={{ marginTop: 10 }}>
+                  <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--color-muted,#6b7280)', userSelect: 'none' }}>
+                    Update investment amount…
+                  </summary>
+                  <div className="admin-amount-edit" style={{ marginTop: 10 }}>
+                    <input
+                      type="number"
+                      className="form-control"
+                      min="0"
+                      step="1"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="Investment amount"
+                      style={{ flex: '1 1 140px' }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={saving}
+                      onClick={approveActivate}
+                    >
+                      <FiCheck /> {saving ? 'Saving…' : 'Update amount'}
+                    </button>
+                  </div>
+                </details>
               )}
             </div>
           )}

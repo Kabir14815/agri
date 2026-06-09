@@ -37,13 +37,15 @@ export default function AdminDashboard() {
   const [recentUsers, setRecentUsers] = useState([])
 
   useEffect(() => {
-    Promise.all([adminApi.stats(), adminApi.contacts(), adminApi.users()])
-      .then(([s, c, users]) => {
-        setStats(s)
-        setRecent(c.slice(0, 5))
-        setRecentUsers(users.filter((u) => u.role !== 'admin').slice(0, 5))
-      })
-      .catch((e) => setError(e.message))
+    // Load stats first (fastest — now a handful of aggregations).
+    adminApi.stats().then(setStats).catch((e) => setError(e.message))
+    // Load contacts and users in parallel, independently.
+    adminApi.contacts()
+      .then((c) => setRecent(c.slice(0, 5)))
+      .catch(() => {})
+    adminApi.users()
+      .then((users) => setRecentUsers(users.filter((u) => u.role !== 'admin').slice(0, 5)))
+      .catch(() => {})
   }, [])
 
   return (

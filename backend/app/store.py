@@ -518,8 +518,16 @@ class MongoStore:
             "team_count": team_count,
         }
 
-    def sync_live_mlm_stats(self, user_id: int) -> dict:
-        """Recompute wallets, team & incomes from MongoDB ledger — keeps dashboard dynamic."""
+    # How many seconds must pass before we re-run the full ledger sync.
+    _SYNC_COOLDOWN_SECONDS = 30
+
+    def sync_live_mlm_stats(self, user_id: int, force: bool = False) -> dict:
+        """Recompute wallets, team & incomes from MongoDB ledger — keeps dashboard dynamic.
+
+        Skips re-computation if the mlm stats were synced less than _SYNC_COOLDOWN_SECONDS
+        ago (i.e. rapid successive dashboard loads won't trigger repeated full scans).
+        Pass force=True to bypass the cooldown (e.g. after a deposit approval).
+        """
         from .accrual_lock import accrual_snapshot
         from .mlm import default_mlm_stats
         from .referral import member_id_from_user
@@ -528,6 +536,18 @@ class MongoStore:
         user = self.find_user_by_id(user_id)
         if not user:
             raise KeyError("not_found")
+
+        # Cooldown check — skip full recomputation if recently synced.
+        if not force:
+            mlm_cached = user.get("mlm") or {}
+            last_sync = mlm_cached.get("_last_sync_at")
+            if last_sync:
+                try:
+                    elapsed = (datetime.utcnow() - datetime.fromisoformat(last_sync.rstrip("Z"))).total_seconds()
+                    if elapsed < self._SYNC_COOLDOWN_SECONDS:
+                        return user  # Return cached data — still fresh enough.
+                except (ValueError, TypeError):
+                    pass
 
         amount = float(user.get("amount", 0) or 0)
         stats = dict(user.get("mlm") or default_mlm_stats(user_id, amount))
@@ -584,6 +604,9 @@ class MongoStore:
         parts = [user.get("city"), user.get("state")]
         if any(parts):
             stats["location"] = ", ".join(p for p in parts if p)
+
+        # Stamp sync time so the cooldown check above can skip re-computation on rapid hits.
+        stats["_last_sync_at"] = datetime.utcnow().isoformat() + "Z"
 
         self.db.users.update_one(
             {"id": user_id},
@@ -735,7 +758,7 @@ class MongoStore:
             from .referral_bonus import distribute_investment_bonus
 
             distribute_investment_bonus(self, serialized, delta, "package_update")
-            self.sync_live_mlm_stats(user_id)
+            self.sync_live_mlm_stats(user_id, force=True)
         return serialized
 
     def verify_user_password(self, user: dict, plain: str) -> bool:
@@ -1000,7 +1023,7 @@ class MongoStore:
                 distribute_investment_bonus(
                     self, updated, dep_amount, f"deposit_{deposit_id}"
                 )
-            self.sync_live_mlm_stats(user["id"])
+            self.sync_live_mlm_stats(user["id"], force=True)
         return self.set_deposit_status(deposit_id, "approved")
 
     def add_wallet_entry(
@@ -1095,7 +1118,7 @@ class MongoStore:
         if not summary:
             if float(stats.get("package_amount", 0) or user.get("amount", 0) or 0) > 0:
                 self._set_user_mlm_stats(user_id, stats)
-            return self.sync_live_mlm_stats(user_id)
+            return self.sync_live_mlm_stats(user_id)  # cooldown check inside; OK to call
 
         if old_last is None:
             lock_query: dict = {
@@ -1134,7 +1157,7 @@ class MongoStore:
                 ),
                 "credit",
             )
-        return self.sync_live_mlm_stats(user_id)
+        return self.sync_live_mlm_stats(user_id, force=True)  # new credits posted — must sync
 
     def _run_interest_accrual(self, stats: dict, user: dict):
         from .investment_interest import accrue_through_today
@@ -1448,7 +1471,7 @@ class MongoStore:
             f"Exchange from {from_w} #{exchange_id}",
             "credit",
         )
-        self.sync_live_mlm_stats(user["id"])
+        self.sync_live_mlm_stats(user["id"], force=True)
         return self.set_exchange_status(exchange_id, "approved")
 
     # ----------------------------- Farmer daily logs -----------------------

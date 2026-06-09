@@ -1140,23 +1140,50 @@ def admin_me(admin: dict = Depends(require_admin)):
 
 @app.get("/api/admin/stats")
 def admin_stats(admin: dict = Depends(require_admin), store: MongoStore = Depends(get_store)):
+    """Fetch all admin counts in parallel using a single $facet aggregation per collection."""
+    # Simple counts from content collections (one query each via estimated count).
+    content = {
+        "products": store.db.products.estimated_document_count(),
+        "services": store.db.services.estimated_document_count(),
+        "blog_posts": store.db.blog.estimated_document_count(),
+        "achievers": store.db.achievers.estimated_document_count(),
+        "testimonials": store.db.testimonials.estimated_document_count(),
+        "faqs": store.db.faqs.estimated_document_count(),
+        "users": store.db.users.estimated_document_count(),
+        "contacts": store.db.contacts.estimated_document_count(),
+        "wallet_transfers": store.db.wallet_transfers.estimated_document_count(),
+        "referral_visits": store.db.referral_visits.estimated_document_count(),
+    }
+    # Batch status-specific counts with $facet — one round trip for deposits & tickets.
+    dep_pipeline = [{"$facet": {
+        "all": [{"$count": "n"}],
+        "pending": [{"$match": {"status": "pending"}}, {"$count": "n"}],
+    }}]
+    dep_result = list(store.db.deposits.aggregate(dep_pipeline))
+    dep = dep_result[0] if dep_result else {}
+
+    exc_pipeline = [{"$facet": {
+        "all": [{"$count": "n"}],
+        "pending": [{"$match": {"status": "pending"}}, {"$count": "n"}],
+    }}]
+    exc_result = list(store.db.exchange_requests.aggregate(exc_pipeline))
+    exc = exc_result[0] if exc_result else {}
+
+    hlp_pipeline = [{"$facet": {
+        "all": [{"$count": "n"}],
+        "open": [{"$match": {"status": "open"}}, {"$count": "n"}],
+    }}]
+    hlp_result = list(store.db.help_tickets.aggregate(hlp_pipeline))
+    hlp = hlp_result[0] if hlp_result else {}
+
     return {
-        "products": store.count("products"),
-        "services": store.count("services"),
-        "blog_posts": store.count("blog"),
-        "achievers": store.count("achievers"),
-        "testimonials": store.count("testimonials"),
-        "faqs": store.count("faqs"),
-        "users": store.count("users"),
-        "contacts": store.count("contacts"),
-        "deposits": store.db.deposits.count_documents({}),
-        "deposits_pending": store.db.deposits.count_documents({"status": "pending"}),
-        "help_tickets": store.db.help_tickets.count_documents({}),
-        "help_tickets_open": store.db.help_tickets.count_documents({"status": "open"}),
-        "exchange_requests": store.db.exchange_requests.count_documents({}),
-        "exchange_pending": store.db.exchange_requests.count_documents({"status": "pending"}),
-        "wallet_transfers": store.db.wallet_transfers.count_documents({}),
-        "referral_visits": store.db.referral_visits.count_documents({}),
+        **content,
+        "deposits": (dep.get("all") or [{}])[0].get("n", 0),
+        "deposits_pending": (dep.get("pending") or [{}])[0].get("n", 0),
+        "exchange_requests": (exc.get("all") or [{}])[0].get("n", 0),
+        "exchange_pending": (exc.get("pending") or [{}])[0].get("n", 0),
+        "help_tickets": (hlp.get("all") or [{}])[0].get("n", 0),
+        "help_tickets_open": (hlp.get("open") or [{}])[0].get("n", 0),
     }
 
 
