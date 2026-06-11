@@ -86,7 +86,7 @@ export default function WalletStatement() {
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
     </>
   )
 }

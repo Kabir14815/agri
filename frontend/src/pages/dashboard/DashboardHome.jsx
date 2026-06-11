@@ -47,21 +47,49 @@ function QuarterlyChart({ data }) {
   )
 }
 
-function DonutChart({ total, pending, cross }) {
-  const used = Math.max(0, total - pending - cross)
-  const sum = total || 1
-  const usedPct = Math.min(100, (used / sum) * 100)
-  const pendingPct = Math.min(100 - usedPct, (pending / sum) * 100)
-  const crossPct = Math.min(100 - usedPct - pendingPct, (cross / sum) * 100)
-  const grad = `conic-gradient(#3b82f6 0% ${usedPct}%, #f97316 ${usedPct}% ${usedPct + pendingPct}%, #ef4444 ${usedPct + pendingPct}% ${usedPct + pendingPct + crossPct}%, #e5e7eb ${usedPct + pendingPct + crossPct}% 100%)`
+// earning_limits from backend:
+//   total   = lifetime earning cap (e.g. 10× investment)
+//   pending = money currently sitting in income wallet (earned, not yet withdrawn)
+//   cross   = amount that exceeded the cap (capped out)
+//   used    = remaining capacity still available to earn = total − pending − cross
+function DonutChart({ total, pending, cross, used: usedFromBackend }) {
+  const remaining = usedFromBackend != null
+    ? Math.max(0, usedFromBackend)
+    : Math.max(0, (total || 0) - (pending || 0) - (cross || 0))
+  const sum = Math.max(total || 0, remaining + (pending || 0) + (cross || 0), 1)
+
+  const remainPct = Math.min(100, (remaining / sum) * 100)
+  const pendingPct = Math.min(100 - remainPct, ((pending || 0) / sum) * 100)
+  const crossPct   = Math.min(100 - remainPct - pendingPct, ((cross || 0) / sum) * 100)
+  const emptyPct   = Math.max(0, 100 - remainPct - pendingPct - crossPct)
+
+  const grad = [
+    `#22c55e 0% ${remainPct}%`,
+    `#f97316 ${remainPct}% ${remainPct + pendingPct}%`,
+    `#ef4444 ${remainPct + pendingPct}% ${remainPct + pendingPct + crossPct}%`,
+    `#334155 ${remainPct + pendingPct + crossPct}% 100%`,
+  ].join(', ')
+
   return (
     <div className="mlm-donut-wrap">
-      <div className="mlm-donut" style={{ background: grad }} />
+      <div className="mlm-donut" style={{ background: `conic-gradient(${grad})` }} />
       <ul className="mlm-donut-legend">
-        <li><span className="dot blue" /> Used {formatInr(used, 0)}</li>
-        <li><span className="dot orange" /> Pending {formatInr(pending, 0)}</li>
-        <li><span className="dot red" /> Capped {formatInr(cross, 0)}</li>
-        <li style={{ opacity: 0.6 }}><span className="dot" style={{ background: '#e5e7eb' }} /> Available {formatInr(Math.max(0, total - used - pending - cross), 0)}</li>
+        <li>
+          <span className="dot" style={{ background: '#22c55e' }} />
+          Available to earn &nbsp;<strong>{formatInr(remaining, 0)}</strong>
+        </li>
+        <li>
+          <span className="dot orange" />
+          In wallet (pending) &nbsp;<strong>{formatInr(pending || 0, 0)}</strong>
+        </li>
+        <li>
+          <span className="dot red" />
+          Capped / exceeded &nbsp;<strong>{formatInr(cross || 0, 0)}</strong>
+        </li>
+        <li style={{ opacity: 0.55 }}>
+          <span className="dot" style={{ background: '#334155' }} />
+          Total limit &nbsp;<strong>{formatInr(total || 0, 0)}</strong>
+        </li>
       </ul>
     </div>
   )
@@ -312,6 +340,7 @@ export default function DashboardHome() {
             total={limit.total}
             pending={limit.pending}
             cross={limit.cross}
+            used={limit.used}
           />
         </article>
 
