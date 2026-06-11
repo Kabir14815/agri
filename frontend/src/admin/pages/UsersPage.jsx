@@ -12,6 +12,7 @@ import {
   FiGitBranch,
   FiCheck,
   FiTrendingUp,
+  FiBarChart2 as FiBarChart,
   FiImage,
   FiAlertTriangle,
 } from 'react-icons/fi'
@@ -449,32 +450,88 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
           </div>
 
           {/* ── Financial summary ─────────────────────────────────────── */}
-          {dashData && user.role !== 'admin' && (
-            <div className="admin-profile-section">
-              <h4 style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                <FiTrendingUp /> Wallets &amp; Interest
-              </h4>
-              <div style={{ display: 'grid', gap: 4 }}>
-                <WalletRow label="Income wallet" value={dashData.income_wallet} />
-                <WalletRow label="Repurchase wallet" value={dashData.repurchase_wallet} />
-                <WalletRow label="Top-up wallet" value={dashData.topup_wallet} />
-                <WalletRow label="Total earnings" value={dashData.total_earning} />
-                <WalletRow label="Investment return (net, earned)" value={dashData.investment?.total_interest_net} />
-                <WalletRow label="TDS deducted (1%)" value={dashData.investment?.total_tds} />
-                <WalletRow label="Daily net interest (expected)" value={dashData.investment?.daily_net} />
-                <WalletRow
-                  label="Interest penalty (missed days)"
-                  value={dashData.investment?.penalty_total ?? dashData.daily_log?.penalty_total}
-                />
-              </div>
-              {(dashData.daily_log?.missed_days_total ?? 0) > 0 && (
-                <p style={{ marginTop: 8, fontSize: 12, color: '#b45309', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <FiAlertTriangle size={13} />
-                  {dashData.daily_log.missed_days_total} day(s) missed — interest cut applied
-                </p>
-              )}
-            </div>
-          )}
+          {dashData && user.role !== 'admin' && (() => {
+            const inv = dashData.investment || {}
+            const lim = dashData.earning_limits || {}
+            const incomes = dashData.incomes || []
+            const availableToEarn = Math.max(0, (lim.total || 0) - (lim.pending || 0) - (lim.cross || 0))
+            const capPct = lim.total > 0 ? Math.min(100, Math.round(((lim.pending || 0) / lim.total) * 100)) : 0
+
+            return (
+              <>
+                {/* Wallets */}
+                <div className="admin-profile-section">
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                    <FiTrendingUp /> Wallets
+                  </h4>
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <WalletRow label="Income wallet (balance)" value={dashData.income_wallet} />
+                    <WalletRow label="Repurchase wallet" value={dashData.repurchase_wallet} />
+                    <WalletRow label="Top-up / Topup wallet" value={dashData.topup_wallet} />
+                    <WalletRow label="Total lifetime earnings" value={dashData.total_earning} />
+                  </div>
+                </div>
+
+                {/* Income breakdown */}
+                <div className="admin-profile-section">
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                    <FiDollarSign /> Income breakdown
+                  </h4>
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    {incomes.map((inc) => (
+                      <WalletRow key={inc.key} label={inc.label} value={inc.value} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Investment / interest details */}
+                <div className="admin-profile-section">
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                    <FiTrendingUp /> Investment &amp; Interest
+                  </h4>
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <WalletRow label="Principal invested" value={inv.principal} />
+                    <WalletRow label="Monthly gross rate" value={inv.monthly_gross} />
+                    <WalletRow label="Monthly TDS (1%)" value={inv.monthly_tds} />
+                    <WalletRow label="Monthly net interest" value={inv.monthly_net} />
+                    <WalletRow label="Daily net interest" value={inv.daily_net} />
+                    <WalletRow label="Total interest earned (net)" value={inv.total_interest_net} />
+                    <WalletRow label="Total TDS deducted" value={inv.total_tds} />
+                    <WalletRow label="Interest penalty (missed photos)" value={inv.penalty_total} />
+                    <WalletRow label="Remaining interest cap" value={inv.interest_remaining_net} />
+                  </div>
+                  {(dashData.daily_log?.missed_days_total ?? 0) > 0 && (
+                    <p style={{ marginTop: 8, fontSize: 12, color: '#b45309', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <FiAlertTriangle size={13} />
+                      {dashData.daily_log.missed_days_total} day(s) of photos missed — interest cut applied
+                    </p>
+                  )}
+                  {inv.interest_cap_reached && (
+                    <p style={{ marginTop: 8, fontSize: 12, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <FiAlertTriangle size={13} />
+                      Earning cap reached — no further interest will accrue
+                    </p>
+                  )}
+                </div>
+
+                {/* Earning limits / cap */}
+                <div className="admin-profile-section">
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                    <FiBarChart /> Earning cap ({capPct}% used)
+                  </h4>
+                  <div style={{ background: '#f3f4f6', borderRadius: 6, height: 8, marginBottom: 8, overflow: 'hidden' }}>
+                    <div style={{ width: `${capPct}%`, height: '100%', background: capPct >= 90 ? '#dc2626' : '#16a34a', transition: 'width 0.4s' }} />
+                  </div>
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <WalletRow label="Lifetime earning cap (10× principal)" value={lim.total} />
+                    <WalletRow label="Already earned (in wallet)" value={lim.pending} />
+                    <WalletRow label="Available to earn" value={availableToEarn} />
+                    {(lim.cross || 0) > 0 && <WalletRow label="⚠ Exceeded cap (capped out)" value={lim.cross} />}
+                  </div>
+                </div>
+              </>
+            )
+          })()}
 
           {/* ── Daily log / crop photos ───────────────────────────────── */}
           {user.role !== 'admin' && (

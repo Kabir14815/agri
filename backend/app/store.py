@@ -601,9 +601,25 @@ class MongoStore:
             2,
         )
 
-        # income_wallet_progress: % of income wallet vs earning limit cap (dynamic)
-        limit_total = max(float(stats.get("earning_limit_total") or 0), amount * 10 if amount else 20_000)
+        # ── Earning limits — derive from actual wallet balance + investment ──────
+        # earning_limit_total  : lifetime net income cap = 10× principal
+        # earning_limit_pending: money currently sitting in income wallet (earned, not yet withdrawn)
+        # earning_limit_cross  : amount that somehow exceeded the cap (0 in normal operation)
         income_bal = float(stats.get("income_wallet", 0) or 0)
+        if amount > 0:
+            stored_limit = float(stats.get("earning_limit_total") or 0)
+            limit_total = round(max(stored_limit, amount * 10), 2)
+        else:
+            # Inactive users: use whatever was previously set (0 for brand-new users)
+            limit_total = float(stats.get("earning_limit_total") or 0)
+
+        limit_pending = round(income_bal, 2)                         # pending = in wallet
+        limit_cross = round(max(0.0, income_bal - limit_total), 2)   # > 0 only if cap breached
+
+        stats["earning_limit_total"] = limit_total
+        stats["earning_limit_pending"] = limit_pending
+        stats["earning_limit_cross"] = limit_cross
+
         if limit_total > 0:
             stats["income_wallet_progress"] = min(100, int((income_bal / limit_total) * 100))
         else:

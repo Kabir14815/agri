@@ -152,7 +152,7 @@ export default function DashboardDailyLog() {
           )}
 
           {status && (
-            <div className={`form-status ${status.type === 'error' ? 'error' : 'success'}`}>
+            <div className={`form-message ${status.type === 'error' ? 'error' : 'success'}`} style={{ marginBottom: 8 }}>
               {status.text}
             </div>
           )}
