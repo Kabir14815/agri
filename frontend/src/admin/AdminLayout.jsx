@@ -54,6 +54,13 @@ export default function AdminLayout() {
   return (
     <AdminDialogProvider>
     <div className="admin-shell">
+      {open && (
+        <div
+          className="admin-sidebar-overlay"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <aside className={`admin-sidebar ${open ? 'open' : ''}`}>
         <div className="admin-brand">
           <div className="brand-logo">K</div>
