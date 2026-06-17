@@ -2204,6 +2204,15 @@ textarea.form-control {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
+}
+
+.admin-modal form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .admin-modal-head h3 {
@@ -2215,6 +2224,9 @@ textarea.form-control {
 .admin-modal-body {
   padding: 22px 24px;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-modal-foot {
