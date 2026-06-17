@@ -2225,6 +2225,53 @@ textarea.form-control {
   gap: 10px;
 }
 
+.admin-modal--wide {
+  max-width: 720px;
+}
+
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+
+.admin-form-span-2 {
+  grid-column: 1 / -1;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: -2px 0 6px;
+  line-height: 1.4;
+}
+
+.form-control-readonly {
+  padding: 10px 14px;
+  background: #f3f4f6;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 14px;
+  color: var(--color-text);
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+}
+
+.admin-form-grid .form-group select.form-control {
+  appearance: auto;
+}
+
+@media (max-width: 600px) {
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-form-span-2 {
+    grid-column: auto;
+  }
+}
+
 /* ── Admin sidebar overlay backdrop ──────────────────────────────────── */
 .admin-sidebar-overlay {
   display: none;

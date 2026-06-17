@@ -123,6 +123,11 @@ function ImageUploadField({ name, label, value, onChange }) {
   )
 }
 
+function fieldClass(f) {
+  if (f.fullWidth) return 'admin-form-span-2'
+  return ''
+}
+
 export default function ResourceManager({
   resource,
   title,
@@ -130,6 +135,9 @@ export default function ResourceManager({
   fields,
   columns,
   imageField,
+  modalClass = '',
+  formGrid = false,
+  computeFields,
 }) {
   const dialog = useAdminDialog()
   const [items, setItems] = useState([])
@@ -149,13 +157,15 @@ export default function ResourceManager({
   }
   useEffect(load, [resource])
 
+  const applyComputed = (next) => (computeFields ? { ...next, ...computeFields(next) } : next)
+
   const openCreate = () => {
-    setForm(emptyFromFields(fields))
+    setForm(applyComputed(emptyFromFields(fields)))
     setEditing({})
   }
 
   const openEdit = (item) => {
-    setForm({ ...item })
+    setForm(applyComputed({ ...item }))
     setEditing(item)
   }
 
@@ -166,12 +176,15 @@ export default function ResourceManager({
 
   const onChange = (e) => {
     const { name, value, type } = e.target
-    setForm((prev) => ({ ...prev, [name]: type === 'number' ? Number(value) : value }))
+    setForm((prev) => applyComputed({
+      ...prev,
+      [name]: type === 'number' ? (value === '' ? '' : Number(value)) : value,
+    }))
   }
 
   // Called from ImageUploadField
   const onImageChange = (name, value) => {
-    setForm((prev) => ({ ...prev, [name]: value }))
+    setForm((prev) => applyComputed({ ...prev, [name]: value }))
   }
 
   const save = async (e) => {
@@ -179,7 +192,9 @@ export default function ResourceManager({
     setBusy(true)
     setStatus(null)
     try {
-      const payload = { ...form }
+      const computed = computeFields ? computeFields(form) : {}
+      const payload = { ...form, ...computed }
+      delete payload.id
       fields.forEach((f) => {
         if (f.type === 'number') payload[f.name] = Number(payload[f.name] || 0)
       })
@@ -307,16 +322,17 @@ export default function ResourceManager({
 
       {editing !== null && (
         <div className="admin-modal-backdrop" onClick={close}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+          <div className={`admin-modal ${modalClass}`.trim()} onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-head">
               <h3>{editing.id ? `Edit ${title.replace(/s$/, '')}` : `Add new ${title.replace(/s$/, '')}`}</h3>
-              <button className="icon-btn" onClick={close}><FiX /></button>
+              <button type="button" className="icon-btn" onClick={close}><FiX /></button>
             </div>
             <form onSubmit={save}>
-              <div className="admin-modal-body">
+              <div className={`admin-modal-body${formGrid ? ' admin-form-grid' : ''}`}>
                 {fields.map((f) => (
-                  <div className="form-group" key={f.name}>
+                  <div className={`form-group ${fieldClass(f)}`.trim()} key={f.name}>
                     <label>{f.label}{f.required && ' *'}</label>
+                    {f.hint && <p className="field-hint">{f.hint}</p>}
                     {f.type === 'image' ? (
                       <ImageUploadField
                         name={f.name}
@@ -331,8 +347,26 @@ export default function ResourceManager({
                         value={form[f.name] ?? ''}
                         onChange={onChange}
                         required={f.required}
-                        rows={4}
+                        rows={f.rows || 4}
+                        placeholder={f.placeholder}
                       />
+                    ) : f.type === 'select' ? (
+                      <select
+                        className="form-control"
+                        name={f.name}
+                        value={form[f.name] ?? ''}
+                        onChange={onChange}
+                        required={f.required}
+                      >
+                        {!f.required && <option value="">— Select —</option>}
+                        {(f.options || []).map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : f.type === 'readonly' ? (
+                      <div className="form-control-readonly">
+                        {f.render ? f.render(form) : (form[f.name] ?? '—')}
+                      </div>
                     ) : (
                       <input
                         className="form-control"
@@ -342,6 +376,8 @@ export default function ResourceManager({
                         onChange={onChange}
                         required={f.required}
                         step={f.type === 'number' ? 'any' : undefined}
+                        min={f.min}
+                        placeholder={f.placeholder}
                       />
                     )}
                   </div>
