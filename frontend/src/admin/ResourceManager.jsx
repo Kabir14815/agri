@@ -328,7 +328,8 @@ export default function ResourceManager({
               <button type="button" className="icon-btn" onClick={close}><FiX /></button>
             </div>
             <form onSubmit={save}>
-              <div className={`admin-modal-body${formGrid ? ' admin-form-grid' : ''}`}>
+              <div className="admin-modal-body">
+                <div className={formGrid ? 'admin-form-grid' : undefined}>
                 {fields.map((f) => (
                   <div className={`form-group ${fieldClass(f)}`.trim()} key={f.name}>
                     <label>{f.label}{f.required && ' *'}</label>
@@ -382,6 +383,7 @@ export default function ResourceManager({
                     )}
                   </div>
                 ))}
+                </div>
               </div>
               <div className="admin-modal-foot">
                 <button type="button" className="btn btn-outline" onClick={close}>
