@@ -9,6 +9,7 @@ const ProfileView = lazy(() => import('./dashboard/ProfileView.jsx'))
 const ProfileEdit = lazy(() => import('./dashboard/ProfileEdit.jsx'))
 const ProfileBank = lazy(() => import('./dashboard/ProfileBank.jsx'))
 const ProfilePassword = lazy(() => import('./dashboard/ProfilePassword.jsx'))
+const ProfilePan = lazy(() => import('./dashboard/ProfilePan.jsx'))
 const DepositLayout = lazy(() => import('./dashboard/DepositLayout.jsx'))
 const DepositRequest = lazy(() => import('./dashboard/DepositRequest.jsx'))
 const DepositHistory = lazy(() => import('./dashboard/DepositHistory.jsx'))
@@ -65,6 +66,7 @@ export default function Dashboard() {
           <Route index element={<Suspense fallback={<DashFallback />}><ProfileView /></Suspense>} />
           <Route path="edit" element={<Suspense fallback={<DashFallback />}><ProfileEdit /></Suspense>} />
           <Route path="bank" element={<Suspense fallback={<DashFallback />}><ProfileBank /></Suspense>} />
+          <Route path="pan" element={<Suspense fallback={<DashFallback />}><ProfilePan /></Suspense>} />
           <Route path="password" element={<Suspense fallback={<DashFallback />}><ProfilePassword /></Suspense>} />
         </Route>
         <Route

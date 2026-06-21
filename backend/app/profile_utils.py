@@ -26,6 +26,7 @@ def enrich_user_defaults(user: dict) -> dict:
 
 def user_profile_payload(user: dict) -> Dict[str, Any]:
     u = enrich_user_defaults(dict(user))
+    pan = u.get("pan_card") or {}
     return {
         "id": u["id"],
         "member_id": u.get("mlm", {}).get("member_id") if isinstance(u.get("mlm"), dict) else member_id_for(u["id"]),
@@ -43,6 +44,12 @@ def user_profile_payload(user: dict) -> Dict[str, Any]:
         "bank": dict(u.get("bank") or default_bank()),
         "role": u.get("role", "customer"),
         "registered_at": u.get("registered_at"),
+        "pan_card": {
+            "pan_number": pan.get("pan_number", ""),
+            "status": pan.get("status", "not_uploaded"),  # not_uploaded | pending | verified
+            "uploaded_at": pan.get("uploaded_at"),
+            "has_image": bool(pan.get("image_data")),
+        },
     }
 
 

@@ -150,6 +150,21 @@ export const api = {
       auth: 'user',
       body: JSON.stringify(data),
     }),
+  uploadPan: (formData) => {
+    const headers = userAuthHeader()
+    return fetch(`${BASE}/user/pan-card`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Request failed' }))
+        throw new Error(formatApiError(err.detail))
+      }
+      return res.json()
+    })
+  },
+  getPanImage: () => request('/user/pan-card/image', { auth: 'user' }),
   getReferralInfo: () => request('/user/referral-info', { auth: 'user' }),
   getDailyLog: () => request('/user/daily-log', { auth: 'user' }),
   submitDailyLog: (formData) => {

@@ -805,6 +805,54 @@ def user_password_change(
     return {"success": True, "message": "Password updated successfully"}
 
 
+@app.post("/api/user/pan-card")
+async def user_upload_pan(
+    pan_number: str = Form(...),
+    image: Optional[UploadFile] = File(None),
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    from .image_compress import compress_image_bytes, image_data_url
+
+    pan = pan_number.strip().upper()
+    if not pan:
+        raise HTTPException(status_code=400, detail="PAN number is required")
+
+    update: dict = {
+        "pan_card.pan_number": pan,
+        "pan_card.status": "pending",
+        "pan_card.uploaded_at": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+    }
+
+    if image and image.filename:
+        raw = await image.read()
+        if raw:
+            if len(raw) > 5_000_000:
+                raise HTTPException(status_code=400, detail="Image too large (max 5MB)")
+            try:
+                b64, mime, _ = compress_image_bytes(raw, max_edge=1600, quality=80)
+                update["pan_card.image_data"] = image_data_url(mime, b64)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
+
+    try:
+        updated = store.update_user_dot_notation(user["id"], update)
+    except KeyError:
+        raise _not_found() from None
+    return {"success": True, "profile": _profile_for_user(updated, store)}
+
+
+@app.get("/api/user/pan-card/image")
+def user_pan_image(
+    user: dict = Depends(require_user),
+):
+    pan = (user.get("pan_card") or {})
+    data = pan.get("image_data")
+    if not data:
+        raise HTTPException(status_code=404, detail="No PAN image uploaded")
+    return {"data_url": data}
+
+
 @app.get("/api/user/referral-tree")
 def user_referral_tree(
     member_id: Optional[str] = None,

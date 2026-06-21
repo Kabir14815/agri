@@ -4,6 +4,7 @@ const SUB = [
   { to: '/dashboard/profile', end: true, label: 'Profile' },
   { to: '/dashboard/profile/edit', label: 'Edit Profile' },
   { to: '/dashboard/profile/bank', label: 'Bank Detail' },
+  { to: '/dashboard/profile/pan', label: 'PAN Card' },
   { to: '/dashboard/profile/password', label: 'Change Password' },
 ]
 

@@ -876,6 +876,19 @@ class MongoStore:
         users.sort(key=lambda x: x.get("registered_at") or "", reverse=True)
         return users
 
+    def update_user_dot_notation(self, user_id: int, dot_updates: dict) -> dict:
+        """Apply $set with arbitrary dot-notation paths (e.g. 'pan_card.status')."""
+        if not dot_updates:
+            raise ValueError("No fields to update")
+        result = self.db.users.find_one_and_update(
+            {"id": user_id},
+            {"$set": dot_updates},
+            return_document=ReturnDocument.AFTER,
+        )
+        if not result:
+            raise KeyError("not_found")
+        return self._serialize(result)
+
     def update_user_amount(self, user_id: int, amount: float) -> dict:
         return self.update_user_mlm(user_id, amount=float(amount))
 
