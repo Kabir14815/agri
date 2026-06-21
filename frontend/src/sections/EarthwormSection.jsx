@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { BRAND } from '../constants/brand.js'
 
 export default function EarthwormSection() {
   return (
@@ -8,9 +9,13 @@ export default function EarthwormSection() {
           <img
             src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=900&q=80"
             alt="Earthworm"
+            loading="lazy"
+            decoding="async"
+            width={900}
+            height={600}
           />
           <div>
-            <span className="section-title-eyebrow">KGF Farming</span>
+            <span className="section-title-eyebrow">{BRAND.shortName}</span>
             <h2 className="section-title">Earthworm</h2>
             <p>
               Earthworms are voracious eaters, consuming organic matter like dead

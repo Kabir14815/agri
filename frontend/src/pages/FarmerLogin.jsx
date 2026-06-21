@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { FiDroplet, FiLogIn } from 'react-icons/fi'
 import { api } from '../api.js'
 import { useFarmerAuth } from '../farmer/FarmerAuth.jsx'
+import { AuthBrandHeader } from '../components/BrandLogo.jsx'
 
 export default function FarmerLogin() {
   const navigate = useNavigate()
@@ -47,6 +48,7 @@ export default function FarmerLogin() {
   return (
     <div className="auth-wrap auth-premium farmer-auth-wrap">
       <div className="auth-card auth-card-premium farmer-login-card">
+        <AuthBrandHeader />
         <div className="farmer-login-badge">
           <FiDroplet aria-hidden />
           <span>Farmer Portal</span>

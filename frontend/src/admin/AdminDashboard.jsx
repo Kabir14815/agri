@@ -14,6 +14,7 @@ import {
   FiRefreshCw,
 } from 'react-icons/fi'
 import { adminApi } from '../api.js'
+import { BRAND } from '../constants/brand.js'
 
 const STAT_CARDS = [
   { key: 'products', label: 'Products', icon: <FiPackage />, link: '/admin/products', color: '#1f7a3a' },
@@ -53,7 +54,7 @@ export default function AdminDashboard() {
       <div className="admin-page-header">
         <div>
           <h1>Dashboard</h1>
-          <p>Overview of everything happening on the KGF Farming site.</p>
+          <p>Overview of everything happening on the {BRAND.name} site.</p>
         </div>
       </div>
 

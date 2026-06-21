@@ -10,6 +10,7 @@ import {
   FiMessageCircle,
 } from 'react-icons/fi'
 import { useCompany } from '../context/CompanyContext.jsx'
+import BrandLogo from './BrandLogo.jsx'
 
 export default function Footer() {
   const { company } = useCompany()
@@ -39,15 +40,7 @@ export default function Footer() {
       <div className="container">
         <div className="footer-grid">
           <div>
-            <div className="brand" style={{ color: '#fff' }}>
-              <div className="brand-logo">K</div>
-              <div>
-                <div style={{ color: '#fff' }}>{company.name}</div>
-                <div className="brand-sub" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                  {company.full_name}
-                </div>
-              </div>
-            </div>
+            <BrandLogo variant="footer" light showText asLink={false} />
             <p style={{ marginTop: 16 }}>
               Leading provider of vermicompost, organic fertilizers and natural crop protection
               solutions across India.

@@ -13,6 +13,7 @@ import {
 } from 'react-icons/fi'
 import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 import { formatInr, formatInrPlain } from '../../utils/format.js'
+import { BRAND } from '../../constants/brand.js'
 
 function ProgressBar({ percent, color = '#22c55e' }) {
   return (
@@ -121,7 +122,7 @@ export default function DashboardHome() {
     if (!d?.referral_link) return
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Join KGF Group', url: d.referral_link })
+        await navigator.share({ title: `Join ${BRAND.name}`, url: d.referral_link })
       } catch {
         // user cancelled or share unsupported — silently ignore
       }

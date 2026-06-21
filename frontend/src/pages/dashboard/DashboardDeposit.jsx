@@ -1,5 +1,6 @@
 import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 import { formatInrPlain } from '../../utils/format.js'
+import { BRAND } from '../../constants/brand.js'
 
 export default function DashboardDeposit() {
   const { data: d, loading } = useLiveDashboard()
@@ -15,7 +16,7 @@ export default function DashboardDeposit() {
         <p>Member ID: {d.member_id}</p>
       </div>
       <p className="mlm-hint">
-        To upgrade your package, contact KGF Farming support or use the Topup Wallet after
+        To upgrade your package, contact {BRAND.name} support or use the Topup Wallet after
         admin approval.
       </p>
       <div className="mlm-card">

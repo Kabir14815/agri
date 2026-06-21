@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { BRAND } from '../constants/brand.js'
 
 export default function TestimonialsSection() {
   const [items, setItems] = useState([])
@@ -31,7 +32,7 @@ export default function TestimonialsSection() {
 
         <div className="stats-banner">
           <div className="stats-banner-info">
-            <span>KGF Farming Group</span>
+            <span>{BRAND.fullName}</span>
             <h3>Vermi Composting · Happy Customers</h3>
           </div>
           <div className="stats-banner-info" style={{ textAlign: 'right' }}>

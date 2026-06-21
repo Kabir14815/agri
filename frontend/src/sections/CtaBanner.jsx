@@ -1,14 +1,15 @@
 import { Link } from 'react-router-dom'
+import { BRAND } from '../constants/brand.js'
 
 export default function CtaBanner() {
   return (
     <section className="cta-banner">
       <div className="container cta-banner-inner">
         <div>
-          <span className="cta-banner-eyebrow">Join KGF Farming</span>
+          <span className="cta-banner-eyebrow">Join {BRAND.name}</span>
           <h2>High quality vermicompost & organic crop care</h2>
           <p>
-            Register today to partner with Kamauput Growth Farming — eco-friendly products,
+            Register today to partner with {BRAND.fullName} — eco-friendly products,
             expert support and sustainable solutions for your farm.
           </p>
         </div>

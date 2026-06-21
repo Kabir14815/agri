@@ -22,6 +22,7 @@ import {
 } from 'react-icons/fi'
 import { useAdminAuth } from './AdminAuth.jsx'
 import { AdminDialogProvider } from './AdminDialog.jsx'
+import BrandLogo from '../components/BrandLogo.jsx'
 
 const NAV = [
   { to: '/admin', icon: <FiGrid />, label: 'Dashboard', end: true },
@@ -63,11 +64,7 @@ export default function AdminLayout() {
       )}
       <aside className={`admin-sidebar ${open ? 'open' : ''}`}>
         <div className="admin-brand">
-          <div className="brand-logo">K</div>
-          <div>
-            <div style={{ color: '#fff', fontWeight: 700 }}>KGF Admin</div>
-            <small style={{ color: 'rgba(255,255,255,0.55)' }}>Control Panel</small>
-          </div>
+          <BrandLogo variant="admin" light showText asLink={false} />
         </div>
 
         <nav>

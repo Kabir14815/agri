@@ -732,6 +732,19 @@ def user_dashboard(
     return _user_dashboard_payload(user, store)
 
 
+@app.post("/api/user/notifications/{notification_id}/dismiss")
+def user_dismiss_notification(
+    notification_id: int,
+    user: dict = Depends(require_user),
+    store: MongoStore = Depends(get_store),
+):
+    try:
+        note = store.dismiss_user_notification(user["id"], notification_id)
+    except KeyError:
+        raise _not_found() from None
+    return {"success": True, "notification": note}
+
+
 def _profile_for_user(user: dict, store: MongoStore) -> dict:
     merged = enrich_user_defaults(dict(user))
     profile = user_profile_payload(merged)

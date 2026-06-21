@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { DashboardProvider } from '../context/DashboardContext.jsx'
+import DashboardGreetings from './DashboardGreetings.jsx'
 import {
   FiHome,
   FiUser,
@@ -23,6 +24,8 @@ import {
   FiX,
 } from 'react-icons/fi'
 import { useUserAuth } from './UserAuth.jsx'
+import { BRAND } from '../constants/brand.js'
+import BrandLogo from '../components/BrandLogo.jsx'
 
 const NAV = [
   { to: '/dashboard', end: true, icon: FiHome, label: 'Dashboard', color: '#f97316' },
@@ -149,8 +152,7 @@ export default function UserDashboardLayout() {
         {/* Sidebar header */}
         <div className="mlm-sidebar-head">
           <div className="mlm-logo">
-            <span className="mlm-logo-badge">KGF</span>
-            <span>GROUP</span>
+            <BrandLogo variant="dashboard" light showText asLink={false} />
           </div>
           {/* Close button — visible only on mobile */}
           <button
@@ -314,10 +316,11 @@ export default function UserDashboardLayout() {
         </header>
 
         <div className="mlm-content">
+          <DashboardGreetings />
           <Outlet />
         </div>
 
-        <footer className="mlm-footer">© KGF FARMING {new Date().getFullYear()}</footer>
+        <footer className="mlm-footer">© {BRAND.fullName} {new Date().getFullYear()}</footer>
       </div>
     </div>
     </DashboardProvider>

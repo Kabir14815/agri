@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAdminAuth } from './AdminAuth.jsx'
+import { AuthBrandHeader } from '../components/BrandLogo.jsx'
+import { BRAND } from '../constants/brand.js'
 
 export default function AdminLogin() {
   const { login } = useAdminAuth()
@@ -31,8 +33,9 @@ export default function AdminLogin() {
   return (
     <div className="auth-wrap" style={{ background: '#0d1f12' }}>
       <div className="auth-card">
+        <AuthBrandHeader />
         <h2>Admin Portal</h2>
-        <p className="sub">Sign in to manage KGF Farming.</p>
+        <p className="sub">Sign in to manage {BRAND.name}.</p>
 
         {status && (
           <div className={`form-message ${status.type}`}>{status.text}</div>

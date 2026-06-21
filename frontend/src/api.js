@@ -70,6 +70,8 @@ export const api = {
   login: (data) =>
     request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   userDashboard: () => request('/user/dashboard', { auth: 'user' }),
+  dismissNotification: (id) =>
+    request(`/user/notifications/${id}/dismiss`, { method: 'POST', auth: 'user' }),
   getProfile: () => request('/user/profile', { auth: 'user' }),
   updateProfile: (data) =>
     request('/user/profile', {

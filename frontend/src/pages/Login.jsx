@@ -8,6 +8,7 @@ import {
   buildRegisterPath,
   normalizeReferralCode,
 } from '../utils/referral.js'
+import { AuthBrandHeader } from '../components/BrandLogo.jsx'
 
 const LOGIN_MEMBER_ID_KEY = 'kgf_login_member_id'
 
@@ -86,6 +87,14 @@ export default function Login() {
       }
 
       applyUserSession(res.token, res.user, 'customer')
+      try {
+        sessionStorage.setItem(
+          'kgf_dashboard_welcome',
+          JSON.stringify({ name: res.user.full_name }),
+        )
+      } catch {
+        /* ignore storage errors */
+      }
       setStatus({
         type: 'success',
         text: `Welcome back, ${res.user.full_name}! Opening your dashboard…`,
@@ -103,6 +112,7 @@ export default function Login() {
   return (
     <div className="auth-wrap auth-premium">
       <div className="auth-card auth-card-premium" style={{ maxWidth: 480 }}>
+        <AuthBrandHeader />
         <h2>Member Login</h2>
         <p className="sub">
           Sign in with your <strong>Member ID</strong> or email and password from registration.

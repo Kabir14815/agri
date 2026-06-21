@@ -303,13 +303,11 @@
 .mlm-logo-badge {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #22c55e, #15803d);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  color: #fff;
+  border-radius: 8px;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px;
 }
 
 .mlm-nav {
@@ -1720,14 +1718,11 @@
   width: 36px;
   height: 36px;
   margin: 0 auto 8px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #22c55e, #15803d);
-  font-size: 10px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
+  border-radius: 8px;
+  object-fit: contain;
+  display: block;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px;
 }
 
 .mlm-tree-mid {
@@ -1926,6 +1921,91 @@
   margin-top: 8px;
   font-weight: 600;
   color: inherit;
+}
+
+.mlm-greetings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.mlm-greeting-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  position: relative;
+}
+
+.mlm-greeting-icon {
+  flex-shrink: 0;
+  font-size: 22px;
+  margin-top: 2px;
+}
+
+.mlm-greeting-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.mlm-greeting-body strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.mlm-greeting-body p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.mlm-greeting-welcome {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.14), rgba(16, 185, 129, 0.08));
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #14532d;
+}
+
+.mlm-greeting-welcome .mlm-greeting-icon {
+  color: #16a34a;
+}
+
+.mlm-greeting-success {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #1e3a8a;
+}
+
+.mlm-greeting-success .mlm-greeting-icon {
+  color: #2563eb;
+}
+
+.mlm-greeting-dismiss {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.mlm-greeting-dismiss:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.mlm-greeting-dismiss:disabled {
+  cursor: wait;
+  opacity: 0.4;
 }
 
 .mlm-card-warn h2 {

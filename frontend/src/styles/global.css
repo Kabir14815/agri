@@ -91,6 +91,8 @@ p {
 
 .section {
   padding: 80px 0;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
 }
 
 .section-sm {
@@ -247,6 +249,84 @@ p {
   color: #fff;
   font-family: var(--font-display);
   font-size: 18px;
+}
+
+.brand-logo-img {
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+}
+
+.brand-logo-img--navbar {
+  width: 52px;
+  height: 52px;
+}
+
+.brand-logo-img--footer {
+  width: 56px;
+  height: 56px;
+}
+
+.brand-logo-img--admin {
+  width: 46px;
+  height: 46px;
+}
+
+.brand-logo-img--dashboard {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+}
+
+.brand-logo-img--auth {
+  width: 110px;
+  height: auto;
+  max-height: 130px;
+  margin: 0 auto;
+}
+
+.brand-name--light {
+  color: #fff;
+}
+
+.brand-sub--light {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.brand--auth {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.auth-brand-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.auth-brand-name {
+  margin: 10px 0 4px;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-primary-dark, #14532d);
+}
+
+.auth-brand-tagline {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.auth-split-visual .auth-brand-name,
+.auth-wrap[style*="0d1f12"] .auth-brand-name {
+  color: #fff;
+}
+
+.auth-split-visual .auth-brand-tagline,
+.auth-wrap[style*="0d1f12"] .auth-brand-tagline {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .brand-sub {
@@ -3182,6 +3262,12 @@ textarea.form-control {
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
+}
+
+.farmer-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .farmer-header h1 {

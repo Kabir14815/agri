@@ -8,6 +8,8 @@ import {
   persistReferralCode,
   normalizeReferralCode,
 } from '../utils/referral.js'
+import { AuthBrandHeader } from '../components/BrandLogo.jsx'
+import { BRAND } from '../constants/brand.js'
 
 export default function ReferralLanding() {
   const { code: routeCode } = useParams()
@@ -66,7 +68,8 @@ export default function ReferralLanding() {
   return (
     <div className="auth-wrap auth-premium">
       <div className="auth-card auth-card-premium referral-landing-card" style={{ maxWidth: 520 }}>
-        <span className="auth-visual-badge">KGF Farming referral</span>
+        <AuthBrandHeader />
+        <span className="auth-visual-badge">{BRAND.name} referral</span>
         <h2>You&apos;re invited!</h2>
         <p className="sub">
           Join under <strong>{sponsor.sponsor_name}</strong> using referral code{' '}

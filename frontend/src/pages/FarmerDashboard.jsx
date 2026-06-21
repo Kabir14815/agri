@@ -4,6 +4,8 @@ import { FiCamera, FiCheck, FiDroplet, FiLogOut, FiRefreshCw, FiX } from 'react-
 import { farmerApi } from '../api.js'
 import { useFarmerAuth } from '../farmer/FarmerAuth.jsx'
 import { compressImageFile } from '../utils/compressImage.js'
+import { BRAND } from '../constants/brand.js'
+import BrandLogo from '../components/BrandLogo.jsx'
 
 export default function FarmerDashboard() {
   const { profile, dashboard, refresh, logout } = useFarmerAuth()
@@ -76,12 +78,15 @@ export default function FarmerDashboard() {
   return (
     <div className="farmer-shell">
       <header className="farmer-header">
-        <div>
-          <p className="farmer-header-kicker">KGF Farming · Field report</p>
-          <h1>Hello, {profile?.full_name || 'Farmer'}</h1>
-          <p className="farmer-header-meta">
-            ID {profile?.member_id} · {logDate} (UTC)
-          </p>
+        <div className="farmer-header-brand">
+          <BrandLogo variant="dashboard" showText={false} asLink={false} />
+          <div>
+            <p className="farmer-header-kicker">{BRAND.name} · Field report</p>
+            <h1>Hello, {profile?.full_name || 'Farmer'}</h1>
+            <p className="farmer-header-meta">
+              ID {profile?.member_id} · {logDate} (UTC)
+            </p>
+          </div>
         </div>
         <div className="farmer-header-actions">
           <button type="button" className="btn btn-outline-light" onClick={() => refresh()}>

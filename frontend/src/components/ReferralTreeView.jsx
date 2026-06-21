@@ -1,9 +1,10 @@
 import { formatInrPlain } from '../utils/format.js'
+import { BRAND } from '../constants/brand.js'
 
 export function ReferralTreeNode({ node, onView, isRoot }) {
   return (
     <div className={`mlm-tree-node${isRoot ? ' root' : ''}`}>
-      <div className="mlm-tree-node-logo">KGF</div>
+      <img src={BRAND.logo} alt="" className="mlm-tree-node-logo" />
       <p className="mlm-tree-mid">{node.member_id}</p>
       <p className="mlm-tree-name">{node.full_name}</p>
       <p className="mlm-tree-stat">{node.referral_count}</p>

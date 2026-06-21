@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import PageBanner from '../components/PageBanner.jsx'
 import { api } from '../api.js'
+import { BRAND } from '../constants/brand.js'
 
 export default function Achievers() {
   const [items, setItems] = useState([])
@@ -24,8 +25,8 @@ export default function Achievers() {
             <span className="section-title-eyebrow">Our Stars</span>
             <h2 className="section-title">Meet our top achievers</h2>
             <p style={{ maxWidth: 700, margin: '0 auto' }}>
-              The hard work and dedication of our partners is the foundation of KGF
-              Farming's success. We're proud to celebrate them here.
+              The hard work and dedication of our partners is the foundation of {BRAND.name}&apos;s
+              success. We&apos;re proud to celebrate them here.
             </p>
           </div>
 

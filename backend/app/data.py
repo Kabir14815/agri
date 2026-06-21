@@ -247,12 +247,14 @@ BLOG_POSTS = [
 ]
 
 COMPANY = {
-    "name": "KGF Farming",
+    "name": "Kamauput Growth Farming",
     "full_name": "Kamauput Growth Farming Pvt Ltd.",
     "email": "info@kgffarming.com",
     "phone": "+91 93552 40503",
     "address": "1133/3, Sheetal Puri Colony, Apollo Road, Jind 126102 — Near Madhur Milan Hotel, Gali No. 03",
-    "tagline": "Agriculture & Pure Eco Farming",
+    "tagline": "KGF का साथ है तो बदलाव अपने आप है",
+    "motto": "जय जवान जय किसान",
+    "logo": "/brand/logo-sm.png",
     "year": 2026,
     "facebook": "",
     "twitter": "",

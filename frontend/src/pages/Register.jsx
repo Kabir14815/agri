@@ -9,6 +9,8 @@ import {
   buildLoginPath,
   buildReferralShareUrl,
 } from '../utils/referral.js'
+import { AuthBrandHeader } from '../components/BrandLogo.jsx'
+import { BRAND } from '../constants/brand.js'
 
 export default function Register() {
   const navigate = useNavigate()
@@ -130,7 +132,8 @@ export default function Register() {
     <div className="auth-wrap auth-premium">
       <div className="auth-split">
         <aside className="auth-split-visual">
-          <span className="auth-visual-badge">Join KGF Farming</span>
+          <AuthBrandHeader />
+          <span className="auth-visual-badge">Join {BRAND.name}</span>
           <h2>Create your member profile</h2>
           <p>
             {activeCode && sponsorName
@@ -160,6 +163,7 @@ export default function Register() {
         </aside>
 
         <div className="auth-card auth-card-premium">
+          <AuthBrandHeader />
           <h2>Register</h2>
           <p className="sub">Fill in your profile to get started.</p>
 

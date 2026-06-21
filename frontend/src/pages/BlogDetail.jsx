@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import PageBanner from '../components/PageBanner.jsx'
 import { api } from '../api.js'
+import { BRAND } from '../constants/brand.js'
 
 export default function BlogDetail() {
   const { id } = useParams()
@@ -43,7 +44,7 @@ export default function BlogDetail() {
           <img src={post.image} alt={post.title} loading="lazy" style={{ borderRadius: 16, marginBottom: 24 }} />
           <p>{post.excerpt}</p>
           <p>
-            At KGF Farming we believe that healthy soil makes healthy crops. Whether
+            At {BRAND.name} we believe that healthy soil makes healthy crops. Whether
             it's our 100% organic vermicompost, eco-friendly insecticides or unique
             growth boosters, every product we develop is designed to help Indian
             farmers grow more — sustainably.

@@ -18,7 +18,7 @@ export default function BlogPage() {
         { name: 'excerpt', label: 'Excerpt', type: 'textarea', required: true },
         { name: 'image', label: 'Cover image', type: 'image' },
         { name: 'date', label: 'Date (YYYY-MM-DD)' },
-        { name: 'author', label: 'Author', default: 'KGF Team' },
+        { name: 'author', label: 'Author', default: 'Kamauput Team' },
       ]}
     />
   )

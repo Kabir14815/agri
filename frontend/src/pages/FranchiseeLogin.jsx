@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api.js'
 import { useUserAuth } from '../user/UserAuth.jsx'
+import { AuthBrandHeader } from '../components/BrandLogo.jsx'
 
 export default function FranchiseeLogin() {
   const navigate = useNavigate()
@@ -36,6 +37,14 @@ export default function FranchiseeLogin() {
         return
       }
       applySession(res.token, res.user, 'franchisee')
+      try {
+        sessionStorage.setItem(
+          'kgf_dashboard_welcome',
+          JSON.stringify({ name: res.user.full_name }),
+        )
+      } catch {
+        /* ignore storage errors */
+      }
       setStatus({ type: 'success', text: `Welcome, partner ${res.user.full_name}!` })
       setTimeout(() => navigate('/dashboard', { replace: true }), 700)
     } catch (err) {
@@ -48,6 +57,7 @@ export default function FranchiseeLogin() {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
+        <AuthBrandHeader />
         <h2>Franchisee Login</h2>
         <p className="sub">Sign in with your partner Member ID and password.</p>
 

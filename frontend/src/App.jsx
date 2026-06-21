@@ -5,17 +5,8 @@ import Navbar from './components/Navbar.jsx'
 import Footer from './components/Footer.jsx'
 import ScrollToTop from './components/ScrollToTop.jsx'
 import Home from './pages/Home.jsx'
-import About from './pages/About.jsx'
-import Services from './pages/Services.jsx'
-import WhyUs from './pages/WhyUs.jsx'
-import Achievers from './pages/Achievers.jsx'
-import Blog from './pages/Blog.jsx'
-import BlogDetail from './pages/BlogDetail.jsx'
-import Contact from './pages/Contact.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
-import FranchiseeLogin from './pages/FranchiseeLogin.jsx'
-import OurLegals from './pages/OurLegals.jsx'
 import NotFound from './pages/NotFound.jsx'
 
 import { AdminAuthProvider, RequireAdmin } from './admin/AdminAuth.jsx'
@@ -24,6 +15,16 @@ import { CompanyProvider } from './context/CompanyContext.jsx'
 import ReferralLanding from './pages/ReferralLanding.jsx'
 import ReferralTracker from './components/ReferralTracker.jsx'
 import { FarmerAuthProvider, RequireFarmer } from './farmer/FarmerAuth.jsx'
+
+const About = lazy(() => import('./pages/About.jsx'))
+const Services = lazy(() => import('./pages/Services.jsx'))
+const WhyUs = lazy(() => import('./pages/WhyUs.jsx'))
+const Achievers = lazy(() => import('./pages/Achievers.jsx'))
+const Blog = lazy(() => import('./pages/Blog.jsx'))
+const BlogDetail = lazy(() => import('./pages/BlogDetail.jsx'))
+const Contact = lazy(() => import('./pages/Contact.jsx'))
+const FranchiseeLogin = lazy(() => import('./pages/FranchiseeLogin.jsx'))
+const OurLegals = lazy(() => import('./pages/OurLegals.jsx'))
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const AdminLayout = lazy(() => import('./admin/AdminLayout.jsx'))

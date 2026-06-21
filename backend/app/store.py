@@ -126,6 +126,7 @@ class MongoStore:
             "referral_visits",
             "farm_daily_logs",
             "interest_penalties",
+            "user_notifications",
         ]:
             idx(self.db[name], [("id", ASCENDING)], unique=True)
         idx(self.db.farm_daily_logs, [("user_id", ASCENDING), ("log_date", ASCENDING)], unique=True)
@@ -146,6 +147,8 @@ class MongoStore:
         idx(self.db.deposits, [("user_id", ASCENDING)])
         idx(self.db.deposits, [("status", ASCENDING)])
         idx(self.db.deposits, [("created_at", DESCENDING)])
+        idx(self.db.user_notifications, [("user_id", ASCENDING), ("read", ASCENDING)])
+        idx(self.db.user_notifications, [("created_at", DESCENDING)])
         idx(self.db.contacts, [("submitted_at", DESCENDING)])
         idx(self.db.help_tickets, [("user_id", ASCENDING), ("status", ASCENDING)])
         idx(self.db.exchange_requests, [("user_id", ASCENDING), ("status", ASCENDING)])
@@ -981,7 +984,56 @@ class MongoStore:
             "source": "admin_manual",
         }
         self.db.deposits.insert_one(record)
+        self.create_user_notification(
+            user_id,
+            "deposit_approved",
+            "Account activated!",
+            f"Your account has been activated with an investment of ₹{float(amount):,.0f}. "
+            "Daily interest will now accrue to your income wallet.",
+            {"deposit_id": dep_id, "amount": float(amount), "source": "admin_manual"},
+        )
         return self.deposit_public(record)
+
+    def create_user_notification(
+        self,
+        user_id: int,
+        kind: str,
+        title: str,
+        message: str,
+        meta: Optional[dict] = None,
+    ) -> dict:
+        record = {
+            "id": self._next_id(self.db.user_notifications),
+            "user_id": user_id,
+            "kind": kind,
+            "title": title,
+            "message": message,
+            "meta": meta or {},
+            "read": False,
+            "created_at": datetime.utcnow().isoformat() + "Z",
+        }
+        self.db.user_notifications.insert_one(record)
+        return self._serialize(record)
+
+    def list_user_notifications(
+        self, user_id: int, unread_only: bool = True, limit: int = 20
+    ) -> List[dict]:
+        query: Dict[str, Any] = {"user_id": user_id}
+        if unread_only:
+            query["read"] = False
+        return self._serialize_many(
+            self.db.user_notifications.find(query).sort("id", DESCENDING).limit(limit)
+        )
+
+    def dismiss_user_notification(self, user_id: int, notification_id: int) -> dict:
+        result = self.db.user_notifications.find_one_and_update(
+            {"id": notification_id, "user_id": user_id},
+            {"$set": {"read": True, "read_at": datetime.utcnow().isoformat() + "Z"}},
+            return_document=ReturnDocument.AFTER,
+        )
+        if not result:
+            raise KeyError("not_found")
+        return self._serialize(result)
 
     def find_deposit(self, deposit_id: int) -> Optional[dict]:
         return self._serialize(self.db.deposits.find_one({"id": deposit_id}))
@@ -1048,7 +1100,16 @@ class MongoStore:
                     self, updated, dep_amount, f"deposit_{deposit_id}"
                 )
             self.sync_live_mlm_stats(user["id"], force=True)
-        return self.set_deposit_status(deposit_id, "approved")
+        approved = self.set_deposit_status(deposit_id, "approved")
+        self.create_user_notification(
+            user["id"],
+            "deposit_approved",
+            "Deposit approved!",
+            f"Great news! Your deposit of ₹{dep_amount:,.0f} has been approved. "
+            "The amount has been credited to your Topup wallet and your package is updated.",
+            {"deposit_id": deposit_id, "amount": dep_amount},
+        )
+        return approved
 
     def add_wallet_entry(
         self,
@@ -1496,7 +1557,16 @@ class MongoStore:
             "credit",
         )
         self.sync_live_mlm_stats(user["id"], force=True)
-        return self.set_exchange_status(exchange_id, "approved")
+        approved = self.set_exchange_status(exchange_id, "approved")
+        self.create_user_notification(
+            user["id"],
+            "exchange_approved",
+            "Exchange approved!",
+            f"Your fund exchange of ₹{amount:,.0f} from {from_w.replace('_', ' ')} "
+            f"to {to_w.replace('_', ' ')} wallet has been approved and completed.",
+            {"exchange_id": exchange_id, "amount": amount, "from_wallet": from_w, "to_wallet": to_w},
+        )
+        return approved
 
     # ----------------------------- Farmer daily logs -----------------------
 

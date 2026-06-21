@@ -1,4 +1,5 @@
 import PageBanner from '../components/PageBanner.jsx'
+import { BRAND } from '../constants/brand.js'
 
 const LEGALS = [
   {
@@ -23,7 +24,7 @@ const LEGALS = [
   },
   {
     title: 'Trademark',
-    detail: 'KGF Farming™ is a registered trademark of Kamauput Growth Farming Pvt. Ltd.',
+    detail: `${BRAND.shortName}™ is a registered trademark of ${BRAND.fullName}`,
   },
 ]
 

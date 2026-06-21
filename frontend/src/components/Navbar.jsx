@@ -3,6 +3,7 @@ import { NavLink, Link } from 'react-router-dom'
 import { FiMenu, FiX, FiChevronDown, FiShield } from 'react-icons/fi'
 import { useAdminAuth } from '../admin/AdminAuth.jsx'
 import { useUserAuth } from '../user/UserAuth.jsx'
+import BrandLogo from './BrandLogo.jsx'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -27,13 +28,7 @@ export default function Navbar() {
     <header className="site-header">
       <nav className="navbar" aria-label="Main navigation">
         <div className="container navbar-inner">
-          <Link to="/" className="brand" onClick={close}>
-            <div className="brand-logo">K</div>
-            <div>
-              <div>KGF Farming</div>
-              <div className="brand-sub">Kamauput Growth Farming</div>
-            </div>
-          </Link>
+          <BrandLogo variant="navbar" to="/" onClick={close} />
 
           <ul className={`nav-links nav-drawer ${open ? 'open' : ''}`}>
             <li>

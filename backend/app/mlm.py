@@ -380,4 +380,7 @@ def build_dashboard_payload(
             "recent_penalties": recent_penalties,
         },
         "computed_at": computed_at,
+        "notifications": (
+            store.list_user_notifications(user["id"]) if store else []
+        ),
     }
