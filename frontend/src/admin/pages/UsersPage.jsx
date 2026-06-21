@@ -138,7 +138,7 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
       setReferrals(refreshed)
       onAmountSaved?.(value)
       await dialog.success(
-        'Member approved and activated. Any pending deposit requests from this member have been cancelled. Daily interest (10% p.m., 1% TDS) will accrue to their income wallet.',
+        'Member approved and activated. Any pending deposit requests from this member have been cancelled. Daily rental income (1% p.m., 2% TDS) will accrue to their income wallet.',
         'Member activated',
       )
     } catch (e) {
@@ -492,7 +492,7 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
                   <div style={{ display: 'grid', gap: 4 }}>
                     <WalletRow label="Principal invested" value={inv.principal} />
                     <WalletRow label="Monthly gross rate" value={inv.monthly_gross} />
-                    <WalletRow label="Monthly TDS (1%)" value={inv.monthly_tds} />
+                    <WalletRow label="Monthly TDS (2%)" value={inv.monthly_tds} />
                     <WalletRow label="Monthly net interest" value={inv.monthly_net} />
                     <WalletRow label="Daily net interest" value={inv.daily_net} />
                     <WalletRow label="Total interest earned (net)" value={inv.total_interest_net} />

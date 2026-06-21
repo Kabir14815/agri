@@ -16,7 +16,7 @@ export default function EarthwormSection() {
           />
           <div>
             <span className="section-title-eyebrow">{BRAND.shortName}</span>
-            <h2 className="section-title">Earthworm</h2>
+            <h2 className="section-title">Earthworm (Kechua)</h2>
             <p>
               Earthworms are voracious eaters, consuming organic matter like dead
               leaves, decaying plants, and other detritus. They digest this organic
@@ -30,6 +30,10 @@ export default function EarthwormSection() {
               soil structure and microbial activity. This benefits the entire food
               web in the soil.
             </p>
+            <div className="earthworm-price-tag">
+              <span className="earthworm-price-label">Kechua Buying Price</span>
+              <span className="earthworm-price-value">₹5 <small>/ kg</small></span>
+            </div>
             <Link to="/about" className="btn btn-primary">Discover More</Link>
           </div>
         </div>

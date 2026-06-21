@@ -274,7 +274,7 @@ def build_dashboard_payload(
         {"key": "level_income", "label": "Level Income", "value": stats["level_income"]},
         {
             "key": "investment_return",
-            "label": "Investment Return (10% p.m.)",
+            "label": "Rental Income (1% p.m.)",
             "value": investment_return,
         },
         {"key": "reward_bonus", "label": "Reward Bonus", "value": stats["reward_bonus"]},
@@ -290,7 +290,7 @@ def build_dashboard_payload(
             "value": float(stats.get("investment_interest_today", 0) or 0),
         },
         {
-            "label": "TDS on Interest Today (1%)",
+            "label": "TDS on Rental Income Today (2%)",
             "value": float(stats.get("investment_tds_today", 0) or 0),
         },
         {"label": "Direct Income Today", "value": stats["direct_income_today"]},

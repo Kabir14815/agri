@@ -1,14 +1,14 @@
-"""Daily investment return: 10% per month gross, 1% TDS on interest.
+"""Daily rental income: 1% per month gross, 2% TDS on rental income.
 
-Missing daily crop photo → that day's interest is not credited (penalty tracked separately).
+Missing daily crop photo → that day's income is not credited (penalty tracked separately).
 """
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Dict, Optional
 
-MONTHLY_GROSS_RATE = 0.10
-TDS_ON_INTEREST_RATE = 0.01
+MONTHLY_GROSS_RATE = 0.01
+TDS_ON_INTEREST_RATE = 0.02
 DAYS_PER_MONTH = 30
 MAX_CATCHUP_DAYS = 90
 INTEREST_CAP_MULTIPLIER = 10  # max lifetime net interest = 10× principal (e.g. ₹2.5L → ₹25L)

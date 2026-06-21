@@ -48,7 +48,7 @@ export default function DashboardIncomes() {
       {data.investment?.principal > 0 && (
         <>
           <h3 className="mlm-section-label" style={{ marginTop: 28 }}>
-            Investment return (10% monthly, 1% TDS on interest)
+            Rental income (1% monthly, 2% TDS on rental income)
           </h3>
           <div className="mlm-grid" style={{ marginBottom: 20 }}>
             <article className="mlm-card">
@@ -64,7 +64,7 @@ export default function DashboardIncomes() {
               <h2>{formatInr(data.investment.monthly_net, 2)}</h2>
             </article>
             <article className="mlm-card">
-              <small>Total interest earned</small>
+              <small>Total rental income earned</small>
               <h2>{formatInr(data.investment.total_interest_net, 2)}</h2>
               {data.investment.interest_cap_net > 0 && (
                 <p className="mlm-hint" style={{ marginTop: 8, marginBottom: 0 }}>
@@ -76,15 +76,15 @@ export default function DashboardIncomes() {
               )}
             </article>
             <article className="mlm-card">
-              <small>Total TDS deducted</small>
+              <small>Total TDS deducted (2%)</small>
               <h2>{formatInr(data.investment.total_tds, 2)}</h2>
             </article>
             <article className="mlm-card mlm-card-warn">
-              <small>Interest cut today (no photo)</small>
+              <small>Rental income cut today (no photo)</small>
               <h2>{formatInr(data.investment.penalty_today || 0, 2)}</h2>
             </article>
             <article className="mlm-card mlm-card-warn">
-              <small>Total interest lost (missed photos)</small>
+              <small>Total rental income lost (missed photos)</small>
               <h2>{formatInr(data.investment.penalty_total || 0, 2)}</h2>
             </article>
             <article className="mlm-card">
@@ -93,11 +93,11 @@ export default function DashboardIncomes() {
             </article>
           </div>
           <p className="mlm-hint">
-            Interest is calculated daily (10% ÷ 30 days per month), up to 10× your invested
-            amount. 1% TDS is deducted from each day&apos;s gross interest before crediting your
+            Rental income is calculated daily (1% ÷ 30 days per month), up to 10× your invested
+            amount. 2% TDS is deducted from each day&apos;s gross rental income before crediting your
             income wallet. Upload a daily crop
             photo on <Link to="/dashboard/daily-log">Daily Crop Log</Link> — missing a day cuts
-            that day&apos;s interest only.
+            that day&apos;s rental income only.
           </p>
         </>
       )}

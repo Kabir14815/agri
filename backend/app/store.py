@@ -1205,7 +1205,7 @@ class MongoStore:
         return float(stats.get(field, 0) or 0)
 
     def accrue_investment_interest(self, user_id: int) -> Optional[dict]:
-        """Credit daily investment return (10% p.m. gross, 1% TDS on interest)."""
+        """Credit daily rental income (1% p.m. gross, 2% TDS on rental income)."""
         user = self.find_user_by_id(user_id)
         if not user:
             return None
