@@ -279,10 +279,13 @@ p {
 }
 
 .brand-logo-img--auth {
-  width: 110px;
+  width: 160px;
   height: auto;
-  max-height: 130px;
+  max-height: 180px;
   margin: 0 auto;
+  background: #fff;
+  border-radius: 12px;
+  padding: 4px;
 }
 
 .brand-name--light {

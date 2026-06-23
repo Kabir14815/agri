@@ -301,12 +301,12 @@
 }
 
 .mlm-logo-badge {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 8px;
   object-fit: contain;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.08);
+  background: #fff;
   padding: 2px;
 }
 
@@ -1854,7 +1854,7 @@
   border-radius: 8px;
   object-fit: contain;
   display: block;
-  background: rgba(255, 255, 255, 0.08);
+  background: #fff;
   padding: 2px;
 }
 
