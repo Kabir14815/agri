@@ -138,7 +138,7 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
       setReferrals(refreshed)
       onAmountSaved?.(value)
       await dialog.success(
-        'Member approved and activated. Any pending deposit requests from this member have been cancelled. Daily rental income (1% p.m., 2% TDS) will accrue to their income wallet.',
+        'Member approved and activated. Any pending deposit requests from this member have been cancelled. Daily rental income (10% p.m., 2% TDS) will accrue to their income wallet.',
         'Member activated',
       )
     } catch (e) {

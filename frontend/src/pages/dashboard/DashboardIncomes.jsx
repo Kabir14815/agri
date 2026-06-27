@@ -48,7 +48,7 @@ export default function DashboardIncomes() {
       {data.investment?.principal > 0 && (
         <>
           <h3 className="mlm-section-label" style={{ marginTop: 28 }}>
-            Rental income (1% monthly, 2% TDS on rental income)
+            Rental income (10% monthly, 2% TDS on rental income)
           </h3>
           <div className="mlm-grid" style={{ marginBottom: 20 }}>
             <article className="mlm-card">
@@ -93,7 +93,7 @@ export default function DashboardIncomes() {
             </article>
           </div>
           <p className="mlm-hint">
-            Rental income is calculated daily (1% ÷ 30 days per month), up to 10× your invested
+            Rental income is calculated daily (10% ÷ 30 days per month), up to 10× your invested
             amount. 2% TDS is deducted from each day&apos;s gross rental income before crediting your
             income wallet. Upload a daily crop
             photo on <Link to="/dashboard/daily-log">Daily Crop Log</Link> — missing a day cuts

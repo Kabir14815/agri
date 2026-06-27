@@ -274,7 +274,7 @@ def build_dashboard_payload(
         {"key": "level_income", "label": "Level Income", "value": stats["level_income"]},
         {
             "key": "investment_return",
-            "label": "Rental Income (1% p.m.)",
+            "label": "Rental Income (10% p.m.)",
             "value": investment_return,
         },
         {"key": "reward_bonus", "label": "Reward Bonus", "value": stats["reward_bonus"]},
