@@ -117,17 +117,24 @@ export default function DashboardIncomes() {
           <h3 className="mlm-section-label" style={{ marginTop: 28 }}>Earning limits</h3>
           <div className="mlm-grid">
             <article className="mlm-card">
-              <small>Total limit</small>
+              <small>Lifetime earning cap</small>
               <h2>{formatInr(data.earning_limits.total, 0)}</h2>
+              <p className="mlm-hint" style={{ marginTop: 4, marginBottom: 0 }}>10× your invested amount</p>
             </article>
-            <article className="mlm-card">
-              <small>Pending</small>
-              <h2>{formatInr(data.earning_limits.pending, 0)}</h2>
-            </article>
-            <article className="mlm-card">
-              <small>Used</small>
+            <article className="mlm-card mlm-card-green">
+              <small>Remaining to earn</small>
               <h2>{formatInr(data.earning_limits.used, 0)}</h2>
             </article>
+            <article className="mlm-card">
+              <small>Credited to wallet</small>
+              <h2>{formatInr(data.earning_limits.pending, 0)}</h2>
+            </article>
+            {data.earning_limits.cross > 0 && (
+              <article className="mlm-card mlm-card-warn">
+                <small>Cap exceeded (not credited)</small>
+                <h2>{formatInr(data.earning_limits.cross, 0)}</h2>
+              </article>
+            )}
           </div>
         </>
       )}

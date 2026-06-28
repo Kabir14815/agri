@@ -216,7 +216,7 @@ export default function DashboardHome() {
             <>
               <FiCamera />
               <span>
-                Today&apos;s crop photo submitted · interest protected for {dailyLog.log_date}.
+                Today&apos;s crop photo submitted · rental income protected for {dailyLog.log_date}.
               </span>
             </>
           ) : (
@@ -225,7 +225,7 @@ export default function DashboardHome() {
               <div>
                 <strong>Daily crop photo required</strong>
                 <p>
-                  Upload before midnight UTC or lose today&apos;s interest (
+                  Upload before midnight UTC or lose today&apos;s rental income (
                   {formatInr(dailyLog.penalty_today || d.investment?.daily_net || 0, 2)}).
                   {dailyLog.penalty_total > 0 &&
                     ` Total lost so far: ${formatInr(dailyLog.penalty_total, 2)}.`}

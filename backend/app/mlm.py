@@ -286,7 +286,7 @@ def build_dashboard_payload(
 
     today_incomes = [
         {
-            "label": "Investment Return Today (net)",
+            "label": "Rental Income Today (net)",
             "value": float(stats.get("investment_interest_today", 0) or 0),
         },
         {
@@ -304,7 +304,7 @@ def build_dashboard_payload(
         today_incomes.insert(
             0,
             {
-                "label": "Interest cut today (no daily photo)",
+                "label": "Rental income cut today (no photo)",
                 "value": penalty_today,
             },
         )
