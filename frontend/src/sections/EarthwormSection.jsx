@@ -31,7 +31,7 @@ export default function EarthwormSection() {
               web in the soil.
             </p>
             <div className="earthworm-price-tag">
-              <span className="earthworm-price-label">Vermy कम्पोस्ट</span>
+              <span className="earthworm-price-label">Vermicompost Buying Price</span>
               <span className="earthworm-price-value">₹5 <small>/ kg</small></span>
             </div>
             <Link to="/about" className="btn btn-primary">Discover More</Link>
