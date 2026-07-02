@@ -491,7 +491,7 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
                 {/* Monthly payout summary */}
                 <div className="admin-profile-section">
                   <h4 style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                    <FiTrendingUp /> Monthly Payout Summary
+                    <FiTrendingUp /> Month-End Payout Projection
                   </h4>
                   {/* 3-column summary strip */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 }}>

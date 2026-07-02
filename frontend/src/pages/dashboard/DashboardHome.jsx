@@ -259,19 +259,19 @@ export default function DashboardHome() {
 
           return (
             <article className="mlm-card mlm-payout-summary">
-              <h3 className="mlm-payout-title">Monthly Payout Summary</h3>
+              <h3 className="mlm-payout-title">Month-End Payout Projection</h3>
               <p className="mlm-payout-note">
-                Based on ₹{(inv.principal / 100000).toFixed(1)}L package at 10% p.m.
+                Projected full-month payout · ₹{(inv.principal / 100000).toFixed(1)}L package at 10% p.m.
               </p>
 
               {/* Main earning rows */}
               <div className="mlm-payout-rows">
                 <div className="mlm-payout-row gross">
-                  <span>Estimated Gross Earning (per month)</span>
+                  <span>Gross Earning at Month-End</span>
                   <strong>{formatInr(inv.monthly_gross, 0)}</strong>
                 </div>
                 <div className="mlm-payout-row tds">
-                  <span>TDS Deducted @ 2% of gross</span>
+                  <span>TDS @ 2% of gross</span>
                   <strong>− {formatInr(inv.monthly_tds, 0)}</strong>
                 </div>
                 {penaltyTotal > 0 && (
@@ -284,7 +284,7 @@ export default function DashboardHome() {
                   </div>
                 )}
                 <div className="mlm-payout-row net">
-                  <span>Net Payout Received</span>
+                  <span>You will receive at Month-End</span>
                   <strong>{formatInr(penaltyTotal > 0 ? actualNet : inv.monthly_net, 0)}</strong>
                 </div>
               </div>

@@ -78,7 +78,9 @@ def initialize_accrual_fields(stats: dict, principal: float, on_date: Optional[d
     stats["investment_principal"] = float(principal)
     if principal > 0 and not stats.get("interest_accrual_start"):
         stats["interest_accrual_start"] = today.isoformat()
-        stats["interest_last_accrual_date"] = (today - timedelta(days=1)).isoformat()
+        # Interest starts the day AFTER admin approval — set last accrual to today
+        # so the first daily credit runs tomorrow onwards.
+        stats["interest_last_accrual_date"] = today.isoformat()
     stats.setdefault("investment_interest_total", 0.0)
     stats.setdefault("investment_tds_total", 0.0)
     stats.setdefault("investment_interest_gross_total", 0.0)
