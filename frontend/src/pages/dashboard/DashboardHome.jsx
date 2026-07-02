@@ -248,6 +248,40 @@ export default function DashboardHome() {
           <span className="mlm-card-deco">📦</span>
         </article>
 
+        {d.investment?.principal > 0 && (
+          <article className="mlm-card mlm-payout-summary">
+            <h3 className="mlm-payout-title">Monthly Payout Summary</h3>
+            <div className="mlm-payout-rows">
+              <div className="mlm-payout-row gross">
+                <span>Estimated Gross Earning</span>
+                <strong>{formatInr(d.investment.monthly_gross, 2)}</strong>
+              </div>
+              <div className="mlm-payout-row tds">
+                <span>TDS Deducted (2%)</span>
+                <strong>− {formatInr(d.investment.monthly_tds, 2)}</strong>
+              </div>
+              <div className="mlm-payout-row net">
+                <span>Net Payout This Month</span>
+                <strong>{formatInr(d.investment.monthly_net, 2)}</strong>
+              </div>
+            </div>
+            <div className="mlm-payout-lifetime">
+              <div>
+                <small>Total Earned (net)</small>
+                <span>{formatInr(d.investment.total_interest_net, 2)}</span>
+              </div>
+              <div>
+                <small>Total TDS Paid</small>
+                <span>{formatInr(d.investment.total_tds, 2)}</span>
+              </div>
+              <div>
+                <small>Daily Credit</small>
+                <span>{formatInr(d.investment.daily_net, 4)}</span>
+              </div>
+            </div>
+          </article>
+        )}
+
         <article className="mlm-card mlm-card-dark">
           <div className="mlm-card-head">
             <div>

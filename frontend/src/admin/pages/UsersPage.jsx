@@ -323,6 +323,10 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
                 {user.role}
               </span>
               <p className="user-id">{user.member_id || `KGF${870000 + user.id}`}</p>
+              <p style={{ fontSize: 12, color: 'var(--color-muted,#6b7280)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <FiCalendar size={12} />
+                Joined: <strong style={{ color: 'var(--color-text)' }}>{formatDate(user.registered_at)}</strong>
+              </p>
             </div>
           </div>
 
@@ -484,32 +488,47 @@ function ProfileModal({ user, onClose, onDelete, canDelete, onAmountSaved, onVie
                   </div>
                 </div>
 
-                {/* Investment / interest details */}
+                {/* Monthly payout summary */}
                 <div className="admin-profile-section">
-                  <h4 style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                    <FiTrendingUp /> Investment &amp; Interest
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                    <FiTrendingUp /> Monthly Payout Summary
                   </h4>
+                  {/* 3-column summary strip */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 }}>
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 11, color: '#166534', marginBottom: 4, fontWeight: 600 }}>GROSS EARNING</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#15803d' }}>{formatInr(inv.monthly_gross)}</div>
+                      <div style={{ fontSize: 10, color: '#4ade80', marginTop: 2 }}>10% p.m.</div>
+                    </div>
+                    <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 11, color: '#9a3412', marginBottom: 4, fontWeight: 600 }}>TDS DEDUCTED</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#c2410c' }}>− {formatInr(inv.monthly_tds)}</div>
+                      <div style={{ fontSize: 10, color: '#fb923c', marginTop: 2 }}>2% TDS</div>
+                    </div>
+                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 11, color: '#1e40af', marginBottom: 4, fontWeight: 600 }}>NET PAYOUT</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#1d4ed8' }}>{formatInr(inv.monthly_net)}</div>
+                      <div style={{ fontSize: 10, color: '#60a5fa', marginTop: 2 }}>per month</div>
+                    </div>
+                  </div>
                   <div style={{ display: 'grid', gap: 4 }}>
                     <WalletRow label="Principal invested" value={inv.principal} />
-                    <WalletRow label="Monthly gross rate" value={inv.monthly_gross} />
-                    <WalletRow label="Monthly TDS (2%)" value={inv.monthly_tds} />
-                    <WalletRow label="Monthly net interest" value={inv.monthly_net} />
-                    <WalletRow label="Daily net interest" value={inv.daily_net} />
-                    <WalletRow label="Total interest earned (net)" value={inv.total_interest_net} />
-                    <WalletRow label="Total TDS deducted" value={inv.total_tds} />
-                    <WalletRow label="Interest penalty (missed photos)" value={inv.penalty_total} />
-                    <WalletRow label="Remaining interest cap" value={inv.interest_remaining_net} />
+                    <WalletRow label="Daily net credit" value={inv.daily_net} />
+                    <WalletRow label="Total rental income earned (net)" value={inv.total_interest_net} />
+                    <WalletRow label="Total TDS deducted (lifetime)" value={inv.total_tds} />
+                    <WalletRow label="Rental income lost (missed photos)" value={inv.penalty_total} />
+                    <WalletRow label="Remaining earning cap" value={inv.interest_remaining_net} />
                   </div>
                   {(dashData.daily_log?.missed_days_total ?? 0) > 0 && (
                     <p style={{ marginTop: 8, fontSize: 12, color: '#b45309', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <FiAlertTriangle size={13} />
-                      {dashData.daily_log.missed_days_total} day(s) of photos missed — interest cut applied
+                      {dashData.daily_log.missed_days_total} day(s) of photos missed — income cut applied
                     </p>
                   )}
                   {inv.interest_cap_reached && (
                     <p style={{ marginTop: 8, fontSize: 12, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <FiAlertTriangle size={13} />
-                      Earning cap reached — no further interest will accrue
+                      Earning cap reached — no further rental income will accrue
                     </p>
                   )}
                 </div>
