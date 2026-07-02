@@ -10,6 +10,7 @@ import {
   FiCamera,
   FiAlertTriangle,
   FiRefreshCw,
+  FiCalendar,
 } from 'react-icons/fi'
 import { useLiveDashboard } from '../../hooks/useLiveDashboard.js'
 import { formatInr, formatInrPlain } from '../../utils/format.js'
@@ -188,6 +189,19 @@ export default function DashboardHome() {
           <FiMapPin />
           <span>Location — {d.location}</span>
         </div>
+        {d.registered_at && (
+          <div className="mlm-summary-pill">
+            <FiCalendar />
+            <span>
+              Joined —{' '}
+              {new Date(d.registered_at).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="mlm-referral">

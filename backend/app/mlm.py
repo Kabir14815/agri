@@ -338,6 +338,7 @@ def build_dashboard_payload(
         "full_name": user["full_name"],
         "email": user["email"],
         "phone": user.get("phone"),
+        "registered_at": user.get("registered_at"),
         "role": user.get("role", "customer"),
         "amount": float(user.get("amount", 0) or 0),
         "member_id": member_id,
