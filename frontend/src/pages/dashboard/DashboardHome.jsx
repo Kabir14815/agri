@@ -303,34 +303,6 @@ export default function DashboardHome() {
                 </div>
               </div>
 
-              {/* Today's alert if penalty */}
-              {penaltyToday > 0 && (
-                <div className="mlm-payout-alert">
-                  ⚠ Today's rental income cut due to missing crop photo: − {formatInr(penaltyToday, 2)}
-                </div>
-              )}
-
-              {/* Lifetime footer */}
-              <div className="mlm-payout-lifetime">
-                <div>
-                  <small>Total Earned (net)</small>
-                  <span>{formatInr(inv.total_interest_net, 2)}</span>
-                </div>
-                <div>
-                  <small>Total TDS Paid</small>
-                  <span>{formatInr(inv.total_tds, 2)}</span>
-                </div>
-                <div>
-                  <small>Daily Net Credit</small>
-                  <span>{formatInr(inv.daily_net, 2)}</span>
-                </div>
-                {penaltyTotal > 0 && (
-                  <div style={{ borderColor: '#7f1d1d' }}>
-                    <small style={{ color: '#f87171' }}>Total Lost (logs)</small>
-                    <span style={{ color: '#f87171' }}>− {formatInr(penaltyTotal, 2)}</span>
-                  </div>
-                )}
-              </div>
             </article>
           )
         })()}
