@@ -248,39 +248,78 @@ export default function DashboardHome() {
           <span className="mlm-card-deco">📦</span>
         </article>
 
-        {d.investment?.principal > 0 && (
-          <article className="mlm-card mlm-payout-summary">
-            <h3 className="mlm-payout-title">Monthly Payout Summary</h3>
-            <div className="mlm-payout-rows">
-              <div className="mlm-payout-row gross">
-                <span>Estimated Gross Earning</span>
-                <strong>{formatInr(d.investment.monthly_gross, 2)}</strong>
+        {d.investment?.principal > 0 && (() => {
+          const inv = d.investment
+          const log = d.daily_log || {}
+          const penaltyTotal = log.penalty_total || 0
+          const penaltyToday = log.penalty_today || 0
+          const missedDays = log.missed_days_total || 0
+          // Actual net after penalty = monthly_net minus proportional penalty
+          const actualNet = Math.max(0, inv.monthly_net - penaltyTotal)
+
+          return (
+            <article className="mlm-card mlm-payout-summary">
+              <h3 className="mlm-payout-title">Monthly Payout Summary</h3>
+              <p className="mlm-payout-note">
+                Based on ₹{(inv.principal / 100000).toFixed(1)}L package at 10% p.m.
+              </p>
+
+              {/* Main earning rows */}
+              <div className="mlm-payout-rows">
+                <div className="mlm-payout-row gross">
+                  <span>Estimated Gross Earning (per month)</span>
+                  <strong>{formatInr(inv.monthly_gross, 0)}</strong>
+                </div>
+                <div className="mlm-payout-row tds">
+                  <span>TDS Deducted @ 2% of gross</span>
+                  <strong>− {formatInr(inv.monthly_tds, 0)}</strong>
+                </div>
+                {penaltyTotal > 0 && (
+                  <div className="mlm-payout-row penalty">
+                    <span>
+                      Deducted — missed daily logs
+                      {missedDays > 0 && <em> ({missedDays} day{missedDays > 1 ? 's' : ''})</em>}
+                    </span>
+                    <strong>− {formatInr(penaltyTotal, 2)}</strong>
+                  </div>
+                )}
+                <div className="mlm-payout-row net">
+                  <span>Net Payout Received</span>
+                  <strong>{formatInr(penaltyTotal > 0 ? actualNet : inv.monthly_net, 0)}</strong>
+                </div>
               </div>
-              <div className="mlm-payout-row tds">
-                <span>TDS Deducted (2%)</span>
-                <strong>− {formatInr(d.investment.monthly_tds, 2)}</strong>
+
+              {/* Today's alert if penalty */}
+              {penaltyToday > 0 && (
+                <div className="mlm-payout-alert">
+                  ⚠ Today's rental income cut due to missing crop photo: − {formatInr(penaltyToday, 2)}
+                </div>
+              )}
+
+              {/* Lifetime footer */}
+              <div className="mlm-payout-lifetime">
+                <div>
+                  <small>Total Earned (net)</small>
+                  <span>{formatInr(inv.total_interest_net, 2)}</span>
+                </div>
+                <div>
+                  <small>Total TDS Paid</small>
+                  <span>{formatInr(inv.total_tds, 2)}</span>
+                </div>
+                <div>
+                  <small>Daily Net Credit</small>
+                  <span>{formatInr(inv.daily_net, 2)}</span>
+                </div>
+                {penaltyTotal > 0 && (
+                  <div style={{ borderColor: '#7f1d1d' }}>
+                    <small style={{ color: '#f87171' }}>Total Lost (logs)</small>
+                    <span style={{ color: '#f87171' }}>− {formatInr(penaltyTotal, 2)}</span>
+                  </div>
+                )}
               </div>
-              <div className="mlm-payout-row net">
-                <span>Net Payout This Month</span>
-                <strong>{formatInr(d.investment.monthly_net, 2)}</strong>
-              </div>
-            </div>
-            <div className="mlm-payout-lifetime">
-              <div>
-                <small>Total Earned (net)</small>
-                <span>{formatInr(d.investment.total_interest_net, 2)}</span>
-              </div>
-              <div>
-                <small>Total TDS Paid</small>
-                <span>{formatInr(d.investment.total_tds, 2)}</span>
-              </div>
-              <div>
-                <small>Daily Credit</small>
-                <span>{formatInr(d.investment.daily_net, 4)}</span>
-              </div>
-            </div>
-          </article>
-        )}
+            </article>
+          )
+        })()}
 
         <article className="mlm-card mlm-card-dark">
           <div className="mlm-card-head">
