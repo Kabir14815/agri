@@ -58,8 +58,7 @@ def daily_interest_breakdown(principal: float) -> Dict[str, float]:
     if principal <= 0:
         return {"gross": 0.0, "tds": 0.0, "net": 0.0}
     gross = round(principal * MONTHLY_GROSS_RATE / DAYS_PER_MONTH, 4)
-    # TDS is on total investment value (principal), prorated daily
-    tds = round(principal * TDS_ON_INTEREST_RATE / DAYS_PER_MONTH, 4)
+    tds = round(gross * TDS_ON_INTEREST_RATE, 4)
     net = round(gross - tds, 4)
     return {"gross": gross, "tds": tds, "net": net}
 
@@ -253,8 +252,7 @@ def investment_summary(stats: dict, user_amount: float = 0) -> Dict[str, Any]:
     principal = investment_principal(stats, user_amount)
     daily = daily_interest_breakdown(principal)
     monthly_gross = round(principal * MONTHLY_GROSS_RATE, 2)
-    # TDS is 2% of the total investment value (principal), not of the monthly interest
-    monthly_tds = round(principal * TDS_ON_INTEREST_RATE, 2)
+    monthly_tds = round(monthly_gross * TDS_ON_INTEREST_RATE, 2)
     monthly_net = round(monthly_gross - monthly_tds, 2)
     cap = interest_earning_cap(principal)
     earned = interest_earned_so_far(stats)
