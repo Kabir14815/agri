@@ -285,7 +285,7 @@ export default function DashboardHome() {
                   <strong>{formatInr(inv.monthly_gross, 0)}</strong>
                 </div>
                 <div className="mlm-payout-row tds">
-                  <span>TDS @ 2% of gross</span>
+                  <span>TDS @ 2% of investment value</span>
                   <strong>− {formatInr(inv.monthly_tds, 0)}</strong>
                 </div>
                 {penaltyTotal > 0 && (
